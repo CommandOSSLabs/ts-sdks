@@ -1,0 +1,47 @@
+###############################################
+# Root/Common: General project-wide ignores
+###############################################
+
+# NodeJS Dependencies
+node_modules
+
+# Build Outputs
+dist
+
+# IDE and Editor Configurations
+.vscode/*
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/vscode-git-graph.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Cache
+/.cache
+/build
+*.vars
+.wrangler
+_worker.bundle
+
+# Turborepo
+.turbo
+
+# Walrus Deployer Configuration
+ws-resources.json
+
+# Environments
+.env*
+!.env.example
+.dev.vars
+
+###############################################
+# Doccument Site: Astro
+###############################################
+
+.astro/

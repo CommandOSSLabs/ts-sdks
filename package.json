@@ -1,0 +1,20 @@
+{
+  "name": "ts-sdk",
+  "private": true,
+  "packageManager": "pnpm@10.17.1",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "check": "biome check",
+    "check:fix": "biome check --fix",
+    "check:types": "turbo run check-types",
+    "publish-packages": "turbo run check build test && changeset version && changeset publish"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.4",
+    "@changesets/cli": "^2.29.7",
+    "lefthook": "^1.12.3",
+    "turbo": "latest"
+  }
+}

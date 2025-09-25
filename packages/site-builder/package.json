@@ -1,0 +1,30 @@
+{
+  "name": "@cmdoss/site-builder",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "tag": "latest"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check-types": "tsc --noEmit",
+    "build": "tsdown --platform browser --minify"
+  },
+  "peerDependencies": {
+    "@mysten/sui": "catalog:",
+    "@mysten/wallet-standard": "catalog:",
+    "@mysten/walrus": "catalog:"
+  },
+  "dependencies": {
+    "@zenfs/core": "^2.4.0",
+    "@zenfs/dom": "^1.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsdown": "^0.15.4"
+  }
+}

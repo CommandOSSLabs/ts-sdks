@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../configs/tsconfig.library.json",
+  "compilerOptions": {
+    "lib": ["ES2021", "DOM"],
+    "outDir": "/dist"
+  },
+  "include": ["src/**/*"]
+}
