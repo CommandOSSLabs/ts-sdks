@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛎 Checkout
+        uses: actions/checkout@v5
+      - name: 🏗 Setup PNPM
+        uses: pnpm/action-setup@v4
+      - name: 🏗 Setup NodeJS
+        uses: actions/setup-node@v4
+        with: { node-version-file: .node-version, cache: pnpm }
+      - name: 📦 Install dependencies
+        run: pnpm install
+      - name: 📦 Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: pnpm release-packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: 🛳️ Deploy to JSR
+        working-directory: ./packages/site-builder
+        run: pnpx jsr publish
+
+      # - name: 📢 Send a Slack notification if a publish happens
+      #   if: steps.changesets.outputs.published == 'true'
+      #   # You can do something when a publish happens.
+      #   run: my-slack-bot send-notification --message "A new version of ${GITHUB_REPOSITORY} was published!"
