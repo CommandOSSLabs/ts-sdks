@@ -7,6 +7,7 @@ import { AdvancedSettings } from '@/components/AdvancedSettings'
 import { AnimatedBackground } from '@/components/AnimatedBackground'
 import { BlobContentViewer } from '@/components/BlobContentViewer'
 import { CostDisplay } from '@/components/CostDisplay'
+import { FileExplorer } from '@/components/file-explorer/file-explorer'
 import { Introduction } from '@/components/Introduction'
 import { Button } from '@/components/ui/button'
 import { CardContent } from '@/components/ui/card'
@@ -88,8 +89,8 @@ export default function Home() {
     <div className="container mx-auto p-6">
       <AnimatedBackground />
       <Introduction />
-      <div className="flex flex-col items-center lg:items-start lg:grid lg:grid-cols-2 gap-6 max-w-4xl mx-auto">
-        <CardContent className="relative">
+      <div className="flex flex-col items-center lg:items-start lg:grid lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <CardContent className="relative col-span-2">
           <h1 className="mb-1">Assets</h1>
           {isFileSystemLoading && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
@@ -116,16 +117,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-4">
-              {assets.map(({ path, content }) => (
-                <div key={path} className="border rounded-lg">
-                  <div className=" px-3 py-2 border-b">
-                    <span className="text-sm font-medium">{path}</span>
-                  </div>
-                  <pre className=" p-4 text-xs overflow-x-auto max-h-40">
-                    <BlobContentViewer content={content} />
-                  </pre>
-                </div>
-              ))}
+              <FileExplorer className="h-[300px]" assets={assets} />
 
               <Button
                 onClick={() => {
