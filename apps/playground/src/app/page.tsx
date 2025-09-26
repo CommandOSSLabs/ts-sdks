@@ -90,7 +90,7 @@ export default function Home() {
       <Introduction />
       <div className="flex flex-col items-center lg:items-start lg:grid lg:grid-cols-2 gap-6 max-w-4xl mx-auto">
         <CardContent className="relative">
-          <h1 className="mb-3">Assets</h1>
+          <h1 className="mb-1">Assets</h1>
           {isFileSystemLoading && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
               <div className="flex items-center gap-2">
@@ -156,8 +156,8 @@ export default function Home() {
         </CardContent>
 
         <CardContent>
-          <h1>Deploy</h1>
-          <div className="pt-4 flex flex-col gap-2">
+          <h1 className="mb-1">Deploy</h1>
+          <div className=" flex flex-col gap-2">
             <Button
               onClick={() => handlePrepareAssets()}
               className={`w-full ${currentStep !== DeploySteps.Idle || loading ? 'bg-[#97f0e5] text-[#0C0F1D] hover:bg-[#97f0e5]/90 border border-[#97F0E599]' : 'bg-[#97f0e5] text-[#0C0F1D] hover:bg-[#97f0e5]/90 border border-[#97F0E599]'}`}
@@ -269,8 +269,8 @@ export default function Home() {
           </div>
 
           {deployedSiteId && (
-            <CardContent className="mt-6">
-              <h1>Deployed Site</h1>
+            <>
+              <h1 className="mb-1 mt-4">Deployed Site</h1>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -331,7 +331,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </CardContent>
+            </>
           )}
         </CardContent>
       </div>
