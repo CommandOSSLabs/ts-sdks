@@ -32,9 +32,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: 🛳️ Deploy to JSR
-        working-directory: ./packages/site-builder
-        run: pnpx jsr publish
+      # - name: 🛳️ Deploy to JSR
+      #   working-directory: ./packages/site-builder
+      #   run: pnpx jsr publish
 
       # - name: 📢 Send a Slack notification if a publish happens
       #   if: steps.changesets.outputs.published == 'true'
