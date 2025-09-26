@@ -73,8 +73,6 @@ importers:
         specifier: ^0.15.4
         version: 0.15.4(typescript@5.9.2)
 
-  packages/typescript-config: {}
-
 packages:
 
   '@0no-co/graphql.web@1.2.0':
