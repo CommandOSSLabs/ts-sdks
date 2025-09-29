@@ -1,5 +1,5 @@
 import { WalrusFile, type WriteFilesFlow } from '@mysten/walrus'
-import { QUILT_PATCH_ID_INTERNAL_HEADER } from './lib/constatnts'
+import { QUILT_PATCH_ID_INTERNAL_HEADER } from './lib/constants'
 import { extractPatchHex } from './lib/path-id'
 import { blobIdBase64ToU256, getSiteIdFromResponse } from './lib/utils'
 import type {
