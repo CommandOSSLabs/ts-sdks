@@ -1,0 +1,126 @@
+---
+title: File Management
+description: Learn how to manage files and assets using ZenFsFileManager in Site Builder SDK.
+badge: { text: 'Guide', variant: 'note' }
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+The Site Builder SDK provides a powerful file management system through `ZenFsFileManager`, a browser-based file system that allows you to create, read, update, and delete files in a virtual workspace. This guide covers everything you need to know about managing files for your decentralized websites.
+
+## Overview
+
+ZenFsFileManager provides:
+- **Browser-based file system** - No server required
+- **Real-time file watching** - Automatic updates when files change
+- **Asset preparation** - Automatic hash calculation and content processing
+- **Workspace isolation** - Multiple projects in separate directories
+
+## Basic Setup
+
+### 1. Initialize File Manager
+
+```typescript
+import { ZenFsFileManager } from '@cmdoss/site-builder';
+
+// Create a new file manager for a specific workspace
+const fileManager = new ZenFsFileManager('/my-workspace');
+
+// Wait for the file manager to be ready
+await fileManager.ready;
+```
+
+### 2. React Hook Integration
+
+The playground uses a custom hook for seamless integration:
+
+```typescript
+import { useZenFsWorkspace } from '@/hooks/useZenFsWorkspace';
+
+function MyComponent() {
+  const {
+    assets,
+    loading,
+    fileManager,
+    clear
+  } = useZenFsWorkspace('/workspace');
+
+  // Use the file manager and assets
+}
+```
+
+## React Integration
+
+### Custom Hook Example
+
+Here's how the playground implements file management:
+
+```typescript
+import { useZenFsWorkspace } from '@/hooks/useZenFsWorkspace';
+
+function FileManager() {
+  const {
+    assets,
+    loading,
+    fileManager,
+    clear
+  } = useZenFsWorkspace('/workspace');
+
+  const addTestFiles = async () => {
+    const testFiles = {
+      'index.html': '<h1>Hello World!</h1>',
+      'style.css': 'body { margin: 0; }'
+    };
+
+    for (const [path, content] of Object.entries(testFiles)) {
+      await fileManager?.writeFile(path, content);
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={addTestFiles}>Add Test Files</button>
+      <button onClick={clear}>Clear All Files</button>
+      
+      {loading && <p>Loading files...</p>}
+      
+      <ul>
+        {assets.map(asset => (
+          <li key={asset.path}>
+            {asset.path} - {asset.content.byteLength} bytes
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+### File Explorer Component
+
+The playground includes a comprehensive file explorer:
+
+```typescript
+import { FileExplorer } from '@/components/file-explorer/file-explorer';
+
+function MyApp() {
+  const { assets } = useZenFsWorkspace('/workspace');
+  
+  return (
+    <FileExplorer 
+      assets={assets}
+      className="h-[300px]"
+    />
+  );
+}
+```
+
+:::tip[Read more]
+Read full file:
+[useZenFsWorkspace.ts](https://github.com/CommandOSSLabs/ts-sdks/blob/main/apps/playground/src/hooks/useZenFsWorkspace.ts).
+:::
+
+## Next Steps
+- Explore [Asset Preparation](/guides/asset-preparation/) for advanced file processing

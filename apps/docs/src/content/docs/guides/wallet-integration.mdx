@@ -1,0 +1,173 @@
+---
+title: Wallet Integration
+description: Learn how to integrate Sui wallets with Site Builder SDK using Sui dApp Kit.
+badge: { text: 'Guide', variant: 'tip' }
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+The Site Builder SDK integrates seamlessly with Sui wallets through the Sui dApp Kit, providing a smooth user experience for connecting wallets, managing accounts, and signing transactions. This guide covers everything you need to know about wallet integration.
+
+## Overview
+
+Wallet integration provides:
+- **Multi-wallet support** - Connect to various Sui wallets
+- **Account management** - Handle multiple accounts and addresses
+- **Transaction signing** - Sign and execute blockchain transactions
+- **Balance checking** - Monitor Sui and WAL token balances
+- **Network switching** - Support for testnet and mainnet
+
+## Prerequisites
+
+Before integrating wallets, ensure you have:
+
+- **Sui dApp Kit** installed and configured
+- **Wallet adapters** for your target wallets
+- **Network configuration** for Sui and Walrus
+- **Proper error handling** for wallet operations
+
+## Basic Setup
+
+### 1. Install Dependencies
+
+```bash
+npm install @mysten/dapp-kit @mysten/sui @mysten/walrus
+```
+
+### 2. Configure dApp Kit
+
+```typescript
+import { SuiClientProvider, WalletProvider } from '@mysten/dapp-kit';
+import { getFullnodeUrl } from '@mysten/sui/client';
+import { createNetworkConfig } from '@mysten/dapp-kit';
+
+// Network configuration
+const networkConfig = createNetworkConfig({
+  devnet: { url: getFullnodeUrl('devnet') },
+  testnet: { url: getFullnodeUrl('testnet') },
+  mainnet: { url: getFullnodeUrl('mainnet') },
+});
+
+// Wallet configuration
+const walletConfig = {
+  wallets: [
+    // Add your preferred wallet adapters
+  ],
+};
+```
+
+### 3. Provider Setup
+
+```typescript
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
+        <WalletProvider
+          wallets={walletConfig.wallets}
+          autoConnect={true}
+        >
+          <YourApp />
+        </WalletProvider>
+      </SuiClientProvider>
+    </QueryClientProvider>
+  );
+}
+```
+:::tip[Read more]
+Read more information:
+[Wallet Provider](https://sdk.mystenlabs.com/dapp-kit/wallet-provider).
+:::
+
+### SDK Integration
+
+The Site Builder SDK integrates with dApp Kit for seamless transaction signing:
+
+```typescript
+import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+
+function SDKIntegration() {
+  const suiClient = useSuiClient();
+  const currentAccount = useCurrentAccount();
+  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+
+  // Initialize SDK with wallet integration
+  const sdk = useMemo(() => {
+    if (suiClient && currentAccount) {
+      return new WalrusSiteBuilderSdk(
+        walrusClient,
+        suiClient,
+        currentAccount,
+        signAndExecuteTransaction,
+        wallet
+      );
+    }
+    return null;
+  }, [suiClient, currentAccount, signAndExecuteTransaction]);
+
+  return <div>{/* Your SDK components */}</div>;
+}
+```
+:::tip[Read more]
+Read full file:
+[useDeployToWalrus.ts](https://github.com/CommandOSSLabs/ts-sdks/blob/main/apps/playground/src/hooks/useDeployToWalrus.ts).
+:::
+
+
+## Balance Management
+
+### Sui Balance
+
+```typescript
+import { useSuiBalance } from '@/hooks/useSuiBalance';
+
+function SuiBalance() {
+  const { balance, isLoading, error } = useSuiBalance();
+
+  if (isLoading) return <p>Loading balance...</p>;
+  if (error) return <p>Error loading balance: {error.message}</p>;
+
+  return (
+    <div className="balance">
+      <h3>Sui Balance</h3>
+      <p>{balance.totalBalance} SUI</p>
+      <p>Available: {balance.availableBalance} SUI</p>
+    </div>
+  );
+}
+```
+
+### WAL Token Balance
+
+```typescript
+import { useWalBalance } from '@/hooks/useWalBalance';
+
+function WalBalance() {
+  const { balance, isLoading, error } = useWalBalance();
+
+  if (isLoading) return <p>Loading WAL balance...</p>;
+  if (error) return <p>Error loading WAL balance: {error.message}</p>;
+
+  return (
+    <div className="wal-balance">
+      <h3>WAL Balance</h3>
+      <p>{balance} WAL</p>
+    </div>
+  );
+}
+```
+
+:::tip[Read more]
+Read full hooks:
+[Hooks](https://github.com/CommandOSSLabs/ts-sdks/blob/main/apps/playground/src/hooks).
+:::
+
+## Next Steps
+- Check [File Management](/guides/file-management/) for organizing your assets

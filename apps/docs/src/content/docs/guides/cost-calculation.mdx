@@ -1,0 +1,165 @@
+---
+title: Cost Calculation
+description: Learn how to calculate and manage costs for deploying decentralized websites on Walrus + Sui networks.
+badge: { text: 'Guide', variant: 'caution' }
+sidebar:
+  order: 4
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Understanding the cost structure is crucial when deploying decentralized websites. The Site Builder SDK provides comprehensive cost calculation tools to help you estimate and manage expenses for storage, transactions, and network operations.
+
+## Overview
+
+Deployment costs include:
+- **Storage costs** - WAL tokens for file storage on Walrus
+- **Write costs** - WAL tokens for uploading files to the network
+- **Gas costs** - SUI tokens for blockchain transactions
+- **Tip amounts** - Optional SUI tips for faster transaction processing
+
+## Cost Structure
+
+### Storage Costs (WAL Tokens)
+
+Storage costs are calculated based on:
+- **File size** - Total bytes of your content
+- **Epoch duration** - How long files are stored
+- **Network conditions** - Current storage pricing
+
+```typescript
+// Storage cost calculation
+const storageCost = await walrusClient.storageCost(fileSize, epochs);
+```
+
+### Write Costs (WAL Tokens)
+
+Write costs cover:
+- **Upload operations** - Moving files to Walrus network
+- **Network bandwidth** - Data transfer costs
+- **Processing fees** - File processing and validation
+
+### Gas Costs (SUI Tokens)
+
+Gas costs include:
+- **Transaction fees** - Blockchain transaction costs
+- **Smart contract calls** - Deploy flow operations
+- **Certification costs** - On-chain asset certification
+
+## Basic Cost Calculation
+
+### File Size Calculation
+
+```typescript
+import { getContentByteLength } from '@cmdoss/site-builder';
+
+function calculateFileSize(assets: IAsset[]): number {
+  return assets.reduce((total, asset) => {
+    return total + getContentByteLength(asset.content);
+  }, 0);
+}
+
+// Example usage
+const assets = [
+  { content: 'Hello World', path: 'index.html' },
+  { content: new Uint8Array([1, 2, 3]), path: 'image.png' }
+];
+
+const totalSize = calculateFileSize(assets);
+console.log(`Total file size: ${totalSize} bytes`);
+```
+
+## React Hook Implementation
+
+### Custom Cost Hook
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+
+export function useStorageCost(fileSize: number, epochs: number) {
+  return useQuery({
+    queryKey: ['storageCost', fileSize, epochs],
+    queryFn: async () => {
+      const storageCost = await walrusClient.storageCost(fileSize, epochs);
+      return {
+        storageCost: storageCost.storageCost.toString(),
+        writeCost: storageCost.writeCost.toString(),
+        totalCost: storageCost.totalCost.toString()
+      };
+    },
+    enabled: fileSize > 0 && epochs > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 3,
+    retryDelay: 1000
+  });
+}
+```
+
+### Cost Display Component
+
+```typescript
+interface CostDisplayProps {
+  fileSize: number;
+  epochs: number;
+  tipAmountMist?: string;
+}
+
+export function CostDisplay({ 
+  fileSize, 
+  epochs, 
+  tipAmountMist = '105' 
+}: CostDisplayProps) {
+  const { data: storageCost, isLoading, error } = useStorageCost(fileSize, epochs);
+
+  if (isLoading) {
+    return <div className="cost-loading">Calculating costs...</div>;
+  }
+
+  if (error) {
+    return <div className="cost-error">Error calculating costs</div>;
+  }
+
+  return (
+    <div className="cost-display">
+      <h3>Upload Cost Estimate</h3>
+      
+      <div className="cost-breakdown">
+        <div className="cost-item">
+          <span>Storage Cost:</span>
+          <span>
+            {storageCost ? formatCostDisplay(storageCost.storageCost, 'WAL') : '---'}
+          </span>
+        </div>
+        
+        <div className="cost-item">
+          <span>Write Cost:</span>
+          <span>
+            {storageCost ? formatCostDisplay(storageCost.writeCost, 'WAL') : '---'}
+          </span>
+        </div>
+        
+        <div className="cost-item">
+          <span>Tip Amount:</span>
+          <span>
+            {storageCost ? formatCostDisplay(tipAmountMist, 'SUI') : '---'}
+          </span>
+        </div>
+        
+        <div className="cost-total">
+          <span>Total Cost:</span>
+          <span>
+            {storageCost ? formatTotalCost(tipAmountMist, storageCost.totalCost) : '---'}
+          </span>
+        </div>
+      </div>
+      
+      <p className="cost-disclaimer">
+        Actual costs may vary based on current network conditions and file size.
+      </p>
+    </div>
+  );
+}
+```
+
+## Next Steps
+- Learn about [Deploy Flow](/guides/deploy-flow/) to deploy with cost awareness
