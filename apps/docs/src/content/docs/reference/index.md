@@ -3,16 +3,16 @@ title: API Reference
 description: Complete API reference for Site Builder SDK.
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+<!-- import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components'; -->
 
 The Site Builder SDK provides a comprehensive TypeScript API for building and deploying decentralized websites on Walrus + Sui. This reference covers all classes, functions, types, and interfaces available in the SDK.
 
 ## Core Classes
 
 <CardGrid stagger>
-	<Card title="WalrusSiteBuilderSdk" icon="rocket" link="/reference/walrus-site-builder-sdk">
+	<LinkCard title="WalrusSiteBuilderSdk" icon="rocket" href="/reference/walrus-site-builder-sdk">
 		Main SDK class for interacting with Walrus and Sui networks. Provides site creation, deployment, and management capabilities.
-	</Card>
+	</LinkCard>
 	<Card title="WalrusSiteDeployFlow" icon="deploy">
 		Manages the complete deployment flow from asset preparation to site updates on-chain.
 	</Card>
@@ -33,12 +33,12 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 	<Card title="IWalrusSiteConfig" icon="gear">
 		Configuration interface for Walrus Site Builder SDK settings including package ID and gas budget.
 	</Card>
-	<Card title="WSResources" icon="database" link="/reference/ws-resources">
+	<LinkCard title="WSResources" icon="database" href="/reference/ws-resources">
 		Walrus Site Resources & Metadata configuration including headers, routes, and site metadata.
-	</Card>
-	<Card title="Metadata" icon="tag" link="/reference/metadata">
+	</LinkCard>
+	<LinkCard title="Metadata" icon="tag" href="/reference/metadata">
 		Site metadata including link, image URL, description, project URL, and creator information.
-	</Card>
+	</LinkCard>
 	<Card title="Routes" icon="route">
 		Route mapping interface for defining URL patterns and their corresponding resources.
 	</Card>
@@ -47,9 +47,9 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 ## Data Types
 
 <CardGrid stagger>
-	<Card title="SiteData" icon="web" link="/reference/site-data">
+	<LinkCard title="SiteData" icon="web" href="/reference/site-data">
 		Complete site data structure containing resources, routes, metadata, and site name.
-	</Card>
+	</LinkCard>
 	<Card title="SiteDataDiff" icon="diff">
 		Represents differences between current and updated site data for efficient updates.
 	</Card>
@@ -59,9 +59,9 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 	<Card title="SuiResource" icon="blockchain">
 		On-chain resource information including blob ID, hash, headers, and byte ranges.
 	</Card>
-	<Card title="IAsset" icon="package" link="/reference/i-asset">
+	<LinkCard title="IAsset" icon="package" href="/reference/i-asset">
 		Asset interface containing path, content, and hash information for file processing.
-	</Card>
+	</LinkCard>
 </CardGrid>
 
 ## Transaction & Flow Types
@@ -84,9 +84,9 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 ## Content & File Types
 
 <CardGrid stagger>
-	<Card title="ContentType" icon="type" link="/reference/content-type">
+	<LinkCard title="ContentType" icon="type" href="/reference/content-type">
 		Comprehensive enum of MIME types for content classification and HTTP headers.
-	</Card>
+	</LinkCard>
 	<Card title="IFileManager" icon="folder-open">
 		Interface for file system operations including read, write, and change monitoring.
 	</Card>

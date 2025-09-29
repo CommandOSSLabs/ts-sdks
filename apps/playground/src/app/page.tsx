@@ -26,7 +26,7 @@ import { testFiles } from './files'
 const AGGREGATOR_URL = 'https://aggregator.walrus-testnet.walrus.space'
 const WALRUSCAN_URL = 'https://walruscan.com/testnet'
 const SUIVISION_URL = 'https://testnet.suivision.xyz'
-const PORTAL_HOST = 'localhost:3001'
+const PORTAL_HOST = 'localhost:3000'
 const PORTAL_HTTPS = false
 
 const getContentByteLength = (content: string | Uint8Array): number => {

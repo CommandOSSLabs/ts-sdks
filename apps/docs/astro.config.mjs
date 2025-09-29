@@ -24,7 +24,7 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Quick Start',
-          items: [{ label: 'Installing', slug: 'quick-start/installing' }]
+          autogenerate: { directory: 'quick-start' }
         },
         {
           label: 'Guides',
@@ -35,7 +35,7 @@ export default defineConfig({
         },
         {
           label: 'Examples',
-          items: [{ label: 'Playground', slug: 'examples' }]
+          autogenerate: { directory: 'examples' }
         },
         {
           label: 'API Reference',
