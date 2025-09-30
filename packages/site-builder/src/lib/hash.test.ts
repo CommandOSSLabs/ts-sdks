@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { describe, test } from 'node:test'
-import { sha256ToU256 } from './hash.ts'
+import { sha256ToU256 } from './hash'
 
 describe('sha256ToU256', () => {
   // Tests verify that sha256ToU256 matches Rust's U256::from_le_bytes behavior

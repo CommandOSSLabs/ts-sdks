@@ -5,6 +5,14 @@
     "clientKind": "git",
     "useIgnoreFile": true
   },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!apps/web/vite-env.d.ts",
+      "!packages/shadcn/src/components"
+    ]
+  },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -12,7 +20,19 @@
   },
   "linter": {
     "enabled": true,
-    "rules": { "recommended": true }
+    "rules": {
+      "recommended": true,
+      "a11y": {
+        "useKeyWithClickEvents": "off",
+        "noStaticElementInteractions": "off"
+      },
+      "correctness": {
+        "useUniqueElementIds": "off"
+      },
+      "suspicious": {
+        "noUnknownAtRules": "off"
+      }
+    }
   },
   "javascript": {
     "formatter": {

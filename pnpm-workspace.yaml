@@ -5,9 +5,9 @@ packages:
 catalog:
   '@mysten/dapp-kit': ^0.18.0
   '@mysten/enoki': ^0.12.0
-  '@mysten/sui': ^1.38.0
+  '@mysten/sui': 1.38.0
   '@mysten/wallet-standard': ^0.17.0
-  '@mysten/walrus': ^0.7.0
+  '@mysten/walrus': 0.7.0
   '@mysten/zksend': ^0.14.0
   '@types/node': ^22.13.4
   typescript: ^5.9.2

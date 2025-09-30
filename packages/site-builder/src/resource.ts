@@ -1,6 +1,6 @@
 import type { WalrusClient } from '@mysten/walrus'
 import { contentTypeFromFilePath } from './content'
-import { QUILT_PATCH_ID_INTERNAL_HEADER } from './lib/constatnts'
+import { QUILT_PATCH_ID_INTERNAL_HEADER } from './lib/constants'
 import type { IAsset, Resource, SiteData, WSResources } from './types'
 
 export class ResourceManager {

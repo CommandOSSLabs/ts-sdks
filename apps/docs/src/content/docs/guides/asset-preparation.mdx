@@ -1,0 +1,183 @@
+---
+title: Asset Preparation
+description: Learn how to prepare and validate assets for deployment with the Site Builder SDK.
+badge: { text: 'Guide', variant: 'note' }
+sidebar:
+  order: 3
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Proper asset preparation is crucial for successful deployment of decentralized websites. This guide covers file validation, content processing, metadata generation, and optimization strategies to ensure your assets are ready for deployment on Walrus + Sui networks.
+
+## Overview
+
+Asset preparation includes:
+- **File validation** - Ensure files are properly formatted and accessible
+- **Content processing** - Convert and optimize file content
+- **Hash calculation** - Generate cryptographic hashes for integrity
+- **Metadata generation** - Create asset metadata and routing information
+- **Size optimization** - Compress and minimize file sizes
+
+## Basic Asset Structure
+
+### IAsset Interface
+
+All assets must conform to the `IAsset` interface:
+
+```typescript
+interface IAsset {
+  path: string;        // File path in workspace
+  content: Uint8Array; // File content as bytes
+  hash: string;        // SHA256 hash
+  hashU256: string;    // U256 formatted hash
+}
+```
+
+### Creating Assets
+
+<Tabs syncKey="asset-creation">
+<TabItem label="From Text Content">
+
+```typescript
+import { getSHA256Hash, sha256ToU256 } from '@cmdoss/site-builder';
+
+async function createTextAsset(path: string, content: string): Promise<IAsset> {
+  const encoder = new TextEncoder();
+  const contentBytes = encoder.encode(content);
+  const hash = await getSHA256Hash(contentBytes);
+  const hashU256 = sha256ToU256(hash);
+
+  return {
+    path,
+    content: contentBytes,
+    hash,
+    hashU256
+  };
+}
+
+// Usage
+const htmlAsset = await createTextAsset('index.html', `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Site</title>
+</head>
+<body>
+    <h1>Hello World!</h1>
+</body>
+</html>
+`);
+```
+
+</TabItem>
+<TabItem label="From File Upload">
+
+```typescript
+async function createFileAsset(file: File): Promise<IAsset> {
+  const arrayBuffer = await file.arrayBuffer();
+  const contentBytes = new Uint8Array(arrayBuffer);
+  const hash = await getSHA256Hash(contentBytes);
+  const hashU256 = sha256ToU256(hash);
+
+  return {
+    path: file.name,
+    content: contentBytes,
+    hash,
+    hashU256
+  };
+}
+
+// Usage with file input
+const fileInput = document.getElementById('file-input') as HTMLInputElement;
+fileInput.addEventListener('change', async (event) => {
+  const file = event.target.files?.[0];
+  if (file) {
+    const asset = await createFileAsset(file);
+    console.log('Created asset:', asset);
+  }
+});
+```
+
+</TabItem>
+<TabItem label="From Binary Data">
+
+```typescript
+async function createBinaryAsset(path: string, binaryData: ArrayBuffer): Promise<IAsset> {
+  const contentBytes = new Uint8Array(binaryData);
+  const hash = await getSHA256Hash(contentBytes);
+  const hashU256 = sha256ToU256(hash);
+
+  return {
+    path,
+    content: contentBytes,
+    hash,
+    hashU256
+  };
+}
+
+// Usage
+const imageResponse = await fetch('https://example.com/image.png');
+const imageData = await imageResponse.arrayBuffer();
+const imageAsset = await createBinaryAsset('images/logo.png', imageData);
+```
+
+</TabItem>
+</Tabs>
+
+## React Hook Implementation
+
+### Asset Preparation Hook
+
+```typescript
+import { useState, useEffect } from 'react';
+
+export function useAssetPreparation(initialAssets: IAsset[]) {
+  const [assets, setAssets] = useState<IAsset[]>(initialAssets);
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  const validateAssets = async () => {
+    setLoading(true);
+    try {
+      const result = await validateAssets(assets);
+      setValidation(result);
+    } catch (error) {
+      console.error('Validation failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const optimizeAssets = async () => {
+    setLoading(true);
+    try {
+      const optimized = await optimizeImageAssets(assets);
+      const compressed = compressTextAssets(optimized);
+      setAssets(compressed);
+    } catch (error) {
+      console.error('Optimization failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    if (assets.length > 0) {
+      validateAssets();
+    }
+  }, [assets]);
+  
+  return {
+    assets,
+    validation,
+    loading,
+    validateAssets,
+    optimizeAssets,
+    setAssets
+  };
+}
+```
+
+## Next Steps
+- Check [Cost Calculation](/guides/cost-calculation/) for deployment pricing

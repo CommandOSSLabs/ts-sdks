@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { describe, test } from 'node:test'
-import { objectIdToWalrusSiteUrl } from './objectIdToWalrusSiteUrl.ts'
+import { objectIdToWalrusSiteUrl } from './objectIdToWalrusSiteUrl'
 
 const DEFAULT_PORTAL = 'localhost:3000'
 
