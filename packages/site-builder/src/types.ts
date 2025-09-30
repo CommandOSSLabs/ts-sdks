@@ -261,6 +261,12 @@ export interface IWalrusSiteDeployFlow {
    * Cleans up temporary assets and resources.
    */
   cleanupAssets(): Promise<void>
+
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | EventListenerOptions
+  ): void
 }
 
 // #endregion
