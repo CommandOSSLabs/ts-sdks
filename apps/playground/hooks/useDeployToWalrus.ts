@@ -1,3 +1,5 @@
+'use client'
+
 import {
   type IAsset,
   type ICertifiedBlob,
@@ -8,12 +10,11 @@ import {
 } from '@cmdoss/site-builder'
 import {
   useCurrentAccount,
-  useCurrentWallet,
   useSignAndExecuteTransaction,
   useSuiClient
 } from '@mysten/dapp-kit'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { walrusClient } from '@/lib/walrus'
+import { useWalrusClient } from './useWalrusClient'
 
 export enum DeploySteps {
   Idle,
@@ -25,8 +26,8 @@ export enum DeploySteps {
 
 export function useDeployToWalrus(assets: IAsset[]) {
   const suiClient = useSuiClient()
-  const { currentWallet } = useCurrentWallet()
   const currentAccount = useCurrentAccount()
+  const walrusClient = useWalrusClient()
   const { mutateAsync: signAndExecuteTransaction } =
     useSignAndExecuteTransaction({
       execute: async ({ bytes, signature }) =>
@@ -47,18 +48,17 @@ export function useDeployToWalrus(assets: IAsset[]) {
   const [loading, setLoading] = useState(false)
 
   const sdk = useMemo(() => {
-    if (suiClient && walrusClient && currentAccount && currentWallet) {
+    if (suiClient && walrusClient && currentAccount) {
       console.log('Initializing WalrusSiteBuilderSdk...')
       return new WalrusSiteBuilderSdk(
         walrusClient,
         suiClient,
         currentAccount,
-        signAndExecuteTransaction,
-        currentWallet
+        signAndExecuteTransaction
       )
     }
     return undefined
-  }, [suiClient, currentAccount, currentWallet, signAndExecuteTransaction])
+  }, [suiClient, currentAccount, signAndExecuteTransaction, walrusClient])
 
   const [certifiedBlobs, setCertifiedBlobs] = useState<ICertifiedBlob[]>([])
   const [deployedSiteId, setDeployedSiteId] = useState<string | undefined>()
@@ -75,14 +75,7 @@ export function useDeployToWalrus(assets: IAsset[]) {
     }
     deployFlow.addEventListener('progress', onProress)
     deployFlow.addEventListener('transaction', onTransaction)
-
-    return () => {
-      deployFlow.removeEventListener('progress', onProress as EventListener)
-      deployFlow.removeEventListener(
-        'transaction',
-        onTransaction as EventListener
-      )
-    }
+    // TODO: clean up listeners
   }, [deployFlow])
 
   const handlePrepareAssets = useCallback(async () => {

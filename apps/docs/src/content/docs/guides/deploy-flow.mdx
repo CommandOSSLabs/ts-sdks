@@ -33,12 +33,12 @@ Before starting the deployment flow, ensure you have:
 
 ```typescript
 import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
-import { walrusClient } from '@/lib/walrus';
 import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 
 function MyDeployComponent() {
   const suiClient = useSuiClient();
   const currentAccount = useCurrentAccount();
+  const walrusClient = useWalrusClient();
   const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
   
   // Initialize SDK

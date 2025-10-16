@@ -1,12 +1,8 @@
 import type { SuiClient } from '@mysten/sui/client'
 import { Transaction } from '@mysten/sui/transactions'
 import type { WalrusClient } from '@mysten/walrus'
-import type {
-  IWalrusSiteConfig,
-  Metadata,
-  SiteData,
-  SiteDataDiff
-} from './types'
+import { mainPackage } from './lib/constants'
+import type { Metadata, SiteData, SiteDataDiff } from './types'
 
 const DEFAULT_SITE_NAME = 'My Walrus Site'
 const DEFAULT_SITE_METADATA: Metadata = {
@@ -14,15 +10,11 @@ const DEFAULT_SITE_METADATA: Metadata = {
   description: 'A walrus site created using Wal-0!',
   creator: 'Wal-0 Team'
 }
-const DEFAULT_WALRUS_SITE_CONFIG: IWalrusSiteConfig = {
-  // Latest Walrus Site Package, get from https://raw.githubusercontent.com/MystenLabs/walrus-sites/refs/heads/mainnet/sites-config.yaml
-  package: '0xf99aee9f21493e1590e7e5a9aea6f343a1f381031a04a732724871fc294be799'
-}
+
 export class SiteManager {
   constructor(
     public walrus: WalrusClient,
-    public sui: SuiClient,
-    public config: IWalrusSiteConfig = DEFAULT_WALRUS_SITE_CONFIG
+    public sui: SuiClient
   ) {}
 
   async getSiteUpdates(
@@ -45,6 +37,8 @@ export class SiteManager {
     siteId: string | undefined
   ): Transaction {
     console.log('Starting to update site resources on chain')
+    const network = this.sui.network === 'mainnet' ? 'mainnet' : 'testnet'
+    const packageId = mainPackage[network].packageId
 
     const tx = new Transaction()
     if (siteId) {
@@ -54,7 +48,7 @@ export class SiteManager {
       const metadata = siteData.metadata ?? DEFAULT_SITE_METADATA
       // Create metadata
       const createdMetadata = tx.moveCall({
-        target: `${this.config.package}::metadata::new_metadata`,
+        target: `${packageId}::metadata::new_metadata`,
         arguments: [
           tx.pure.option('string', metadata.link),
           tx.pure.option('string', metadata.image_url),
@@ -66,7 +60,7 @@ export class SiteManager {
       // Create Site
       // TODO: handle site update
       const createdSite = tx.moveCall({
-        target: `${this.config.package}::site::new_site`,
+        target: `${packageId}::site::new_site`,
         arguments: [
           tx.pure.string(siteData.site_name ?? DEFAULT_SITE_NAME),
           createdMetadata
@@ -75,7 +69,7 @@ export class SiteManager {
 
       // Update site name
       tx.moveCall({
-        target: `${this.config.package}::site::update_name`,
+        target: `${packageId}::site::update_name`,
         arguments: [
           createdSite,
           tx.pure.string(siteData.site_name ?? DEFAULT_SITE_NAME)
@@ -87,7 +81,7 @@ export class SiteManager {
         const range = resource.info.range
         // if (!range || (!range.start && !range.end)) continue
         const createdRange = tx.moveCall({
-          target: `${this.config.package}::site::new_range_option`,
+          target: `${packageId}::site::new_range_option`,
           arguments: [
             tx.pure.option('u64', range?.start),
             tx.pure.option('u64', range?.end)
@@ -95,7 +89,7 @@ export class SiteManager {
         })
 
         const createdResource = tx.moveCall({
-          target: `${this.config.package}::site::new_resource`,
+          target: `${packageId}::site::new_resource`,
           arguments: [
             tx.pure.string(resource.full_path),
             tx.pure.u256(resource.info.blob_id_le_u256),
@@ -107,7 +101,7 @@ export class SiteManager {
         // Add Headers
         for (const [key, value] of Object.entries(resource.info.headers)) {
           tx.moveCall({
-            target: `${this.config.package}::site::add_header`,
+            target: `${packageId}::site::add_header`,
             arguments: [
               createdResource,
               tx.pure.string(key),
@@ -117,7 +111,7 @@ export class SiteManager {
         }
 
         tx.moveCall({
-          target: `${this.config.package}::site::add_resource`,
+          target: `${packageId}::site::add_resource`,
           arguments: [createdSite, createdResource]
         })
       }
@@ -126,13 +120,13 @@ export class SiteManager {
       if (siteData.routes) {
         // Create Routes Object
         tx.moveCall({
-          target: `${this.config.package}::site::create_routes`,
+          target: `${packageId}::site::create_routes`,
           arguments: [createdSite]
         })
         // Insert routes
         for (const [path, res] of Object.entries(siteData.routes || {})) {
           tx.moveCall({
-            target: `${this.config.package}::site::insert_route`,
+            target: `${packageId}::site::insert_route`,
             arguments: [createdSite, tx.pure.string(path), tx.pure.string(res)]
           })
         }

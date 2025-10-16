@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { walrusClient } from '../lib/walrus'
 import { queryKeys } from './queryKeys'
+import { useWalrusClient } from './useWalrusClient'
 
 // Hook for getting current epoch
 export function useCurrentEpoch() {
+  const walrusClient = useWalrusClient()
+
   return useQuery({
     queryKey: queryKeys.currentEpoch(),
     queryFn: async () => {

@@ -1,3 +1,5 @@
+'use client'
+
 import { useCurrentAccount } from '@mysten/dapp-kit'
 import Image from 'next/image'
 import { useGetWalTokens } from '../hooks/useGetWalTokens'

@@ -2,8 +2,7 @@ import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client'
 import type { Transaction } from '@mysten/sui/transactions'
 import type {
   SuiSignAndExecuteTransactionInput,
-  WalletAccount,
-  WalletWithRequiredFeatures
+  WalletAccount
 } from '@mysten/wallet-standard'
 import type { WalrusClient } from '@mysten/walrus'
 
@@ -21,6 +20,14 @@ type UseSignAndExecuteTransactionArgs = PartialBy<
 type ISignAndExecuteTransaction = (
   variables: UseSignAndExecuteTransactionArgs
 ) => Promise<SuiTransactionBlockResponse>
+
+// #endregion
+
+// ##########################################################################
+// #region Configuration Constants
+// ##########################################################################
+
+export type Config = Record<'mainnet' | 'testnet', { packageId: string }>
 
 // #endregion
 
@@ -49,10 +56,40 @@ export interface ICertifiedBlob {
 // #region Configuration Types
 // ##########################################################################
 
-export interface IWalrusSiteConfig {
-  package: string
-  gasBudget?: number
-  checkExtend?: boolean
+export type FileChangedCallback = (arg: {
+  type: 'updated' | 'removed'
+  path: string
+}) => void
+
+export interface IFileManager {
+  /**
+   * Mount and initialize the file manager
+   *
+   * If `data` is provided, it will be used to initialize the workspace.
+   * If `force` is true, it will unmount any existing workspace before mounting.
+   */
+  mount(data?: ArrayBuffer, force?: boolean): Promise<void>
+  /** Write a file to the workspace */
+  writeFile(path: string, content: Uint8Array): Promise<void>
+  /** Remove a file from the workspace */
+  removeFile(path: string): Promise<void>
+  /** Read a file from the workspace */
+  readFile(path: string): Promise<Uint8Array>
+  /** List all files in the workspace recursively */
+  listFiles(): Promise<string[]>
+  /**
+   * Register a callback to be invoked when a file is changed (added, updated, or removed)
+   * Returns an unsubscribe function to remove the listener
+   */
+  onFileChange(callback: FileChangedCallback): () => void
+  /**
+   * Clear all files in the workspace
+   *
+   * Note: **WILL NOT** trigger onFileChange callbacks
+   */
+  clear(): Promise<void>
+  /** Unmount the file manager and release resources */
+  unmount(): void
 }
 
 /**
@@ -261,12 +298,6 @@ export interface IWalrusSiteDeployFlow {
    * Cleans up temporary assets and resources.
    */
   cleanupAssets(): Promise<void>
-
-  removeEventListener(
-    type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: boolean | EventListenerOptions
-  ): void
 }
 
 // #endregion
@@ -295,16 +326,6 @@ export interface IWalrusSiteBuilderSdk {
    * The function used to sign and execute transactions.
    */
   signAndExecuteTransaction: ISignAndExecuteTransaction
-
-  /**
-   * The wallet used for interacting with the user's wallet.
-   */
-  wallet: WalletWithRequiredFeatures
-
-  /**
-   * The Walrus Site Builder SDK configuration.
-   */
-  config: IWalrusSiteConfig
 
   /**
    * Create a deploy flow for deploying a Walrus Site.

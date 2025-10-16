@@ -9,8 +9,8 @@ import {
   useQueryClient
 } from '@tanstack/react-query'
 import { useReducer } from 'react'
-import { walrusClient } from '../lib/walrus'
 import { queryKeys } from './queryKeys'
+import { useWalrusClient } from './useWalrusClient'
 
 /**
  * Helper function to invalidate balance queries after transactions
@@ -117,6 +117,7 @@ export const uploadReducer = (
  * @returns Object containing upload state and step functions
  */
 export function useWalrusUpload() {
+  const walrusClient = useWalrusClient()
   const currentAccount = useCurrentAccount()
   const { mutateAsync: signAndExecuteTransaction } =
     useSignAndExecuteTransaction()

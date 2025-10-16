@@ -1,6 +1,5 @@
 export * from './content'
 export * from './deploy-flow'
-export * from './file-manager'
 export * from './lib'
 export * from './manager'
 export * from './resource'

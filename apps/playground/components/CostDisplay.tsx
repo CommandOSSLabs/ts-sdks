@@ -1,3 +1,5 @@
+'use client'
+
 import { useStorageCost } from '../hooks/useStorageCost'
 import { formatCostDisplay, formatTotalCost } from '../lib/costFormatting'
 

@@ -1,9 +1,5 @@
-import {
-  getSHA256Hash,
-  type IAsset,
-  sha256ToU256,
-  ZenFsFileManager
-} from '@cmdoss/site-builder'
+import { ZenFsFileManager } from '@cmdoss/file-manager'
+import { getSHA256Hash, type IAsset, sha256ToU256 } from '@cmdoss/site-builder'
 import { useEffect, useMemo, useState } from 'react'
 
 export function useZenFsWorkspace(workspaceDir = '/workspace') {
@@ -22,11 +18,10 @@ export function useZenFsWorkspace(workspaceDir = '/workspace') {
     setFileManager(fm)
 
     // Load existing files once the file manager is ready
-    fm.ready.then(async () => {
+    fm.mount(undefined, true).then(async () => {
       try {
         const assets: IAsset[] = []
         const files = await fm.listFiles()
-        console.log('Existing files in workspace:', files)
         for (const filePath of files) {
           const content = await fm.readFile(filePath)
           const hash = await getSHA256Hash(content)
@@ -56,11 +51,12 @@ export function useZenFsWorkspace(workspaceDir = '/workspace') {
             setAssets(prev => prev.filter(f => f.path !== changed.path))
             break
           case 'updated': {
-            const hash = await getSHA256Hash(changed.content)
+            const content = await fm.readFile(changed.path)
+            const hash = await getSHA256Hash(content)
             const hashU256 = sha256ToU256(hash)
             const newFile: IAsset = {
               path: changed.path,
-              content: changed.content,
+              content,
               hash,
               hashU256
             }

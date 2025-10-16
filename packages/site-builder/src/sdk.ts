@@ -2,8 +2,7 @@ import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client'
 import type { Transaction } from '@mysten/sui/transactions'
 import type {
   SuiSignAndExecuteTransactionInput,
-  WalletAccount,
-  WalletWithRequiredFeatures
+  WalletAccount
 } from '@mysten/wallet-standard'
 import type { WalrusClient } from '@mysten/walrus'
 import { WalrusSiteDeployFlow } from './deploy-flow'
@@ -29,17 +28,6 @@ type ISignAndExecuteTransaction = (
   variables: UseSignAndExecuteTransactionArgs
 ) => Promise<SuiTransactionBlockResponse>
 
-interface IWalrusSiteConfig {
-  package: string
-  gasBudget?: number
-  checkExtend?: boolean
-}
-
-const DEFAULT_WALRUS_SITE_CONFIG: IWalrusSiteConfig = {
-  // Latest Walrus Site Package, get from https://raw.githubusercontent.com/MystenLabs/walrus-sites/refs/heads/mainnet/sites-config.yaml
-  package: '0xf99aee9f21493e1590e7e5a9aea6f343a1f381031a04a732724871fc294be799'
-}
-
 export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
   constructor(
     /**
@@ -57,7 +45,7 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
     /**
      * The function used to sign and execute transactions.
      *
-     * Get by calling `useSignAndExecuteTransaction` hook.
+     * Get by calling `useSignAndExecuteTransaction` hook in `'@mysten/dapp-kit'`.
      *
      * ```ts
      * const { mutateAsync: signAndExecuteTransaction } =
@@ -76,15 +64,7 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
      *   })
      * ```
      */
-    public signAndExecuteTransaction: ISignAndExecuteTransaction,
-    /**
-     * The wallet used for interacting with the user's wallet.
-     */
-    public wallet: WalletWithRequiredFeatures,
-    /**
-     * The Walrus Site Builder SDK configuration.
-     */
-    public config: IWalrusSiteConfig = DEFAULT_WALRUS_SITE_CONFIG
+    public signAndExecuteTransaction: ISignAndExecuteTransaction
   ) {}
 
   /**

@@ -1,32 +1,10 @@
 'use client'
 
-import { SuiClientProvider, WalletProvider } from '@mysten/dapp-kit'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { networkConfig } from '@/app/networkConfig'
-import ConnectWalletButton from './ConnectWalletButton'
-import Footer from './Footer'
-import WalletDetails from './WalletDetails'
-export type ProvidersAndLayoutProps = {
-  children: React.ReactNode
-}
+import ConnectWalletButton from '@/components/ConnectWalletButton'
+import Footer from '@/components/Footer'
+import WalletDetails from '@/components/WalletDetails'
 
-export default function ProvidersAndLayout(props: ProvidersAndLayoutProps) {
-  const queryClient = new QueryClient()
-
-  const { children } = props
-  return (
-    <QueryClientProvider client={queryClient}>
-      <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
-        <WalletProvider autoConnect>
-          <Layout>{children}</Layout>
-        </WalletProvider>
-      </SuiClientProvider>
-    </QueryClientProvider>
-  )
-}
-
-function Layout(props: ProvidersAndLayoutProps) {
-  const { children } = props
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="font-montreal max-w-screen w-full min-h-screen p-4 bg-[#0C0F1D] bg-gradient-to-b from-[#0C0F1D80] to-[#97F0E580] from-[77.3%] flex flex-col text-[#F7F7F7] gap-4">
       <div className="relative h-max w-full flex flex-col items-center px-4 md:px-8 lg:px-10 pb-8 pt-8 border-[3px] border-[#99EFE4] rounded-xl overflow-hidden bg-[#090e1d]">

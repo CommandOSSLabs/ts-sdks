@@ -1,16 +1,17 @@
 import {
   useCurrentAccount,
-  useSignAndExecuteTransaction
+  useSignAndExecuteTransaction,
+  useSuiClient
 } from '@mysten/dapp-kit'
 import { coinWithBalance, Transaction } from '@mysten/sui/transactions'
 import { MIST_PER_SUI, parseStructTag } from '@mysten/sui/utils'
 import { TESTNET_WALRUS_PACKAGE_CONFIG } from '@mysten/walrus'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { suiClient } from '../lib/walrus'
 import { queryKeys } from './queryKeys'
 
 // Hook for getting WAL tokens
 export function useGetWalTokens() {
+  const suiClient = useSuiClient()
   const currentAccount = useCurrentAccount()
   const { mutateAsync: signAndExecuteTransaction } =
     useSignAndExecuteTransaction()
