@@ -2,17 +2,18 @@
 
 import { useSuiClient } from '@mysten/dapp-kit'
 import type { SuiClient } from '@mysten/sui/client'
-import { WalrusClient } from '@mysten/walrus'
-import { createContext, type ReactNode, useMemo } from 'react'
+import type { WalrusClient } from '@mysten/walrus'
+import { createContext, type ReactNode, useEffect, useState } from 'react'
 import { useNetworkConfig } from '@/configs/networkConfig'
 
-function createWalrusClient(
+async function createWalrusClient(
   suiClient: SuiClient,
   network: 'mainnet' | 'testnet'
-): WalrusClient {
+): Promise<WalrusClient> {
   if (typeof window === 'undefined')
     throw new Error('WalrusClient can only be used in the browser.')
 
+  const { WalrusClient } = await import('@mysten/walrus')
   return new WalrusClient({
     network,
     suiClient,
@@ -22,9 +23,7 @@ function createWalrusClient(
       sendTip: {
         max: 1000
       }
-    },
-    wasmUrl:
-      'https://unpkg.com/@mysten/walrus-wasm@latest/web/walrus_wasm_bg.wasm'
+    }
   })
 }
 
@@ -34,10 +33,10 @@ export const WalrusClientProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const suiClient = useSuiClient()
   const network = useNetworkConfig()
-  const walrusClient = useMemo(
-    () => createWalrusClient(suiClient, network.name),
-    [suiClient, network]
-  )
+  const [walrusClient, setWalrusClient] = useState<WalrusClient | null>(null)
+  useEffect(() => {
+    createWalrusClient(suiClient, network.name).then(setWalrusClient)
+  }, [suiClient, network])
 
   return (
     <WalrusClientContext.Provider value={walrusClient}>

@@ -130,6 +130,7 @@ export function useWalrusUpload() {
 
   // Encoding a file
   const encodeFile = async (file: File) => {
+    if (!walrusClient) throw new Error('WalrusClient not initialized')
     try {
       // Convert file to WalrusFile format
       const files = [
