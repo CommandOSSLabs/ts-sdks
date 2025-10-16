@@ -1,3 +1,5 @@
+'use client'
+
 import { useSuiClient } from '@mysten/dapp-kit'
 import type { SuiClient } from '@mysten/sui/client'
 import { WalrusClient } from '@mysten/walrus'
@@ -7,8 +9,9 @@ import { useNetworkConfig } from '@/configs/networkConfig'
 function createWalrusClient(
   suiClient: SuiClient,
   network: 'mainnet' | 'testnet'
-): WalrusClient | null {
-  if (typeof window === 'undefined') return null
+): WalrusClient {
+  if (typeof window === 'undefined')
+    throw new Error('WalrusClient can only be used in the browser.')
 
   return new WalrusClient({
     network,
@@ -37,6 +40,8 @@ export const WalrusClientProvider: React.FC<{ children: ReactNode }> = ({
   )
 
   return (
-    <WalrusClientContext value={walrusClient}>{children}</WalrusClientContext>
+    <WalrusClientContext.Provider value={walrusClient}>
+      {children}
+    </WalrusClientContext.Provider>
   )
 }

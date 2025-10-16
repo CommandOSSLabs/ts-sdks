@@ -1,3 +1,5 @@
+'use client'
+
 import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from './queryKeys'
 import { useWalrusClient } from './useWalrusClient'
