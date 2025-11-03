@@ -1,22 +1,30 @@
 ---
-title: Welcome to Site Builder SDK
-description: Get started building decentralized websites with Site Builder SDK.
+title: CommandOSS TypeScript SDKs
+description: Build and deploy decentralized websites on Walrus + Sui with comprehensive TypeScript SDKs.
 template: splash
 hero:
-  tagline: Build and deploy decentralized websites on Walrus + Sui
+  tagline: Deploy decentralized websites on Walrus storage with Sui blockchain integration - entirely in the browser
   image:
-    file: ../../assets/houston.webp
+    file: ../../assets/commandoss_logo.jpg
   actions:
     - text: Get Started
       link: /quick-start/installing/
       icon: right-arrow
-    - text: API Reference
-      link: /reference/
+    - text: View Playground
+      link: http://localhost:3000
       icon: external
       variant: minimal
+    - text: API Reference
+      link: /reference/
+      icon: open-book
+      variant: secondary
 head:
   - tag: title
-    content: Site Builder SDK Documentation
+    content: CommandOSS TypeScript SDKs - Decentralized Web Development
+  - tag: meta
+    attrs:
+      name: description
+      content: Comprehensive TypeScript SDKs for building and deploying decentralized websites on Walrus storage with Sui blockchain integration.
   - tag: style
     content: >-
       .hero-html {
@@ -52,95 +60,184 @@ head:
       .demo {
         padding: 1rem;
         max-width: 50rem;
-        margin: 0 auto 8rem;
-        margin-top: 100px;
-        background-color: var(--sl-color-black);
+        margin: 0 auto 4rem;
+        margin-top: 2rem;
+        background: linear-gradient(135deg, var(--sl-color-gray-6) 0%, var(--sl-color-gray-5) 100%);
+        border-radius: 1rem;
+        border: 1px solid var(--sl-color-gray-4);
         filter:
-          drop-shadow(0 0 0.25rem var(--sl-color-blue-low))
-          drop-shadow(-0.5rem 0.5rem 1rem var(--sl-color-accent))
-          drop-shadow(0.5rem -0.5rem 1rem var(--sl-color-blue-low));
+          drop-shadow(0 0 0.5rem var(--sl-color-blue-low))
+          drop-shadow(0 0.25rem 1rem rgba(0, 0, 0, 0.3));
       }
       @media (min-width: 30rem) {
         .demo {
           padding: 2.5rem;
         }
       }
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+      }
+      .feature-card {
+        background: var(--sl-color-gray-6);
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--sl-color-gray-4);
+      }
+      .feature-card h3 {
+        margin-top: 0;
+        color: var(--sl-color-white);
+      }
 ---
 
-## Installation
+## What's Inside?
+
+Our TypeScript SDKs provide everything you need to build decentralized websites:
+
+<div class="feature-grid">
+  <div class="feature-card">
+    <h3>🏗️ Site Builder Core</h3>
+    <p>Deploy static websites directly to Walrus storage with Sui blockchain integration. Handles asset management, blob storage, and site certification.</p>
+  </div>
+  <div class="feature-card">
+    <h3>⚛️ React Integration</h3>
+    <p>Ready-to-use React hooks and components for seamless integration. Complete file system management with reactive updates.</p>
+  </div>
+  <div class="feature-card">
+    <h3>📁 File Management</h3>
+    <p>Browser-based file system using ZenFS. Support for IndexedDB, ZIP, and ISO backends with real-time change notifications.</p>
+  </div>
+</div>
+
+## Quick Installation
 
 <Tabs syncKey="pkg">
 <TabItem label="npm">
 
 ```sh
+# Core SDK
 npm install @cmdoss/site-builder
+
+# React integration (optional)
+npm install @cmdoss/site-builder-react @cmdoss/file-manager
+
+# Required peer dependencies
+npm install @mysten/sui @mysten/wallet-standard @mysten/walrus
 ```
 
 </TabItem>
 <TabItem label="pnpm">
 
 ```sh
+# Core SDK
 pnpm add @cmdoss/site-builder
-```
 
+# React integration (optional)
+pnpm add @cmdoss/site-builder-react @cmdoss/file-manager
+
+# Required peer dependencies
+pnpm add @mysten/sui @mysten/wallet-standard @mysten/walrus
+```
 
 </TabItem>
 <TabItem label="yarn">
 
 ```sh
+# Core SDK
 yarn add @cmdoss/site-builder
+
+# React integration (optional)
+yarn add @cmdoss/site-builder-react @cmdoss/file-manager
+
+# Required peer dependencies
+yarn add @mysten/sui @mysten/wallet-standard @mysten/walrus
 ```
 
 </TabItem>
 </Tabs>
 
 :::tip[See it in action]
-Try Site Builder SDK in your browser:
-[open the playground](http://localhost:3000).
+Try the complete deployment flow in your browser: [Open the Playground →](http://localhost:3000)
 :::
-
 
 import { Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <div class="demo">
 
-## LLM documentation
+## Basic Usage Example
 
-We have `LLM` so you can 
+Here's how to deploy your first decentralized website:
 
-    <Tabs>
-    	<TabItem label="llms.txt">
-    		<iframe src="/llms.txt" title="llms.txt file for this site"></iframe>
-    	</TabItem>
-    	<TabItem label="llms-full.txt">
-    		<iframe
-    			src="/llms-full.txt"
-    			title="llms-full.txt file for this site"
-    		></iframe>
-    	</TabItem>
-    	<TabItem label="llms-small.txt">
-    		<iframe
-    			src="/llms-small.txt"
-    			title="llms-small.txt file for this site"
-    		></iframe>
-    	</TabItem>
-    </Tabs>
+```typescript
+import { WalrusSiteBuilderSdk, getSHA256Hash, sha256ToU256 } from '@cmdoss/site-builder'
+
+// Initialize the SDK
+const sdk = new WalrusSiteBuilderSdk(
+  walrusClient,
+  suiClient, 
+  activeAccount,
+  signAndExecuteTransaction
+)
+
+// Prepare your assets
+const content = '<h1>Hello Decentralized Web!</h1>'
+const contentBytes = new TextEncoder().encode(content)
+const hash = await getSHA256Hash(contentBytes)
+
+const assets = [{
+  path: '/index.html',
+  content: contentBytes,
+  hash,
+  hashU256: sha256ToU256(hash)
+}]
+
+// Deploy in 4 simple steps
+const deployFlow = sdk.deployFlow(assets)
+await deployFlow.prepareAssets()     // 1. Register blobs
+await deployFlow.uploadAssets(5)     // 2. Upload to Walrus (5 epochs)
+await deployFlow.certifyAssets()     // 3. Certify on Sui
+const siteId = await deployFlow.updateSite()  // 4. Create/update site
+
+console.log(`Site deployed! ID: ${siteId}`)
+```
 
 </div>
 
-## Next steps
+## Architecture Overview
+
+Our SDKs are built with a modular architecture:
+
+- **[@cmdoss/site-builder]** - Core SDK with Walrus + Sui integration
+- **[@cmdoss/site-builder-react]** - React hooks and components  
+- **[@cmdoss/file-manager]** - Browser file system with ZenFS
+- **Playground App** - Interactive demo and testing environment
+- **Documentation** - Comprehensive guides and API reference
+
+## Next Steps
 
 <CardGrid stagger>
-	<Card title="Get Started" icon="rocket">
-		Follow our [installation guide](/quick-start/installing/) to set up Site Builder SDK in your project.
+	<Card title="Quick Start Guide" icon="rocket">
+		Follow our [installation guide](/quick-start/installing/) to set up the SDKs in your project.
 	</Card>
-	<Card title="Explore Examples" icon="code">
-		Check out [real-world examples](/examples/) to see Site Builder SDK in action.
+	<Card title="Deployment Guide" icon="deploy">
+		Learn the [complete deployment flow](/guides/deploy-flow/) from assets to live website.
+	</Card>
+	<Card title="React Integration" icon="react">
+		Discover [React hooks](/guides/file-management/) for seamless file management and deployment.
 	</Card>
 	<Card title="API Reference" icon="open-book">
-		Dive into the complete [API documentation](/reference/) for detailed usage.
+		Explore the complete [API documentation](/reference/) with detailed examples.
 	</Card>
-	<Card title="Configuration" icon="setting">
-		Learn about [configuration options](/guides/configuration/) and authentication setup.
+	<Card title="Live Examples" icon="code">
+		See [real-world examples](/examples/) and working code snippets.
+	</Card>
+	<Card title="Cost Calculator" icon="calculator">
+		Understand [storage costs](/guides/cost-calculation/) and optimize your deployments.
 	</Card>
 </CardGrid>
+
+[@cmdoss/site-builder]: https://www.npmjs.com/package/@cmdoss/site-builder
+[@cmdoss/site-builder-react]: https://www.npmjs.com/package/@cmdoss/site-builder-react
+[@cmdoss/file-manager]: https://www.npmjs.com/package/@cmdoss/file-manager

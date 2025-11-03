@@ -1,98 +1,235 @@
 ---
 title: File Management
-description: Learn how to manage files and assets using ZenFsFileManager in Site Builder SDK.
-badge: { text: 'Guide', variant: 'note' }
+description: Complete guide to browser-based file management using ZenFS and React integration.
 sidebar:
   order: 2
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Steps, Card, CardGrid } from '@astrojs/starlight/components';
 
-The Site Builder SDK provides a powerful file management system through `ZenFsFileManager`, a browser-based file system that allows you to create, read, update, and delete files in a virtual workspace. This guide covers everything you need to know about managing files for your decentralized websites.
+The Site Builder SDK provides a powerful browser-based file management system through ZenFS integration. This allows you to create, manage, and deploy websites entirely in the browser without any server infrastructure.
 
 ## Overview
 
-ZenFsFileManager provides:
-- **Browser-based file system** - No server required
-- **Real-time file watching** - Automatic updates when files change
-- **Asset preparation** - Automatic hash calculation and content processing
-- **Workspace isolation** - Multiple projects in separate directories
+Our file management system provides:
 
-## Basic Setup
+- 🌐 **Browser-based file system** - No server required, works entirely in the browser
+- ⚡ **Real-time file watching** - Automatic updates when files change
+- 📁 **Multiple backends** - IndexedDB, ZIP, and ISO support
+- 🔄 **Asset preparation** - Automatic hash calculation and content processing
+- 🏗️ **Workspace isolation** - Multiple projects in separate directories
+- ⚛️ **React integration** - Ready-to-use hooks and components
 
-### 1. Initialize File Manager
+## Architecture
 
-```typescript
-import { ZenFsFileManager } from '@cmdoss/site-builder';
+The file management system consists of three layers:
 
-// Create a new file manager for a specific workspace
-const fileManager = new ZenFsFileManager('/my-workspace');
+1. **ZenFS Core** - Browser file system implementation
+2. **File Manager** - Our wrapper with additional functionality
+3. **React Integration** - Hooks and components for React apps
 
-// Wait for the file manager to be ready
-await fileManager.ready;
+```mermaid
+graph TD
+    A[React Components] --> B[useZenFsWorkspace Hook]
+    B --> C[ZenFsFileManager]
+    C --> D[ZenFS Core]
+    D --> E[IndexedDB/ZIP/ISO]
 ```
 
-### 2. React Hook Integration
+## Core File Manager
 
-The playground uses a custom hook for seamless integration:
+### Basic Setup
 
 ```typescript
-import { useZenFsWorkspace } from '@/hooks/useZenFsWorkspace';
+import { ZenFsFileManager } from '@cmdoss/file-manager';
 
-function MyComponent() {
-  const {
-    assets,
-    loading,
-    fileManager,
-    clear
-  } = useZenFsWorkspace('/workspace');
+// Create a new file manager instance
+const fileManager = new ZenFsFileManager('/my-workspace', 'indexeddb');
 
-  // Use the file manager and assets
+// Mount the file system
+await fileManager.mount();
+
+// Now you can work with files
+await fileManager.writeFile('/index.html', '<h1>Hello World!</h1>');
+const content = await fileManager.readFile('/index.html');
+const files = await fileManager.listFiles();
+```
+
+### File Operations
+
+<Tabs syncKey="file-ops">
+<TabItem label="Write Files">
+
+```typescript
+// Write text content
+await fileManager.writeFile('/index.html', '<h1>Hello World!</h1>');
+
+// Write binary content
+const imageData = new Uint8Array([/* image bytes */]);
+await fileManager.writeFile('/logo.png', imageData);
+
+// Write from File object (e.g., from file input)
+const handleFileUpload = async (file: File) => {
+  const content = new Uint8Array(await file.arrayBuffer());
+  await fileManager.writeFile(`/${file.name}`, content);
+};
+```
+
+</TabItem>
+<TabItem label="Read Files">
+
+```typescript
+// Read file content as Uint8Array
+const content = await fileManager.readFile('/index.html');
+
+// Convert to string if it's text content
+const textContent = new TextDecoder().decode(content);
+
+// Read and process multiple files
+const files = await fileManager.listFiles();
+for (const filePath of files) {
+  const content = await fileManager.readFile(filePath);
+  console.log(`${filePath}: ${content.byteLength} bytes`);
 }
 ```
 
-## React Integration
-
-### Custom Hook Example
-
-Here's how the playground implements file management:
+</TabItem>
+<TabItem label="File Watching">
 
 ```typescript
-import { useZenFsWorkspace } from '@/hooks/useZenFsWorkspace';
+// Listen for file changes
+const unsubscribe = fileManager.onFileChange((change) => {
+  console.log(`File ${change.type}:`, change.path);
+  
+  if (change.type === 'updated') {
+    console.log('File was created or updated');
+  } else if (change.type === 'removed') {
+    console.log('File was deleted');
+  }
+});
 
-function FileManager() {
+// Clean up listener when done
+unsubscribe();
+```
+
+</TabItem>
+<TabItem label="Cleanup">
+
+```typescript
+// Clear all files in workspace
+await fileManager.clear();
+
+// Remove specific file
+await fileManager.removeFile('/old-file.txt');
+
+// Unmount file system (cleanup)
+fileManager.unmount();
+```
+
+</TabItem>
+</Tabs>
+
+## React Integration
+
+### useZenFsWorkspace Hook
+
+The main hook for React applications provides complete file management:
+
+```typescript
+import { useZenFsWorkspace } from '@cmdoss/site-builder-react';
+
+function MyComponent() {
   const {
-    assets,
-    loading,
-    fileManager,
-    clear
+    assets,        // Array of IAsset objects ready for deployment
+    loading,       // Boolean indicating if files are being loaded
+    totalSize,     // Total size of all files in bytes
+    fileManager,   // Direct access to file manager instance
+    clear          // Function to clear all files
   } = useZenFsWorkspace('/workspace');
+  
+  // Assets are automatically updated when files change
+  console.log(`Loaded ${assets.length} files (${totalSize} bytes)`);
+}
+```
 
-  const addTestFiles = async () => {
-    const testFiles = {
-      'index.html': '<h1>Hello World!</h1>',
-      'style.css': 'body { margin: 0; }'
-    };
+### File Upload Component
 
-    for (const [path, content] of Object.entries(testFiles)) {
-      await fileManager?.writeFile(path, content);
+Here's a complete file upload component:
+
+```typescript
+import { useZenFsWorkspace } from '@cmdoss/site-builder-react';
+import { useCallback } from 'react';
+
+function FileUploader() {
+  const { fileManager, assets, loading } = useZenFsWorkspace();
+  
+  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || !fileManager) return;
+    
+    for (const file of Array.from(files)) {
+      try {
+        const content = new Uint8Array(await file.arrayBuffer());
+        await fileManager.writeFile(`/${file.name}`, content);
+        console.log(`Uploaded: ${file.name}`);
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error);
+      }
     }
-  };
-
+  }, [fileManager]);
+  
+  const handleFolderUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || !fileManager) return;
+    
+    for (const file of Array.from(files)) {
+      try {
+        const content = new Uint8Array(await file.arrayBuffer());
+        // Preserve folder structure using webkitRelativePath
+        const path = file.webkitRelativePath || file.name;
+        await fileManager.writeFile(`/${path}`, content);
+        console.log(`Uploaded: ${path}`);
+      } catch (error) {
+        console.error(`Failed to upload ${file.name}:`, error);
+      }
+    }
+  }, [fileManager]);
+  
   return (
-    <div>
-      <button onClick={addTestFiles}>Add Test Files</button>
-      <button onClick={clear}>Clear All Files</button>
+    <div className="file-uploader">
+      <div className="upload-buttons">
+        <label className="upload-button">
+          📁 Upload Files
+          <input
+            type="file"
+            multiple
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+          />
+        </label>
+        
+        <label className="upload-button">
+          📂 Upload Folder
+          <input
+            type="file"
+            webkitdirectory="true"
+            onChange={handleFolderUpload}
+            style={{ display: 'none' }}
+          />
+        </label>
+      </div>
       
       {loading && <p>Loading files...</p>}
       
-      <ul>
+      <div className="file-list">
+        <h3>Files ({assets.length})</h3>
         {assets.map(asset => (
-          <li key={asset.path}>
-            {asset.path} - {asset.content.byteLength} bytes
-          </li>
+          <div key={asset.path} className="file-item">
+            <span>{asset.path}</span>
+            <span>{asset.content.byteLength} bytes</span>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
@@ -100,27 +237,310 @@ function FileManager() {
 
 ### File Explorer Component
 
-The playground includes a comprehensive file explorer:
+Create a comprehensive file browser:
 
 ```typescript
-import { FileExplorer } from '@/components/file-explorer/file-explorer';
+import { useState } from 'react';
+import { useZenFsWorkspace } from '@cmdoss/site-builder-react';
+import type { IAsset } from '@cmdoss/site-builder';
 
-function MyApp() {
-  const { assets } = useZenFsWorkspace('/workspace');
+interface FileExplorerProps {
+  className?: string;
+}
+
+function FileExplorer({ className }: FileExplorerProps) {
+  const { assets, fileManager } = useZenFsWorkspace();
+  const [selectedFile, setSelectedFile] = useState<IAsset | null>(null);
+  
+  const handleFileSelect = (asset: IAsset) => {
+    setSelectedFile(asset);
+  };
+  
+  const handleFileDelete = async (asset: IAsset) => {
+    if (!fileManager) return;
+    
+    try {
+      await fileManager.removeFile(asset.path);
+      console.log(`Deleted: ${asset.path}`);
+    } catch (error) {
+      console.error(`Failed to delete ${asset.path}:`, error);
+    }
+  };
+  
+  const renderFileContent = (asset: IAsset) => {
+    try {
+      // Try to decode as text for common file types
+      const textContent = new TextDecoder().decode(asset.content);
+      return (
+        <pre className="file-content">
+          <code>{textContent}</code>
+        </pre>
+      );
+    } catch {
+      return <div>Binary file ({asset.content.byteLength} bytes)</div>;
+    }
+  };
   
   return (
-    <FileExplorer 
-      assets={assets}
-      className="h-[300px]"
-    />
+    <div className={`file-explorer ${className}`}>
+      <div className="file-tree">
+        <h3>Files ({assets.length})</h3>
+        {assets.map(asset => (
+          <div 
+            key={asset.path}
+            className={`file-item ${selectedFile?.path === asset.path ? 'selected' : ''}`}
+            onClick={() => handleFileSelect(asset)}
+          >
+            <span className="file-name">{asset.path}</span>
+            <span className="file-size">{asset.content.byteLength}b</span>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFileDelete(asset);
+              }}
+              className="delete-button"
+            >
+              ❌
+            </button>
+          </div>
+        ))}
+      </div>
+      
+      {selectedFile && (
+        <div className="file-preview">
+          <h3>{selectedFile.path}</h3>
+          {renderFileContent(selectedFile)}
+        </div>
+      )}
+    </div>
   );
 }
 ```
 
-:::tip[Read more]
-Read full file:
-[useZenFsWorkspace.ts](https://github.com/CommandOSSLabs/ts-sdks/blob/main/apps/playground/src/hooks/useZenFsWorkspace.ts).
-:::
+## Advanced Features
+
+### Working with Different Backends
+
+<Tabs syncKey="backends">
+<TabItem label="IndexedDB">
+
+```typescript
+// Persistent storage in the browser
+const fileManager = new ZenFsFileManager('/workspace', 'indexeddb');
+await fileManager.mount();
+
+// Files persist across browser sessions
+// Good for: Development, user projects
+```
+
+</TabItem>
+<TabItem label="ZIP Archive">
+
+```typescript
+// Load from ZIP file
+const zipFile = await fetch('/template.zip').then(r => r.arrayBuffer());
+const fileManager = new ZenFsFileManager('/workspace', 'zip');
+await fileManager.mount(zipFile);
+
+// Read-only access to ZIP contents
+// Good for: Templates, static content
+```
+
+</TabItem>
+<TabItem label="ISO Image">
+
+```typescript
+// Load from ISO file
+const isoFile = await fetch('/project.iso').then(r => r.arrayBuffer());
+const fileManager = new ZenFsFileManager('/workspace', 'iso');
+await fileManager.mount(isoFile);
+
+// Read-only access to ISO contents
+// Good for: Large archives, CD/DVD images
+```
+
+</TabItem>
+</Tabs>
+
+### Template System
+
+Create reusable website templates:
+
+```typescript
+const createTemplate = async (templateName: string) => {
+  const templates = {
+    'basic-html': {
+      'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>My Website</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Welcome to my website!</h1>
+</body>
+</html>`,
+      'style.css': `body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background-color: #f0f0f0;
+}
+
+h1 {
+  color: #333;
+  text-align: center;
+}`
+    },
+    'react-spa': {
+      'index.html': `<!DOCTYPE html>
+<html>
+<head>
+  <title>React App</title>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="app.js"></script>
+</body>
+</html>`,
+      'app.js': `// React app bundle would go here
+console.log('React app loaded');`
+    }
+  };
+  
+  const template = templates[templateName];
+  if (!template) throw new Error(`Template "${templateName}" not found`);
+  
+  for (const [path, content] of Object.entries(template)) {
+    await fileManager.writeFile(path, content);
+  }
+};
+
+// Usage
+await createTemplate('basic-html');
+```
+
+### File Processing Pipeline
+
+Process files before deployment:
+
+```typescript
+import { getSHA256Hash, sha256ToU256 } from '@cmdoss/site-builder';
+
+const processAssets = async (rawFiles: { path: string; content: Uint8Array }[]) => {
+  const processedAssets = [];
+  
+  for (const file of rawFiles) {
+    // Calculate hashes
+    const hash = await getSHA256Hash(file.content);
+    const hashU256 = sha256ToU256(hash);
+    
+    // Optional: Compress content
+    let processedContent = file.content;
+    if (file.path.endsWith('.html') || file.path.endsWith('.css') || file.path.endsWith('.js')) {
+      // Minify text files (implement your minification logic)
+      processedContent = minifyContent(file.content, file.path);
+    }
+    
+    processedAssets.push({
+      path: file.path,
+      content: processedContent,
+      hash,
+      hashU256,
+      originalSize: file.content.byteLength,
+      processedSize: processedContent.byteLength
+    });
+  }
+  
+  return processedAssets;
+};
+```
+
+## Best Practices
+
+<CardGrid>
+  <Card title="File Organization">
+    - Use forward slashes for paths (`/folder/file.html`)
+    - Keep file names web-safe (no spaces, special characters)
+    - Organize with clear folder structure
+    - Use lowercase file names for consistency
+  </Card>
+  
+  <Card title="Performance">
+    - Batch file operations when possible
+    - Use file watching instead of polling
+    - Clear unused workspaces to save memory
+    - Compress large files before storage
+  </Card>
+  
+  <Card title="Error Handling">
+    - Always handle file operation errors
+    - Validate file sizes before writing
+    - Check available storage space
+    - Provide user feedback for long operations
+  </Card>
+  
+  <Card title="Security">
+    - Validate file types before upload
+    - Sanitize file names and paths
+    - Limit file sizes and total workspace size
+    - Don't store sensitive data in browser storage
+  </Card>
+</CardGrid>
+
+## Troubleshooting
+
+### Common Issues
+
+**Files not persisting across browser sessions**
+```typescript
+// Ensure you're using IndexedDB backend
+const fileManager = new ZenFsFileManager('/workspace', 'indexeddb');
+```
+
+**Memory issues with large files**
+```typescript
+// Process files in chunks for large uploads
+const processLargeFile = async (file: File) => {
+  const chunkSize = 1024 * 1024; // 1MB chunks
+  const chunks = [];
+  
+  for (let i = 0; i < file.size; i += chunkSize) {
+    const chunk = file.slice(i, i + chunkSize);
+    chunks.push(new Uint8Array(await chunk.arrayBuffer()));
+  }
+  
+  // Combine chunks
+  const combined = new Uint8Array(file.size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.length;
+  }
+  
+  return combined;
+};
+```
+
+**File watching not working**
+```typescript
+// Ensure proper cleanup of listeners
+useEffect(() => {
+  if (!fileManager) return;
+  
+  const unsubscribe = fileManager.onFileChange((change) => {
+    // Handle file changes
+  });
+  
+  return () => {
+    unsubscribe(); // Important: cleanup listener
+  };
+}, [fileManager]);
+```
 
 ## Next Steps
-- Explore [Asset Preparation](/guides/asset-preparation/) for advanced file processing
+
+- **[Deployment Flow](/guides/deploy-flow/)** - Learn to deploy your files
+- **[Cost Calculation](/guides/cost-calculation/)** - Understand storage costs  
+- **[Examples](/examples/)** - See complete working examples
+- **[API Reference](/reference/)** - Detailed API documentation

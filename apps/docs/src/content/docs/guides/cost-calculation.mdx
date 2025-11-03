@@ -1,165 +1,644 @@
 ---
 title: Cost Calculation
-description: Learn how to calculate and manage costs for deploying decentralized websites on Walrus + Sui networks.
-badge: { text: 'Guide', variant: 'caution' }
+description: Complete guide to understanding and calculating costs for deploying decentralized websites on Walrus + Sui.
 sidebar:
-  order: 4
+  order: 3
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Steps, Card, CardGrid } from '@astrojs/starlight/components';
 
-Understanding the cost structure is crucial when deploying decentralized websites. The Site Builder SDK provides comprehensive cost calculation tools to help you estimate and manage expenses for storage, transactions, and network operations.
+Understanding the cost structure is crucial when deploying decentralized websites. This guide covers all aspects of cost calculation, from storage fees to gas costs, with practical examples and optimization strategies.
 
-## Overview
+## Cost Overview
 
-Deployment costs include:
-- **Storage costs** - WAL tokens for file storage on Walrus
-- **Write costs** - WAL tokens for uploading files to the network
-- **Gas costs** - SUI tokens for blockchain transactions
-- **Tip amounts** - Optional SUI tips for faster transaction processing
+Deployment costs consist of three main components:
 
-## Cost Structure
+<CardGrid>
+  <Card title="Storage Costs (WAL)" icon="coin">
+    **Walrus storage fees** based on file size and storage duration (epochs)
+  </Card>
+  <Card title="Write Costs (WAL)" icon="upload">
+    **Network upload fees** for moving files to the Walrus network
+  </Card>
+  <Card title="Gas Costs (SUI)" icon="fuel">
+    **Blockchain transaction fees** for Sui network operations
+  </Card>
+</CardGrid>
 
-### Storage Costs (WAL Tokens)
+## Storage Economics
 
-Storage costs are calculated based on:
-- **File size** - Total bytes of your content
-- **Epoch duration** - How long files are stored
-- **Network conditions** - Current storage pricing
+### Epoch System
+
+Walrus uses an epoch-based storage system:
+
+- **1 epoch** ≈ 1 day (varies by network)
+- **Minimum storage**: 1 epoch
+- **Maximum storage**: Varies by network configuration
+- **Permanent storage**: Available with special flag
+
+### Cost Calculation Formula
 
 ```typescript
-// Storage cost calculation
-const storageCost = await walrusClient.storageCost(fileSize, epochs);
+// Basic cost calculation
+const storageCost = fileSize * epochDuration * storageRate;
+const writeCost = fileSize * writeRate;
+const totalWalrusCost = storageCost + writeCost;
+
+// Gas costs (estimated)
+const gasCost = transactionCount * gasPrice * gasUnits;
 ```
 
-### Write Costs (WAL Tokens)
+## File Size Calculation
 
-Write costs cover:
-- **Upload operations** - Moving files to Walrus network
-- **Network bandwidth** - Data transfer costs
-- **Processing fees** - File processing and validation
-
-### Gas Costs (SUI Tokens)
-
-Gas costs include:
-- **Transaction fees** - Blockchain transaction costs
-- **Smart contract calls** - Deploy flow operations
-- **Certification costs** - On-chain asset certification
-
-## Basic Cost Calculation
-
-### File Size Calculation
+### Basic File Size
 
 ```typescript
-import { getContentByteLength } from '@cmdoss/site-builder';
+import type { IAsset } from '@cmdoss/site-builder';
 
-function calculateFileSize(assets: IAsset[]): number {
+function calculateTotalSize(assets: IAsset[]): number {
   return assets.reduce((total, asset) => {
-    return total + getContentByteLength(asset.content);
+    return total + asset.content.byteLength;
   }, 0);
+}
+
+// Helper function for different content types
+function getContentByteLength(content: string | Uint8Array): number {
+  if (typeof content === 'string') {
+    return new TextEncoder().encode(content).byteLength;
+  }
+  return content.byteLength;
 }
 
 // Example usage
 const assets = [
-  { content: 'Hello World', path: 'index.html' },
-  { content: new Uint8Array([1, 2, 3]), path: 'image.png' }
+  {
+    path: '/index.html',
+    content: new TextEncoder().encode('<h1>Hello World!</h1>'),
+    hash: new Uint8Array(),
+    hashU256: 0n
+  },
+  {
+    path: '/style.css', 
+    content: new TextEncoder().encode('body { margin: 0; }'),
+    hash: new Uint8Array(),
+    hashU256: 0n
+  }
 ];
 
-const totalSize = calculateFileSize(assets);
-console.log(`Total file size: ${totalSize} bytes`);
+const totalSize = calculateTotalSize(assets);
+console.log(`Total size: ${totalSize} bytes`);
 ```
 
-## React Hook Implementation
+### Size Formatting
 
-### Custom Cost Hook
+```typescript
+function formatFileSize(bytes: number): string {
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unitIndex = 0;
+  
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+  
+  return `${size.toFixed(2)} ${units[unitIndex]}`;
+}
+
+// Usage
+console.log(formatFileSize(1536)); // "1.50 KB"
+console.log(formatFileSize(2048576)); // "2.00 MB"
+```
+
+## Cost Calculation API
+
+### Using Walrus Client
+
+```typescript
+import { WalrusClient } from '@mysten/walrus';
+
+const walrusClient = new WalrusClient({
+  aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
+  publisherUrl: 'https://publisher.walrus-testnet.walrus.space'
+});
+
+async function calculateStorageCost(fileSize: number, epochs: number) {
+  try {
+    const costData = await walrusClient.storageCost(fileSize, epochs);
+    
+    return {
+      storageCost: costData.storageCost.toString(),
+      writeCost: costData.writeCost.toString(), 
+      totalCost: costData.totalCost.toString()
+    };
+  } catch (error) {
+    console.error('Failed to calculate storage cost:', error);
+    throw error;
+  }
+}
+
+// Usage
+const cost = await calculateStorageCost(1024, 5); // 1KB for 5 epochs
+console.log('Storage cost:', cost);
+```
+
+### Cost Estimation Hook
+
+Create a reusable React hook for cost calculation:
 
 ```typescript
 import { useQuery } from '@tanstack/react-query';
+import { WalrusClient } from '@mysten/walrus';
 
-export function useStorageCost(fileSize: number, epochs: number) {
-  return useQuery({
+interface StorageCostResult {
+  storageCost: string;
+  writeCost: string;
+  totalCost: string;
+  costPerEpoch: string;
+  costPerMB: string;
+}
+
+export function useStorageCost(
+  fileSize: number, 
+  epochs: number,
+  walrusClient: WalrusClient
+) {
+  return useQuery<StorageCostResult>({
     queryKey: ['storageCost', fileSize, epochs],
     queryFn: async () => {
-      const storageCost = await walrusClient.storageCost(fileSize, epochs);
+      if (fileSize === 0 || epochs === 0) {
+        return {
+          storageCost: '0',
+          writeCost: '0', 
+          totalCost: '0',
+          costPerEpoch: '0',
+          costPerMB: '0'
+        };
+      }
+      
+      const costData = await walrusClient.storageCost(fileSize, epochs);
+      const totalCost = BigInt(costData.totalCost.toString());
+      
+      // Calculate derived metrics
+      const costPerEpoch = totalCost / BigInt(epochs);
+      const costPerMB = totalCost / BigInt(Math.max(1, Math.ceil(fileSize / (1024 * 1024))));
+      
       return {
-        storageCost: storageCost.storageCost.toString(),
-        writeCost: storageCost.writeCost.toString(),
-        totalCost: storageCost.totalCost.toString()
+        storageCost: costData.storageCost.toString(),
+        writeCost: costData.writeCost.toString(),
+        totalCost: costData.totalCost.toString(),
+        costPerEpoch: costPerEpoch.toString(),
+        costPerMB: costPerMB.toString()
       };
     },
     enabled: fileSize > 0 && epochs > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 3,
-    retryDelay: 1000
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   });
 }
 ```
 
-### Cost Display Component
+## Cost Display Components
+
+### Basic Cost Display
 
 ```typescript
+import { useStorageCost } from './hooks/useStorageCost';
+
 interface CostDisplayProps {
   fileSize: number;
   epochs: number;
   tipAmountMist?: string;
 }
 
+function formatCostDisplay(cost: string, currency: 'WAL' | 'SUI'): string {
+  const value = BigInt(cost);
+  const divisor = currency === 'WAL' ? BigInt(1000) : BigInt(1000000000); // WAL: 3 decimals, SUI: 9 decimals
+  const decimals = currency === 'WAL' ? 3 : 9;
+  
+  const wholePart = value / divisor;
+  const fractionalPart = value % divisor;
+  
+  const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
+  const trimmedFractional = fractionalStr.replace(/0+$/, '');
+  
+  if (trimmedFractional === '') {
+    return `${wholePart} ${currency}`;
+  }
+  
+  return `${wholePart}.${trimmedFractional} ${currency}`;
+}
+
 export function CostDisplay({ 
   fileSize, 
   epochs, 
-  tipAmountMist = '105' 
+  tipAmountMist = '105000000' // 0.105 SUI
 }: CostDisplayProps) {
   const { data: storageCost, isLoading, error } = useStorageCost(fileSize, epochs);
 
   if (isLoading) {
-    return <div className="cost-loading">Calculating costs...</div>;
+    return (
+      <div className="cost-display loading">
+        <div className="spinner"></div>
+        <p>Calculating storage costs...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="cost-error">Error calculating costs</div>;
+    return (
+      <div className="cost-display error">
+        <p>⚠️ Unable to calculate costs. Please try again.</p>
+      </div>
+    );
   }
 
+  if (!storageCost) return null;
+
+  const totalSuiCost = BigInt(tipAmountMist);
+  
   return (
     <div className="cost-display">
-      <h3>Upload Cost Estimate</h3>
+      <h3>💰 Upload Cost Estimate</h3>
       
       <div className="cost-breakdown">
-        <div className="cost-item">
-          <span>Storage Cost:</span>
-          <span>
-            {storageCost ? formatCostDisplay(storageCost.storageCost, 'WAL') : '---'}
-          </span>
+        <div className="cost-section">
+          <h4>Walrus Storage Costs</h4>
+          <div className="cost-item">
+            <span>Storage ({epochs} epochs):</span>
+            <span className="cost-value">
+              {formatCostDisplay(storageCost.storageCost, 'WAL')}
+            </span>
+          </div>
+          <div className="cost-item">
+            <span>Write/Upload:</span>
+            <span className="cost-value">
+              {formatCostDisplay(storageCost.writeCost, 'WAL')}
+            </span>
+          </div>
+          <div className="cost-subtotal">
+            <span>Subtotal (WAL):</span>
+            <span className="cost-value">
+              {formatCostDisplay(storageCost.totalCost, 'WAL')}
+            </span>
+          </div>
         </div>
         
-        <div className="cost-item">
-          <span>Write Cost:</span>
-          <span>
-            {storageCost ? formatCostDisplay(storageCost.writeCost, 'WAL') : '---'}
-          </span>
+        <div className="cost-section">
+          <h4>Sui Transaction Costs</h4>
+          <div className="cost-item">
+            <span>Gas & Tips:</span>
+            <span className="cost-value">
+              {formatCostDisplay(tipAmountMist, 'SUI')}
+            </span>
+          </div>
         </div>
         
-        <div className="cost-item">
-          <span>Tip Amount:</span>
-          <span>
-            {storageCost ? formatCostDisplay(tipAmountMist, 'SUI') : '---'}
-          </span>
-        </div>
-        
-        <div className="cost-total">
-          <span>Total Cost:</span>
-          <span>
-            {storageCost ? formatTotalCost(tipAmountMist, storageCost.totalCost) : '---'}
-          </span>
+        <div className="cost-metrics">
+          <div className="metric">
+            <span>Cost per epoch:</span>
+            <span>{formatCostDisplay(storageCost.costPerEpoch, 'WAL')}</span>
+          </div>
+          <div className="metric">
+            <span>Cost per MB:</span>
+            <span>{formatCostDisplay(storageCost.costPerMB, 'WAL')}</span>
+          </div>
         </div>
       </div>
       
-      <p className="cost-disclaimer">
-        Actual costs may vary based on current network conditions and file size.
-      </p>
+      <div className="cost-summary">
+        <p><strong>File size:</strong> {formatFileSize(fileSize)}</p>
+        <p><strong>Storage duration:</strong> {epochs} epochs (~{epochs} days)</p>
+        <p className="disclaimer">
+          💡 Costs are estimates and may vary based on current network conditions.
+        </p>
+      </div>
     </div>
   );
 }
 ```
 
+### Advanced Cost Calculator
+
+```typescript
+import { useState } from 'react';
+
+interface CostCalculatorProps {
+  assets: IAsset[];
+}
+
+export function CostCalculator({ assets }: CostCalculatorProps) {
+  const [epochs, setEpochs] = useState(1);
+  const [permanent, setPermanent] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  
+  const totalSize = calculateTotalSize(assets);
+  const { data: cost, isLoading } = useStorageCost(totalSize, epochs);
+  
+  const handleEpochChange = (value: number) => {
+    setEpochs(Math.max(1, Math.min(100, value)));
+  };
+  
+  return (
+    <div className="cost-calculator">
+      <div className="calculator-controls">
+        <div className="control-group">
+          <label htmlFor="epochs">Storage Duration:</label>
+          <div className="epoch-input">
+            <input
+              id="epochs"
+              type="range"
+              min="1"
+              max="100"
+              value={epochs}
+              onChange={(e) => handleEpochChange(Number(e.target.value))}
+            />
+            <span>{epochs} epochs</span>
+          </div>
+        </div>
+        
+        <div className="control-group">
+          <label>
+            <input
+              type="checkbox"
+              checked={permanent}
+              onChange={(e) => setPermanent(e.target.checked)}
+            />
+            Permanent storage
+          </label>
+        </div>
+        
+        <button
+          onClick={() => setShowBreakdown(!showBreakdown)}
+          className="toggle-breakdown"
+        >
+          {showBreakdown ? 'Hide' : 'Show'} Cost Breakdown
+        </button>
+      </div>
+      
+      <CostDisplay 
+        fileSize={totalSize}
+        epochs={permanent ? 100 : epochs}
+      />
+      
+      {showBreakdown && (
+        <div className="cost-breakdown-detail">
+          <h4>File Breakdown</h4>
+          {assets.map(asset => (
+            <div key={asset.path} className="file-cost">
+              <span>{asset.path}</span>
+              <span>{formatFileSize(asset.content.byteLength)}</span>
+              <span>
+                {((asset.content.byteLength / totalSize) * 100).toFixed(1)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+## Cost Optimization Strategies
+
+### File Compression
+
+<Tabs syncKey="compression">
+<TabItem label="Text Compression">
+
+```typescript
+// Simple text minification for HTML/CSS/JS
+function minifyText(content: string, fileType: string): string {
+  switch (fileType) {
+    case 'html':
+      return content
+        .replace(/>\s+</g, '><')        // Remove whitespace between tags
+        .replace(/\s+/g, ' ')           // Collapse multiple spaces
+        .trim();
+    
+    case 'css':
+      return content
+        .replace(/\s*{\s*/g, '{')       // Remove spaces around braces
+        .replace(/;\s*/g, ';')          // Remove spaces after semicolons
+        .replace(/\s*}\s*/g, '}')       // Remove spaces around closing braces
+        .replace(/\s+/g, ' ')           // Collapse multiple spaces
+        .trim();
+    
+    case 'js':
+      // Basic JS minification (use a proper minifier for production)
+      return content
+        .replace(/\/\*[\s\S]*?\*\//g, '') // Remove comments
+        .replace(/\/\/.*$/gm, '')         // Remove line comments
+        .replace(/\s+/g, ' ')             // Collapse spaces
+        .trim();
+    
+    default:
+      return content;
+  }
+}
+
+// Usage in asset processing
+const processAssets = (assets: IAsset[]): IAsset[] => {
+  return assets.map(asset => {
+    const fileExt = asset.path.split('.').pop()?.toLowerCase();
+    
+    if (['html', 'css', 'js'].includes(fileExt || '')) {
+      const textContent = new TextDecoder().decode(asset.content);
+      const minified = minifyText(textContent, fileExt!);
+      const compressedContent = new TextEncoder().encode(minified);
+      
+      console.log(`${asset.path}: ${asset.content.byteLength} → ${compressedContent.byteLength} bytes`);
+      
+      return {
+        ...asset,
+        content: compressedContent
+      };
+    }
+    
+    return asset;
+  });
+};
+```
+
+</TabItem>
+<TabItem label="Image Optimization">
+
+```typescript
+// Image optimization (requires additional libraries)
+async function optimizeImage(imageData: Uint8Array, format: string): Promise<Uint8Array> {
+  // This would require a library like sharp or canvas-based optimization
+  // For demonstration purposes, we'll return the original data
+  
+  console.log(`Optimizing ${format} image: ${imageData.byteLength} bytes`);
+  
+  // In a real implementation, you would:
+  // 1. Decode the image
+  // 2. Resize if too large
+  // 3. Compress with quality settings
+  // 4. Convert to optimal format (WebP, AVIF)
+  
+  return imageData;
+}
+
+// Usage
+const optimizeAssets = async (assets: IAsset[]): Promise<IAsset[]> => {
+  const optimized = [];
+  
+  for (const asset of assets) {
+    const fileExt = asset.path.split('.').pop()?.toLowerCase();
+    
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExt || '')) {
+      const optimizedContent = await optimizeImage(asset.content, fileExt!);
+      optimized.push({
+        ...asset,
+        content: optimizedContent
+      });
+    } else {
+      optimized.push(asset);
+    }
+  }
+  
+  return optimized;
+};
+```
+
+</TabItem>
+</Tabs>
+
+### Storage Duration Optimization
+
+```typescript
+// Smart epoch calculation based on content type
+function calculateOptimalEpochs(asset: IAsset): number {
+  const fileExt = asset.path.split('.').pop()?.toLowerCase();
+  
+  // Different content types have different update frequencies
+  const epochRecommendations = {
+    // Static assets - longer storage
+    'png': 30,
+    'jpg': 30,
+    'gif': 30,
+    'svg': 30,
+    'ico': 30,
+    'woff': 30,
+    'woff2': 30,
+    
+    // Dynamic content - shorter storage
+    'html': 7,
+    'css': 14,
+    'js': 14,
+    'json': 7,
+    
+    // Default
+    'default': 7
+  };
+  
+  return epochRecommendations[fileExt || 'default'] || epochRecommendations.default;
+}
+
+// Batch deployment with different epochs
+async function deployWithOptimizedCosts(assets: IAsset[], sdk: WalrusSiteBuilderSdk) {
+  // Group assets by optimal epoch duration
+  const assetGroups = new Map<number, IAsset[]>();
+  
+  for (const asset of assets) {
+    const epochs = calculateOptimalEpochs(asset);
+    if (!assetGroups.has(epochs)) {
+      assetGroups.set(epochs, []);
+    }
+    assetGroups.get(epochs)!.push(asset);
+  }
+  
+  // Deploy each group separately
+  const deploymentResults = [];
+  
+  for (const [epochs, groupAssets] of assetGroups) {
+    console.log(`Deploying ${groupAssets.length} assets for ${epochs} epochs`);
+    
+    const deployFlow = sdk.deployFlow(groupAssets);
+    await deployFlow.prepareAssets();
+    await deployFlow.uploadAssets(epochs);
+    await deployFlow.certifyAssets();
+    const siteId = await deployFlow.updateSite();
+    
+    deploymentResults.push({
+      siteId,
+      epochs,
+      assetCount: groupAssets.length
+    });
+  }
+  
+  return deploymentResults;
+}
+```
+
+## Cost Monitoring
+
+### Budget Tracking
+
+```typescript
+interface BudgetTracker {
+  maxWalCost: bigint;
+  maxSuiCost: bigint;
+  currentWalCost: bigint;
+  currentSuiCost: bigint;
+}
+
+function createBudgetTracker(maxWal: string, maxSui: string): BudgetTracker {
+  return {
+    maxWalCost: BigInt(maxWal),
+    maxSuiCost: BigInt(maxSui),
+    currentWalCost: 0n,
+    currentSuiCost: 0n
+  };
+}
+
+function checkBudget(tracker: BudgetTracker, walCost: string, suiCost: string): boolean {
+  const newWalCost = tracker.currentWalCost + BigInt(walCost);
+  const newSuiCost = tracker.currentSuiCost + BigInt(suiCost);
+  
+  return newWalCost <= tracker.maxWalCost && newSuiCost <= tracker.maxSuiCost;
+}
+
+// Usage
+const budget = createBudgetTracker('1000000', '100000000'); // 1 WAL, 0.1 SUI
+const canDeploy = checkBudget(budget, storageCost.totalCost, tipAmount);
+
+if (!canDeploy) {
+  console.warn('Deployment would exceed budget!');
+}
+```
+
+## Best Practices
+
+<CardGrid>
+  <Card title="Cost Optimization">
+    - Compress files before deployment
+    - Use appropriate storage durations
+    - Bundle small files when possible
+    - Monitor network pricing trends
+  </Card>
+  
+  <Card title="Budget Management">
+    - Set spending limits before deployment
+    - Track costs across multiple deployments
+    - Use testnet for cost estimation
+    - Plan for price volatility
+  </Card>
+  
+  <Card title="Performance vs Cost">
+    - Balance file size with loading speed
+    - Consider CDN alternatives for static assets
+    - Use progressive loading for large files
+    - Implement smart caching strategies
+  </Card>
+</CardGrid>
+
 ## Next Steps
-- Learn about [Deploy Flow](/guides/deploy-flow/) to deploy with cost awareness
+
+- **[Deployment Flow](/guides/deploy-flow/)** - Deploy with cost awareness
+- **[File Management](/guides/file-management/)** - Optimize files before deployment
+- **[Examples](/examples/)** - See cost optimization in action
+- **[API Reference](/reference/)** - Detailed cost calculation APIs

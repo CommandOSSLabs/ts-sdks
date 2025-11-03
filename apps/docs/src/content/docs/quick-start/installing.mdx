@@ -1,125 +1,326 @@
 ---
-title: Getting Started
-description: Learn how to start building your next website with Site Builder SDK by CommandOSS.
+title: Installation & Setup
+description: Complete guide to installing and configuring the CommandOSS TypeScript SDKs
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Card, CardGrid } from '@astrojs/starlight/components';
 
-A TypeScript SDK for building and deploying decentralized websites on Walrus + Sui, with integrated file operations using zenfs.
+## Package Overview
+
+The CommandOSS TypeScript SDKs consist of three main packages:
+
+| Package | Purpose | Required |
+|---------|---------|----------|
+| `@cmdoss/site-builder` | Core SDK for Walrus + Sui integration | ✅ Yes |
+| `@cmdoss/site-builder-react` | React hooks and components | 🔶 For React apps |
+| `@cmdoss/file-manager` | Browser file system with ZenFS | 🔶 For React apps |
 
 ## Prerequisites
 
-Before installing Site Builder SDKs, make sure you have:
+Before installing the SDKs, ensure you have:
 
 - **Node.js** 18.0 or higher
-- **npm** 9.0 or higher (or **pnpm** 8.0 or higher)
+- **npm** 9.0+ / **pnpm** 8.0+ / **yarn** 1.22+
 - **TypeScript** 5.0 or higher (recommended)
+- A Sui wallet extension (for blockchain interactions)
 
-## Quick Start
+## Installation
 
-### Install the SDK
+### Core SDK Only
 
-Install Site Builder SDK in your project by running the following command in your terminal:
+If you're building a vanilla JavaScript/TypeScript application:
 
 <Tabs syncKey="pkg">
 <TabItem label="npm">
 
-```sh
+```bash
+# Core SDK
 npm install @cmdoss/site-builder
+
+# Required peer dependencies
+npm install @mysten/sui @mysten/wallet-standard @mysten/walrus
 ```
 
 </TabItem>
 <TabItem label="pnpm">
 
-```sh
+```bash
+# Core SDK
 pnpm add @cmdoss/site-builder
-```
 
+# Required peer dependencies
+pnpm add @mysten/sui @mysten/wallet-standard @mysten/walrus
+```
 
 </TabItem>
 <TabItem label="yarn">
 
-```sh
+```bash
+# Core SDK
 yarn add @cmdoss/site-builder
+
+# Required peer dependencies
+yarn add @mysten/sui @mysten/wallet-standard @mysten/walrus
 ```
 
 </TabItem>
 </Tabs>
 
-This will add the Site Builder SDK package to your project with all the necessary types and functionality.
+### Full React Integration
 
-:::tip[See it in action]
-Try Site Builder SDK in your browser:
-[open the playground](http://localhost:3000).
-:::
-
-### Next steps
-
-- **Configure:** Learn about API configuration and authentication in [Configuration](/guides/configuration/).
-- **Examples:** Check out real-world usage patterns in the [Examples section](/examples/).
-- **API Reference:** Dive into the detailed [API Reference](/reference/) documentation.
-- **Deploy:** Learn how to deploy your Site Builder SDK-powered application.
-
-## Updating Site Builder SDK
-
-:::tip
-Site Builder SDK is actively developed with regular updates and improvements.
-Be sure to update regularly to get the latest features and bug fixes!
-:::
-
-You can update Site Builder SDK by running the following command in your terminal:
+For React applications with file management capabilities:
 
 <Tabs syncKey="pkg">
 <TabItem label="npm">
 
-```sh
-npm update @cmdoss/site-builder
+```bash
+# All packages
+npm install @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+
+# Required peer dependencies
+npm install @mysten/sui @mysten/wallet-standard @mysten/walrus react
+
+# ZenFS dependencies (for file management)
+npm install @zenfs/core @zenfs/dom @zenfs/archives
 ```
 
 </TabItem>
 <TabItem label="pnpm">
 
-```sh
-pnpm update @cmdoss/site-builder
+```bash
+# All packages
+pnpm add @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+
+# Required peer dependencies
+pnpm add @mysten/sui @mysten/wallet-standard @mysten/walrus react
+
+# ZenFS dependencies (for file management)
+pnpm add @zenfs/core @zenfs/dom @zenfs/archives
 ```
 
 </TabItem>
-<TabItem label="Yarn">
+<TabItem label="yarn">
 
-```sh
-yarn upgrade @cmdoss/site-builder
+```bash
+# All packages
+yarn add @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+
+# Required peer dependencies
+yarn add @mysten/sui @mysten/wallet-standard @mysten/walrus react
+
+# ZenFS dependencies (for file management)
+yarn add @zenfs/core @zenfs/dom @zenfs/archives
 ```
 
 </TabItem>
 </Tabs>
 
-See the [Site Builder SDK changelog](https://github.com/CommandOSSLabs/ts-sdks/blob/main/CHANGELOG.md) for a full list of the changes made in each release.
+:::tip[See it in action]
+Try the complete deployment flow in your browser: [Open the Playground →](http://localhost:3000)
+:::
 
-## Troubleshooting Site Builder SDK
+## Environment Setup
 
-Use the [configuration reference](/reference/configuration/) and [API documentation](/reference/) pages to ensure that your Site Builder SDK integration is configured and functioning properly.
-See the guides in the sidebar for help integrating and customizing your Site Builder SDK implementation.
+### TypeScript Configuration
+
+Ensure your `tsconfig.json` includes these settings for optimal compatibility:
+
+```json
+{
+  "compilerOptions": {
+    "lib": ["ES2021", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  }
+}
+```
+
+### Wallet Integration
+
+You'll need to set up wallet integration for Sui blockchain transactions:
+
+```typescript
+import { createNetworkConfig, SuiClientProvider, WalletProvider } from '@mysten/dapp-kit';
+import { getFullnodeUrl } from '@mysten/sui/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const { networkConfig } = createNetworkConfig({
+  localnet: { url: getFullnodeUrl('localnet') },
+  testnet: { url: getFullnodeUrl('testnet') },
+  mainnet: { url: getFullnodeUrl('mainnet') },
+});
+
+const queryClient = new QueryClient();
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
+        <WalletProvider autoConnect>
+          {/* Your app components */}
+        </WalletProvider>
+      </SuiClientProvider>
+    </QueryClientProvider>
+  );
+}
+```
+
+### Walrus Client Setup
+
+Configure the Walrus client for decentralized storage:
+
+```typescript
+import { WalrusClient } from '@mysten/walrus';
+
+const walrusClient = new WalrusClient({
+  aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
+  publisherUrl: 'https://publisher.walrus-testnet.walrus.space'
+});
+```
+
+## Verification
+
+Test your installation with this simple verification script:
+
+```typescript
+import { WalrusSiteBuilderSdk, getSHA256Hash, sha256ToU256 } from '@cmdoss/site-builder';
+
+// Verify the SDK can be imported and basic functions work
+async function verifyInstallation() {
+  try {
+    const testContent = new TextEncoder().encode('Hello World');
+    const hash = await getSHA256Hash(testContent);
+    const hashU256 = sha256ToU256(hash);
+    
+    console.log('✅ Installation verified!');
+    console.log(`Hash: ${Array.from(hash).map(b => b.toString(16).padStart(2, '0')).join('')}`);
+    console.log(`Hash U256: ${hashU256.toString()}`);
+  } catch (error) {
+    console.error('❌ Installation verification failed:', error);
+  }
+}
+
+verifyInstallation();
+```
+
+## Development Tools
+
+For the best development experience, we recommend:
+
+### Package Manager
+- **PNPM** (recommended) - Fast and efficient
+- **npm** - Standard choice
+- **Yarn** - Alternative option
+
+### IDE Extensions
+- **TypeScript** - Built-in type checking
+- **ESLint** - Code linting
+- **Prettier** - Code formatting
+
+### Testing
+The SDKs include built-in tests using Node.js test runner:
+
+```bash
+# Run tests for all packages
+npm test
+
+# Run tests in watch mode during development
+npm run test -- --watch
+```
+
+## Updating the SDKs
+
+Keep your SDKs up to date to get the latest features and bug fixes:
+
+<Tabs syncKey="pkg">
+<TabItem label="npm">
+
+```bash
+npm update @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+```
+
+</TabItem>
+<TabItem label="pnpm">
+
+```bash
+pnpm update @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+```
+
+</TabItem>
+<TabItem label="yarn">
+
+```bash
+yarn upgrade @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+```
+
+</TabItem>
+</Tabs>
+
+## Troubleshooting
 
 ### Common Issues
 
-**Module not found error**
-```bash
-# Make sure you're in the correct directory
-cd your-project-directory
-npm install @cmdoss/site-builder
-```
+<CardGrid>
+  <Card title="Module Resolution Errors">
+    Ensure your bundler supports ESM modules and has proper TypeScript configuration.
+    
+    ```bash
+    # Check your bundler configuration
+    # Ensure "type": "module" in package.json for Node.js projects
+    ```
+  </Card>
+  <Card title="Peer Dependency Warnings">
+    Install all required peer dependencies listed in the installation commands above.
+    
+    ```bash
+    npm ls # Check for missing dependencies
+    ```
+  </Card>
+  <Card title="Wallet Connection Issues">
+    Verify you have a Sui wallet extension installed and properly configured.
+    
+    - Install [Sui Wallet](https://chrome.google.com/webstore/detail/sui-wallet/opcgpfmipidbgpenhmajoajpbobppdil)
+    - Switch to testnet for development
+  </Card>
+  <Card title="ZenFS Errors">
+    Make sure you have all ZenFS dependencies installed for file management features.
+    
+    ```bash
+    npm install @zenfs/core @zenfs/dom @zenfs/archives
+    ```
+  </Card>
+</CardGrid>
 
-**TypeScript errors**
-```bash
-# Install TypeScript if not already installed
-npm install -D typescript @types/node
-```
+### Version Conflicts
 
-**Version conflicts**
+If you encounter version conflicts:
+
 ```bash
-# Check for version conflicts
+# Check installed versions
 npm ls @cmdoss/site-builder
+
+# Clear node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
 ```
 
-If your answer cannot be found in these docs, please visit our [GitHub Issues](https://github.com/CommandOSSLabs/ts-sdks/issues) to check for known issues and solutions.
-You can also join our community discussions for additional support!
+### Getting Help
+
+- 📖 Check our [comprehensive guides](/guides/)
+- 🔍 Browse the [API reference](/reference/)
+- 🎮 Try the [interactive playground](http://localhost:3000)
+- 🐛 Report issues on [GitHub](https://github.com/CommandOSSLabs/ts-sdks/issues)
+
+## Next Steps
+
+Now that you have the SDKs installed, you can:
+
+1. **[Learn the deployment flow](/guides/deploy-flow/)** - Understand how to deploy websites
+2. **[Explore file management](/guides/file-management/)** - Work with browser-based file systems
+3. **[Try the examples](/examples/)** - See working code in action
+4. **[Read the API docs](/reference/)** - Dive into detailed documentation
