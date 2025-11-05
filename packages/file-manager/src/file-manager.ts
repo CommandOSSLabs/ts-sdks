@@ -3,6 +3,9 @@ import { Iso, Zip } from '@zenfs/archives'
 import { configure, fs } from '@zenfs/core'
 import * as path from '@zenfs/core/path'
 import { IndexedDB } from '@zenfs/dom'
+import debug from 'debug'
+
+const log = debug('file-manager')
 
 export class ZenFsFileManager implements IFileManager {
   private changeListeners = new Set<FileChangedCallback>()
@@ -13,6 +16,12 @@ export class ZenFsFileManager implements IFileManager {
   ) {}
 
   async mount(data?: ArrayBuffer, force = false): Promise<void> {
+    log(
+      '⚡️ Mounting workspace at',
+      this.workspaceDir,
+      'with backend',
+      this.backend
+    )
     const backend =
       this.backend === 'indexeddb'
         ? IndexedDB
@@ -27,16 +36,20 @@ export class ZenFsFileManager implements IFileManager {
       .then(() => true)
       .catch(() => false)
     if (isAccessible) {
+      log('⚠️ Workspace directory is already mounted')
       if (!force) throw new Error('Workspace directory is already mounted')
       this.unmount() // Unmount existing instance
     }
+    log('🔧 Configuring filesystem...')
     await configure({ mounts: { [this.workspaceDir]: { backend, data } } })
+    log('✅ Filesystem configured')
   }
 
   async writeFile(
     filePath: string,
     content: string | Uint8Array
   ): Promise<void> {
+    log('✍️ Writing file to', filePath)
     filePath = ensureLeadingSlash(filePath)
     const workspaceFilePath = path.join(this.workspaceDir, filePath)
     const dir = path.dirname(workspaceFilePath)
@@ -44,36 +57,40 @@ export class ZenFsFileManager implements IFileManager {
     const contentBytes =
       typeof content === 'string' ? new TextEncoder().encode(content) : content
     await fs.promises.writeFile(workspaceFilePath, contentBytes)
-    this.notifyChange({
-      type: 'updated',
-      path: filePath
-    })
+    log('✅ File written to', filePath, '(', contentBytes.byteLength, 'bytes )')
+    this.notifyChange({ type: 'updated', path: filePath })
   }
 
   async removeFile(filePath: string): Promise<void> {
+    log('🗑️ Removing file at', filePath)
     filePath = ensureLeadingSlash(filePath)
     const workspaceFilePath = path.join(this.workspaceDir, filePath)
     await fs.promises.rm(workspaceFilePath)
+    log('✅ File removed at', filePath)
     this.notifyChange({ type: 'removed', path: filePath })
   }
 
   async readFile(filePath: string): Promise<Uint8Array> {
+    log('📂 Reading file from', filePath)
     filePath = ensureLeadingSlash(filePath)
     const workspaceFilePath = path.join(this.workspaceDir, filePath)
-    console.log('Reading file from path:', workspaceFilePath)
-    return await fs.promises.readFile(workspaceFilePath)
+    const content = await fs.promises.readFile(workspaceFilePath)
+    log('✅ File read from', filePath, '(', content.byteLength, 'bytes )')
+    return content
   }
 
   async listFiles(): Promise<string[]> {
+    log('📄 Listing files in workspace')
     const files = await fs.promises.readdir(this.workspaceDir, {
       withFileTypes: true,
       recursive: true
     })
-    console.log('Files in workspace:', files)
-    return files
+    const result = files
       .filter(f => f.isFile())
       .map(f => path.resolve(f.parentPath, f.name))
       .map(ensureLeadingSlash)
+    log('✅ Files currently in workspace', result)
+    return result
   }
 
   onFileChange(callback: FileChangedCallback): () => void {
@@ -90,6 +107,7 @@ export class ZenFsFileManager implements IFileManager {
   }
 
   async clear(): Promise<void> {
+    log('🧹 Clearing workspace directory (', this.workspaceDir, ')')
     const files = await fs.promises.readdir(this.workspaceDir, {
       withFileTypes: true
     })
@@ -97,9 +115,11 @@ export class ZenFsFileManager implements IFileManager {
       const filePath = path.join(file.parentPath, file.name)
       await fs.promises.rm(filePath, { recursive: true, force: true })
     }
+    log('✅ Workspace directory cleared, removed', files.length, 'items')
   }
 
   unmount(): void {
+    log('🚪 Unmounting workspace directory (', this.workspaceDir, ')')
     this.changeListeners.clear()
     fs.umount(this.workspaceDir)
   }

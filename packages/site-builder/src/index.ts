@@ -1,7 +1,4 @@
 export * from './content'
-export * from './deploy-flow'
 export * from './lib'
-export * from './manager'
-export * from './resource'
 export * from './sdk'
 export * from './types'

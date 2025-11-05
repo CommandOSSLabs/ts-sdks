@@ -12,6 +12,7 @@
   "dependencies": {
     "@cmdoss/file-manager": "workspace:*",
     "@cmdoss/site-builder": "workspace:*",
+    "@cmdoss/site-builder-react": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@lottiefiles/dotlottie-react": "^0.17.1",
     "@mysten/dapp-kit": "catalog:",

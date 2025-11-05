@@ -1,33 +1,17 @@
-import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client'
-import type { Transaction } from '@mysten/sui/transactions'
-import type {
-  SuiSignAndExecuteTransactionInput,
-  WalletAccount
-} from '@mysten/wallet-standard'
+import type { SuiClient } from '@mysten/sui/client'
 import type { WalrusClient } from '@mysten/walrus'
-import { WalrusSiteDeployFlow } from './deploy-flow'
-import { SiteManager } from './manager'
-import { ResourceManager } from './resource'
+import { UpdateWalrusSiteFlow } from './deploy-flow'
 import type {
-  IAsset,
+  IReadOnlyFileManager,
+  ISignAndExecuteTransaction,
+  IUpdateWalrusSiteFlow,
   IWalrusSiteBuilderSdk,
-  IWalrusSiteDeployFlow,
-  SiteData,
-  SiteDataDiff,
   WSResources
 } from './types'
 
-type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<T>
-type UseSignAndExecuteTransactionArgs = PartialBy<
-  Omit<SuiSignAndExecuteTransactionInput, 'transaction'>,
-  'account' | 'chain'
-> & {
-  transaction: Transaction | string
-}
-type ISignAndExecuteTransaction = (
-  variables: UseSignAndExecuteTransactionArgs
-) => Promise<SuiTransactionBlockResponse>
-
+/**
+ * SDK for publishing Walrus Sites.
+ */
 export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
   constructor(
     /**
@@ -37,11 +21,11 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
     /**
      * The Sui client used for interacting with the Sui API.
      */
-    public sui: SuiClient,
+    public suiClient: SuiClient,
     /**
      * The active wallet account.
      */
-    public activeAccount: WalletAccount,
+    public walletAddr: string,
     /**
      * The function used to sign and execute transactions.
      *
@@ -70,55 +54,17 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
   /**
    * Create a deploy flow for deploying a Walrus Site.
    */
-  deployFlow(
-    assets: IAsset[],
-    wsResource: WSResources = {}
-  ): IWalrusSiteDeployFlow {
-    return new WalrusSiteDeployFlow(this, assets, wsResource)
-  }
-
-  /**
-   * Create transaction to update a Walrus Site
-   */
-  createSiteUpdateTransaction({
-    ownerAddr,
-    siteData,
-    siteId
-  }: {
-    siteId?: string
-    siteData: SiteData
-    ownerAddr: string
-  }): Transaction {
-    return new SiteManager(this.walrus, this.sui).createSiteUpdateTransaction(
-      siteData,
-      ownerAddr,
-      siteId
-    )
-  }
-
-  async getSiteUpdates({
-    siteData,
-    siteId
-  }: {
-    siteData: SiteData
-    siteId?: string
-  }): Promise<SiteDataDiff> {
-    return new SiteManager(this.walrus, this.sui).getSiteUpdates(
-      siteData,
-      siteId
-    )
-  }
-
-  /**
-   * Get the site data from the provided assets.
-   * @param assets The assets to process.
-   * @returns The site data.
-   */
-  async getSiteData(
-    assets: IAsset[],
+  executeSiteUpdateFlow(
+    target: IReadOnlyFileManager,
     wsResource: WSResources
-  ): Promise<SiteData> {
-    const resourceManager = new ResourceManager(this.walrus, wsResource)
-    return resourceManager.getSiteData(assets)
+  ): IUpdateWalrusSiteFlow {
+    return new UpdateWalrusSiteFlow(
+      this.walrus,
+      this.suiClient,
+      target,
+      wsResource,
+      this.signAndExecuteTransaction,
+      this.walletAddr
+    )
   }
 }

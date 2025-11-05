@@ -21,7 +21,11 @@
     "@mysten/walrus": "catalog:"
   },
   "devDependencies": {
+    "@types/debug": "^4.1.12",
     "@types/node": "catalog:",
     "tsdown": "^0.15.4"
+  },
+  "dependencies": {
+    "debug": "^4.4.3"
   }
 }

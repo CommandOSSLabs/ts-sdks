@@ -1,65 +1,40 @@
-import { WalrusFile, type WriteFilesFlow } from '@mysten/walrus'
-import { QUILT_PATCH_ID_INTERNAL_HEADER } from './lib/constants'
+import type { SuiClient } from '@mysten/sui/client'
+import type { Transaction } from '@mysten/sui/transactions'
+import {
+  type WalrusClient,
+  WalrusFile,
+  type WriteFilesFlow
+} from '@mysten/walrus'
+import debug from 'debug'
+import { contentTypeFromFilePath } from './content'
+import { getSHA256Hash, sha256ToU256 } from './lib'
+import { mainPackage } from './lib/constants'
+import { QUILT_PATCH_ID_INTERNAL_HEADER } from './lib/internal-constants'
+import { getSiteIdFromResponse } from './lib/onchain-data-helpers'
 import { extractPatchHex } from './lib/path-id'
-import { blobIdBase64ToU256, getSiteIdFromResponse } from './lib/utils'
+import { computeSiteDataDiff, hasUpdate } from './lib/site-data.utils'
+import { buildSiteCreationTx } from './lib/tx-builder'
+import { blobIdBase64ToU256, isSupportedNetwork } from './lib/utils'
+import { fetchBlobsPatches } from './queries/blobs-patches.query'
+import { getSiteDataFromChain } from './queries/site-data.query'
 import type {
-  IAsset,
   ICertifiedBlob,
-  IFlowListener,
+  IReadOnlyFileManager,
+  ISignAndExecuteTransaction,
   ITransaction,
-  IWalrusSiteBuilderSdk,
+  IUpdateWalrusSiteFlow,
   SiteData,
   SiteDataDiff,
+  SuiResource,
   WSResources
 } from './types'
 
+const log = debug('site-builder:deploy-flow')
+
 interface IState {
-  siteData?: SiteData
   siteUpdates?: SiteDataDiff
   writeFilesFlow?: WriteFilesFlow
-  certifiedBlobs: ICertifiedBlob[]
   transactions: ITransaction[]
-}
-
-/**
- * Response item for a patch in a quilt.
- *
- * > Fetched from https://github.com/MystenLabs/walrus/blob/main/crates/walrus-service/aggregator_openapi.yamlv1/quilts/{quilt_id}/patches
- */
-interface QuiltPatchItem {
-  /** The identifier of the patch (e.g., filename). */
-  identifier: string
-  /** The QuiltPatchId for this patch, encoded as URL-safe base64. */
-  patch_id: string
-  /** Tags for the patch. */
-  tags: Record<string, string>
-}
-
-const DEFAULT_AGGREGATOR_URL = 'https://aggregator.walrus-testnet.walrus.space'
-
-enum DeployStatus {
-  Idle,
-  Preparing,
-  Uploading,
-  Certifying,
-  Updating,
-  CleaningUp,
-  Completed,
-  Failed
-}
-
-// Define the event map, associating event names with CustomEvent types
-interface FlowEvents {
-  progress: CustomEvent<{ status: DeployStatus; message?: string }>
-  transaction: CustomEvent<{ transaction: ITransaction }>
-}
-
-function isUpdateRequired(diff: SiteDataDiff): boolean {
-  if (diff.metadata_op !== 'noop') return true
-  if (diff.site_name_op !== 'noop') return true
-  if (diff.route_ops.length) return true
-  if (diff.resource_ops.length) return true
-  return false
 }
 
 /**
@@ -74,53 +49,159 @@ function isUpdateRequired(diff: SiteDataDiff): boolean {
  * register and certify the blob in separate events handlers by creating
  * separate buttons for the user to click for each step.
  */
-export class WalrusSiteDeployFlow extends EventTarget {
-  private state: IState = {
-    transactions: [],
-    certifiedBlobs: []
-  }
+export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
+  private state: IState = { transactions: [] }
 
   constructor(
     /**
-     * The WalrusSiteBuilderSdk instance.
+     * The Walrus client used for interacting with the Walrus API.
+     */
+    private walrus: WalrusClient,
+    /**
+     * The Sui client used for interacting with the Sui API.
+     */
+    private suiClient: SuiClient,
+    /**
+     * The target file manager containing assets to be deployed.
+     */
+    private target: IReadOnlyFileManager,
+    /**
+     * The Walrus Site resources information.
+     */
+    private wsResource: WSResources,
+    /**
+     * The function used to sign and execute transactions.
      *
-     * Used interface to avoid circular dependency issues.
+     * Get by calling `useSignAndExecuteTransaction` hook in `'@mysten/dapp-kit'`.
+     *
+     * ```ts
+     * const { mutateAsync: signAndExecuteTransaction } =
+     *   useSignAndExecuteTransaction({
+     *     execute: async ({ bytes, signature }) =>
+     *       await suiClient.executeTransactionBlock({
+     *         transactionBlock: bytes,
+     *         signature,
+     *         options: {
+     *           // Raw effects are required so the effects can be reported back to the wallet
+     *           showRawEffects: true,
+     *           // Select additional data to return
+     *           showObjectChanges: true
+     *         }
+     *       })
+     *   })
+     * ```
      */
-    private sdk: IWalrusSiteBuilderSdk,
+    private signAndExecuteTransaction: ISignAndExecuteTransaction,
     /**
-     * The assets to be deployed.
+     * The active wallet address.
      */
-    public assets: IAsset[],
-    /**
-     * The resources associated with the site.
-     */
-    public siteSettings: WSResources = {}
+    private walletAddr: string
   ) {
-    super()
     // Bind methods
     for (const method of [
-      'prepareAssets',
-      'uploadAssets',
-      'certifyAssets',
-      'updateSite',
-      'cleanupAssets'
-    ] satisfies (keyof WalrusSiteDeployFlow)[]) {
+      'prepareResources',
+      'writeResources',
+      'certifyResources',
+      'writeSite'
+    ] satisfies (keyof UpdateWalrusSiteFlow)[]) {
       // biome-ignore lint/suspicious/noExplicitAny: no issue
       this[method] = this[method].bind(this) as any
     }
   }
 
-  // @ts-expect-error: Override the addEventListener method to provide strong typing for event listeners
-  public override addEventListener<K extends keyof FlowEvents>(
-    type: K,
-    listener: IFlowListener<K>,
-    options?: boolean | AddEventListenerOptions
-  ): void {
-    super.addEventListener(type, listener as EventListener, options)
+  async prepareResources(): Promise<void> {
+    log('📦 Preparing files for upload...')
+    const filesPaths = await this.target.listFiles()
+    if (filesPaths.length === 0) throw new Error('Empty site')
+
+    const files: WalrusFile[] = []
+    for (const path of filesPaths) {
+      log('» Reading file', path)
+      const contents = await this.target.readFile(path)
+      files.push(WalrusFile.from({ contents, identifier: path }))
+    }
+
+    // Step 1: Prepare the files for upload
+    this.state.writeFilesFlow = this.walrus.writeFilesFlow({ files })
+
+    log('📦 Getting', files.length, 'files ready for upload...')
+    await this.state.writeFilesFlow.encode()
+    log('✅ Files prepared successfully')
   }
-  /**
-   * Get the list of recorded transactions.
-   */
+
+  async writeResources(
+    epochs: number | 'max',
+    permanent = false
+  ): Promise<void> {
+    log('🚀 Starting asset upload...')
+    const { writeFilesFlow } = this.state
+    if (!writeFilesFlow) throw new Error('Must prepare resources first')
+
+    // Step 2: Register the blob (triggered by user clicking a register button after the encode step)
+    log('📝 Registering blob on chain...', { epochs, permanent })
+    const tx = writeFilesFlow.register({
+      deletable: !permanent,
+      epochs: epochs === 'max' ? 57 : epochs,
+      owner: this.walletAddr
+    })
+    const { digest } = await this.signAndExecuteTransaction({ transaction: tx })
+    this.#recordTransaction(digest, 'Register blob on Walrus network')
+    log('✅ Blob registered successfully with digest:', digest)
+
+    // Step 3: Upload the data to storage nodes
+    // This can be done immediately after the register step, or as a separate step the user initiates
+    log('☁️ Uploading data to storage nodes...')
+    await writeFilesFlow.upload({ digest })
+    log('✅ Data uploaded successfully')
+  }
+
+  async certifyResources(): Promise<{ certifiedBlobs: ICertifiedBlob[] }> {
+    log('🔐 Starting asset certification...')
+    const { writeFilesFlow } = this.state
+    if (!writeFilesFlow) throw new Error('Write files flow not initialized')
+
+    const certifyTx = writeFilesFlow.certify()
+    const res = await this.signAndExecuteTransaction({ transaction: certifyTx })
+    this.#recordTransaction(res.digest, 'Certify blob storage')
+    log('✅ Assets certified successfully', res)
+
+    const certifiedFiles = await writeFilesFlow.listFiles()
+    log('📁 Certified files:', certifiedFiles)
+
+    const { siteUpdates, certifiedBlobs } =
+      await this.#calculateSiteUpdates(certifiedFiles)
+    this.state.siteUpdates = siteUpdates
+    return { certifiedBlobs }
+  }
+
+  async writeSite(): Promise<{ siteId: string }> {
+    const { siteUpdates } = this.state
+    if (!hasUpdate(siteUpdates)) {
+      if (!this.wsResource.object_id) throw new Error('No data to create site')
+      log('⏭️ No site updates to apply')
+      return { siteId: this.wsResource.object_id }
+    }
+    log('🔄 Starting site update...')
+
+    const tx = this.#createSiteUpdateTransaction({
+      siteId: this.wsResource.object_id,
+      siteUpdates,
+      ownerAddr: this.walletAddr
+    })
+    const res = await this.signAndExecuteTransaction({ transaction: tx })
+    // this.#recordTransaction(res.digest, 'Update Walrus site metadata')
+    if (this.wsResource.object_id) {
+      log('✅ Site updated successfully', res)
+      return { siteId: this.wsResource.object_id }
+    }
+
+    const siteId = getSiteIdFromResponse(this.walletAddr, res)
+    if (!siteId) throw new Error('Could not find site ID from response')
+    log('✅ Created new Walrus site with ID:', siteId)
+    this.wsResource.object_id = siteId
+    return { siteId }
+  }
+
   getTransactions(): ITransaction[] {
     return this.state.transactions
   }
@@ -138,194 +219,94 @@ export class WalrusSiteDeployFlow extends EventTarget {
       timestamp: Date.now()
     }
     this.state.transactions.push(transaction)
-    this.dispatchEvent(
-      new CustomEvent('transaction', { detail: { transaction } })
-    )
   }
 
-  #emitProgress(status: DeployStatus, message?: string) {
-    console.log(`[DeployFlow] Status: ${DeployStatus[status]}`, message || '')
-    this.dispatchEvent(
-      new CustomEvent('progress', { detail: { status, message } })
-    )
-  }
+  async #getSiteUpdates(
+    siteId: string | undefined,
+    siteData: SiteData
+  ): Promise<SiteDataDiff> {
+    log('⚡️ Getting site updates')
+    const existingSiteData = !siteId
+      ? { resources: [] } // Empty site data for new site
+      : await getSiteDataFromChain(this.suiClient, siteId)
 
-  /**
-   * Prepares the assets for deployment.
-   */
-  async prepareAssets(): Promise<void> {
-    if (this.assets.length === 0)
-      return this.#emitProgress(DeployStatus.Failed, 'No assets to prepare')
-
-    if (this.assets.some(a => !a.path.startsWith('/')))
-      return this.#emitProgress(
-        DeployStatus.Failed,
-        'All asset paths must start with a leading slash (/)'
-      )
-
-    this.#emitProgress(
-      DeployStatus.Preparing,
-      'Preparing assets for deployment'
-    )
-    console.log('🚀 sdk', this.sdk, this.assets, this.siteSettings)
-    const siteData = await this.sdk.getSiteData(this.assets, this.siteSettings)
-    console.log('🚀 siteData', siteData)
-    const siteId = this.siteSettings.object_id
-    console.log('🚀 siteId', siteId)
-    const siteUpdates = await this.sdk.getSiteUpdates({ siteData, siteId })
-    console.log('🚀 siteUpdates', siteUpdates)
-    console.log('🚀 siteData', siteData)
-    this.state.siteUpdates = siteUpdates
-    this.state.siteData = siteData
-
-    if (!isUpdateRequired(siteUpdates))
-      return this.#emitProgress(DeployStatus.Completed, 'Site is up to date')
-
-    const files = siteUpdates.resource_ops
-      .filter(op => op.type !== 'deleted')
-      .map(op => this.assets.find(f => f.path === op.resource.full_path))
-      .filter((f): f is IAsset => f !== undefined)
-      .map(f => WalrusFile.from({ contents: f.content, identifier: f.path }))
-
-    if (files.length === 0)
-      return this.#emitProgress(DeployStatus.Completed, 'No assets')
-
-    this.state.writeFilesFlow = this.sdk.walrus.writeFilesFlow({ files })
-
-    console.log('📦 Preparing', files.length, 'files for upload')
-    // Step 1: Create and encode the flow (can be done immediately when file is selected)
-    this.#emitProgress(DeployStatus.Preparing, 'Encoding files for upload')
-    await this.state.writeFilesFlow.encode()
-    this.#emitProgress(DeployStatus.Preparing, 'Assets prepared')
+    return computeSiteDataDiff(siteData, existingSiteData)
   }
 
   /**
-   * Uploads the assets to the server.
+   * Calculate the site data from the provided assets.
+   * @param target The file manager containing the site assets.
+   * @param wsResource The Walrus Site resources.
+   * @returns The site data.
    */
-  async uploadAssets(
-    /**
-     * The number of epochs to store the blobs for.
-     *
-     * Can be either a non-zero number of epochs or the special value `max`, which will store the blobs
-     * for the maximum number of epochs allowed by the system object on chain.
-     */
-    epochs: number | 'max',
-    /**
-     * Make the stored resources permanent.
-     *
-     * By default, sites are deletable with site-builder delete command. By passing `true`,
-     * the site is deleted only after `epochs` expiration. Make resources permanent
-     * (non-deletable)
-     */
-    permanent: boolean = false
-  ): Promise<void> {
-    console.log('🚀 Starting asset upload...')
-    const { siteUpdates, writeFilesFlow } = this.state
-    console.log('🚀 Starting asset upload...', { siteUpdates, writeFilesFlow })
-    if (!siteUpdates || !isUpdateRequired(siteUpdates)) {
-      console.log('⏭️ No updates to upload')
-      return
+  async #getNextSiteData(
+    target: IReadOnlyFileManager,
+    wsResource: WSResources
+  ): Promise<SiteData> {
+    log('⚡️ Calculating site data from assets')
+    const resources: SuiResource[] = []
+    for (const path of await target.listFiles()) {
+      const content = await target.readFile(path)
+      const resource: SuiResource = {
+        path: path,
+        blob_id: '<unknown>', // Blob ID will be filled in after upload
+        blob_hash: sha256ToU256(await getSHA256Hash(content)).toString(),
+        headers: wsResource.headers ?? [
+          { key: 'content-encoding', value: 'identity' },
+          { key: 'content-type', value: contentTypeFromFilePath(path) }
+        ]
+      }
+      log(`» Resource:`, resource)
+      resources.push(resource)
     }
-    if (!writeFilesFlow)
-      return this.#emitProgress(
-        DeployStatus.Failed,
-        'Must prepare assets before upload'
-      )
-
-    console.log('⚙️ Upload settings:', { epochs, permanent })
-
-    const uploadCandidates = siteUpdates.resource_ops
-      .filter(op => op.type !== 'deleted')
-      .map(op => this.assets.find(f => f.path === op.resource.full_path))
-      .filter((f): f is IAsset => f !== undefined)
-      .map(f =>
-        WalrusFile.from({
-          contents:
-            typeof f.content === 'string'
-              ? new TextEncoder().encode(f.content)
-              : f.content,
-          identifier: f.path
-        })
-      )
-
-    if (uploadCandidates.length === 0)
-      return this.#emitProgress(
-        DeployStatus.Completed,
-        'No new or updated assets to upload'
-      )
-
-    console.log('📦 Uploading', uploadCandidates.length, 'files')
-    // Step 2: Register the blob (triggered by user clicking a register button after the encode step)
-    console.log('📝 Registering blob on chain...')
-    const registerTx = writeFilesFlow.register({
-      deletable: !permanent,
-      epochs: epochs === 'max' ? 57 : epochs,
-      owner: this.sdk.activeAccount.address
-    })
-    const { digest } = await this.sdk.signAndExecuteTransaction({
-      transaction: registerTx
-    })
-    this.#recordTransaction(digest, 'Register blob on Walrus network')
-    this.#emitProgress(
-      DeployStatus.Updating,
-      `Blob registered with digest: ${digest}`
-    )
-
-    // Step 3: Upload the data to storage nodes
-    // This can be done immediately after the register step, or as a separate step the user initiates
-    console.log('☁️ Uploading data to storage nodes...')
-    await writeFilesFlow.upload({ digest })
-    this.#emitProgress(DeployStatus.Uploading, 'Assets uploaded')
+    return {
+      resources,
+      routes: wsResource.routes,
+      site_name: wsResource.site_name,
+      metadata: wsResource.metadata
+    }
   }
 
   /**
-   * Certifies the uploaded assets.
+   * Create transaction to update a Walrus Site
    */
-  async certifyAssets(): Promise<ICertifiedBlob[]> {
-    console.log('🔐 Starting asset certification...')
-    const { siteUpdates, writeFilesFlow } = this.state
-    if (!siteUpdates || !isUpdateRequired(siteUpdates) || !writeFilesFlow) {
-      this.#emitProgress(DeployStatus.Failed, 'No updates to certify')
-      return []
-    }
-    if (!writeFilesFlow) {
-      this.#emitProgress(
-        DeployStatus.Failed,
-        'Must prepare and upload assets before certification'
-      )
-      return []
-    }
+  #createSiteUpdateTransaction({
+    ownerAddr,
+    siteUpdates,
+    siteId
+  }: {
+    siteId: string | undefined
+    siteUpdates: SiteDataDiff
+    ownerAddr: string
+  }): Transaction {
+    log('⚡️ Creating site update transaction')
 
-    // Step 4: Certify the blob (triggered by user clicking a certify button after the blob is uploaded)
-    this.#emitProgress(
-      DeployStatus.Certifying,
-      'Creating certification transaction...'
+    const network = this.suiClient.network
+    if (!isSupportedNetwork(network))
+      throw new Error(`Unsupported network: ${network}`)
+    const packageId = mainPackage[network].packageId
+
+    return buildSiteCreationTx(siteId, siteUpdates, packageId, ownerAddr)
+  }
+
+  async #calculateSiteUpdates(
+    files: Awaited<ReturnType<WriteFilesFlow['listFiles']>>
+  ) {
+    log('🔄 Calculating site updates with certified files...')
+    const uniqueBlobIds = Array.from(new Set(files.map(f => f.blobId)))
+    log('🔄 Fetching patches for blob IDs:', uniqueBlobIds)
+    const patches = await fetchBlobsPatches(
+      uniqueBlobIds,
+      this.suiClient.network
     )
-    const certifyTx = writeFilesFlow.certify()
-    const res = await this.sdk.signAndExecuteTransaction({
-      transaction: certifyTx
-    })
-    this.#recordTransaction(res.digest, 'Certify blob storage')
-    console.log('✅ Assets certified successfully', res)
-    this.#emitProgress(
-      DeployStatus.Certifying,
-      `Assets certified with digest: ${res.digest}`
-    )
-    const files = await writeFilesFlow.listFiles()
-    console.log('📁 Certified files:', files)
-    const patches = await this.fetchBlobsPatches(
-      // get unique blob IDs
-      Array.from(new Set(files.map(f => f.blobId)))
-    )
-    console.log('🧩 Fetched patches:', patches)
+    log('🧩 Fetched patches:', patches)
     const fileIdentifierByPatchId = new Map(
       patches.map(p => [p.patch_id, p.identifier])
     )
+    const siteId = this.wsResource.object_id
+    const siteData = await this.#getNextSiteData(this.target, this.wsResource)
     const hashByBlobId = new Map(
-      this.state.siteData?.resources.map(a => [
-        a.full_path,
-        a.info.blob_hash_le_u256
-      ]) || []
+      siteData.resources.map(a => [a.path, a.blob_hash]) || []
     )
     const blobs: Array<ICertifiedBlob> = files.map(
       (file): ICertifiedBlob => ({
@@ -335,127 +316,35 @@ export class WalrusSiteDeployFlow extends EventTarget {
         endEpoch: file.blobObject.storage.end_epoch,
         identifier: fileIdentifierByPatchId.get(file.id) || 'unknown',
         blobHash:
-          hashByBlobId.get(fileIdentifierByPatchId.get(file.id) || '') ?? 0n
+          hashByBlobId.get(fileIdentifierByPatchId.get(file.id) || '') ?? ''
       })
     )
-    console.log('✅ Certified blobs:', blobs)
-    this.state.certifiedBlobs = blobs
-    if (this.state.siteData) {
-      console.log('🔄 Updating site data with certified blobs...')
+    log('✅ Certified blobs:', blobs)
 
-      const patchIdByPath = new Map(blobs.map(b => [b.identifier, b.patchId]))
-      const blobIdByPath = new Map(blobs.map(b => [b.identifier, b.blobId]))
-      this.state.siteData.resources.forEach(r => {
-        const patchId = patchIdByPath.get(r.full_path)
-        const blobId = blobIdByPath.get(r.full_path)
-        if (!patchId) {
-          console.warn(`Blob ID for ${r.full_path} not found`)
-          return
-        }
-        if (!blobId) {
-          console.warn(`Blob ID for ${r.full_path} not found`)
-          return
-        }
-        r.info.blob_id = blobId
-        r.info.blob_id_le_u256 = blobIdBase64ToU256(blobId)
-        r.info.headers[QUILT_PATCH_ID_INTERNAL_HEADER] =
-          extractPatchHex(patchId)
+    log('🔄 Updating site data with certified files...')
+    const patchIdByPath = new Map(blobs.map(b => [b.identifier, b.patchId]))
+    const blobIdByPath = new Map(blobs.map(b => [b.identifier, b.blobId]))
+    siteData.resources.forEach(r => {
+      const patchId = patchIdByPath.get(r.path)
+      const blobId = blobIdByPath.get(r.path)
+      if (!patchId) {
+        log(`Blob ID for ${r.path} not found`)
+        return
+      }
+      if (!blobId) {
+        log(`Blob ID for ${r.path} not found`)
+        return
+      }
+      r.blob_id = blobIdBase64ToU256(blobId).toString()
+      r.headers.push({
+        key: QUILT_PATCH_ID_INTERNAL_HEADER,
+        value: extractPatchHex(patchId)
       })
-      console.log(
-        '✅ Updated site data with certified blobs',
-        this.state.siteData
-      )
-    }
-
-    return blobs
-  }
-
-  /**
-   * Updates the site metadata.
-   */
-  async updateSite(): Promise<string | undefined> {
-    console.log('🔄 Starting site update...')
-    const { siteData } = this.state
-    if (!siteData) {
-      console.log('⏭️ No site data to update')
-      return
-    }
-
-    console.log('🏗️ Updating site metadata...')
-    const tx = this.sdk.createSiteUpdateTransaction({
-      siteId: this.siteSettings.object_id,
-      siteData,
-      ownerAddr: this.sdk.activeAccount.address
     })
+    log('✅ Updated state SiteData with certified files', siteData)
 
-    const res = await this.sdk.signAndExecuteTransaction({ transaction: tx })
-    this.#recordTransaction(res.digest, 'Update Walrus site metadata')
-    console.log('✅ Site updated successfully', res)
-    const siteId = getSiteIdFromResponse(this.sdk.activeAccount.address, res)
-    if (siteId) {
-      console.log('📍 Site ID:', siteId)
-      this.siteSettings.object_id = siteId
-      return siteId
-    } else {
-      console.warn('Could not find the object ID for the updated Walrus site!')
-    }
-  }
-
-  /**
-   * Removes unused assets.
-   */
-  async cleanupAssets(): Promise<void> {
-    console.log('🧹 Starting asset cleanup...')
-    const { siteUpdates } = this.state
-    if (!siteUpdates || !isUpdateRequired(siteUpdates)) {
-      console.log('⏭️ No cleanup needed')
-      return
-    }
-
-    const deleteCandidates = siteUpdates.resource_ops
-      .filter(op => op.type === 'deleted')
-      .map(op => op.resource.info.blob_id)
-    if (deleteCandidates.length === 0) {
-      console.log('ℹ️ No assets to delete')
-      return
-    }
-
-    console.log('🗑️ Deleting', deleteCandidates.length, 'unused assets')
-    const deleteTransactions = deleteCandidates.map(id =>
-      this.sdk.walrus.deleteBlobTransaction({
-        owner: this.sdk.activeAccount.address,
-        blobObjectId: id
-      })
-    )
-
-    // Execute each delete transaction and record them
-    for (let i = 0; i < deleteTransactions.length; i++) {
-      const tx = deleteTransactions[i]
-      const res = await this.sdk.signAndExecuteTransaction({ transaction: tx })
-      this.#recordTransaction(
-        res.digest,
-        `Delete unused blob ${i + 1}/${deleteTransactions.length}`
-      )
-    }
-    console.log('✅ Asset cleanup completed')
-  }
-
-  /**
-   * Helps fetch patches for a list of blob IDs.
-   */
-  private async fetchBlobsPatches(blobIds: string[]) {
-    const patches: Array<QuiltPatchItem> = []
-    for (const blobId of blobIds) {
-      const res = await fetch(
-        `${DEFAULT_AGGREGATOR_URL}/v1/quilts/${blobId}/patches`
-      )
-      const items = (await res.json()) as Array<QuiltPatchItem>
-
-      // add only unique patches
-      patches.push(
-        ...items.filter(p => !patches.some(pt => pt.patch_id === p.patch_id))
-      )
-    }
-    return patches
+    const siteUpdates = await this.#getSiteUpdates(siteId, siteData)
+    log('✅ Calculated site updates:', siteUpdates)
+    return { certifiedBlobs: blobs, siteUpdates }
   }
 }

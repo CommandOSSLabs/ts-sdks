@@ -4,7 +4,6 @@ import { useRef, useState } from 'react'
 import { useFileValidation } from '../hooks/useFileValidation'
 import { useWalrusUpload } from '../hooks/useWalrusUpload'
 import { AdvancedSettings } from './AdvancedSettings'
-import { CostDisplay } from './CostDisplay'
 import type { ImageCardProps } from './ImageCard'
 import { Button } from './ui/button'
 
@@ -210,12 +209,6 @@ export default function FileUpload({ onUploadComplete }: FileUploadProps) {
         onDeletableChange={setDeletable}
         isOpen={showAdvancedSettings}
         onToggle={() => setShowAdvancedSettings(!showAdvancedSettings)}
-      />
-
-      <CostDisplay
-        fileSize={file?.size || 0}
-        epochs={epochs}
-        tipAmountMist={tipAmountMist}
       />
 
       {/* Upload Buttons - All Steps Displayed */}

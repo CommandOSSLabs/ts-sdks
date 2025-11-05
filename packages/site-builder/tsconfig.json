@@ -1,11 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "../../configs/tsconfig.library.json",
+  "extends": "../../configs/tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2021", "DOM"],
-    "outDir": "/dist",
     "emitDeclarationOnly": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": { "~/*": ["./src/*"] }
   },
   "include": ["src/**/*"]
 }

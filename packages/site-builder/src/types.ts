@@ -1,10 +1,6 @@
-import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client'
+import type { SuiTransactionBlockResponse } from '@mysten/sui/client'
 import type { Transaction } from '@mysten/sui/transactions'
-import type {
-  SuiSignAndExecuteTransactionInput,
-  WalletAccount
-} from '@mysten/wallet-standard'
-import type { WalrusClient } from '@mysten/walrus'
+import type { SuiSignAndExecuteTransactionInput } from '@mysten/wallet-standard'
 
 // ##########################################################################
 // #region Helper Types
@@ -17,37 +13,41 @@ type UseSignAndExecuteTransactionArgs = PartialBy<
 > & {
   transaction: Transaction | string
 }
-type ISignAndExecuteTransaction = (
+
+/**
+ * The function used to sign and execute transactions.
+ *
+ * Get by calling `useSignAndExecuteTransaction` hook in `'@mysten/dapp-kit'`.
+ */
+export type ISignAndExecuteTransaction = (
   variables: UseSignAndExecuteTransactionArgs
 ) => Promise<SuiTransactionBlockResponse>
-
-// #endregion
-
-// ##########################################################################
-// #region Configuration Constants
-// ##########################################################################
-
-export type Config = Record<'mainnet' | 'testnet', { packageId: string }>
-
-// #endregion
 
 // ##########################################################################
 // #region Core Entity Types
 // ##########################################################################
 
+/**
+ * Information about a transaction executed during the deploy flow.
+ */
 export interface ITransaction {
   digest: string
   description: string
   timestamp: number
 }
 
+/**
+ * Information about a certified blob.
+ *
+ * This struct mirrors the information that is stored on chain.
+ */
 export interface ICertifiedBlob {
   blobId: string
   suiObjectId: string
   endEpoch: number
   patchId: string
   identifier: string
-  blobHash: bigint
+  blobHash: string
 }
 
 // #endregion
@@ -56,12 +56,18 @@ export interface ICertifiedBlob {
 // #region Configuration Types
 // ##########################################################################
 
+/**
+ * Callback invoked when a file is changed (added, updated, or removed)
+ */
 export type FileChangedCallback = (arg: {
   type: 'updated' | 'removed'
   path: string
 }) => void
 
-export interface IFileManager {
+/**
+ * File Manager interface for managing site files.
+ */
+export interface IFileManager extends IReadOnlyFileManager {
   /**
    * Mount and initialize the file manager
    *
@@ -73,15 +79,6 @@ export interface IFileManager {
   writeFile(path: string, content: Uint8Array): Promise<void>
   /** Remove a file from the workspace */
   removeFile(path: string): Promise<void>
-  /** Read a file from the workspace */
-  readFile(path: string): Promise<Uint8Array>
-  /** List all files in the workspace recursively */
-  listFiles(): Promise<string[]>
-  /**
-   * Register a callback to be invoked when a file is changed (added, updated, or removed)
-   * Returns an unsubscribe function to remove the listener
-   */
-  onFileChange(callback: FileChangedCallback): () => void
   /**
    * Clear all files in the workspace
    *
@@ -93,11 +90,24 @@ export interface IFileManager {
 }
 
 /**
+ * Read-only File Manager interface for reading site files.
+ */
+export interface IReadOnlyFileManager {
+  /** Read a file from the workspace */
+  readFile(path: string): Promise<Uint8Array>
+  /** List all files in the workspace recursively */
+  listFiles(): Promise<string[]>
+  /**
+   * Register a callback to be invoked when a file is changed (added, updated, or removed)
+   * Returns an unsubscribe function to remove the listener
+   */
+  onFileChange(callback: FileChangedCallback): () => void
+}
+
+/**
  * The routes for a site
  */
-export interface Routes {
-  [pattern: string]: string
-}
+export type Routes = Array<[string, string]>
 
 /**
  * Metadata associated with a site.
@@ -117,7 +127,7 @@ export interface Metadata {
  */
 export interface WSResources {
   /** The HTTP headers to be set for the resources. */
-  headers?: Record<string, string>
+  headers?: { key: string; value: string }[]
   /** The routes for a site. */
   routes?: Routes
   /** The attributes used inside the Display object. */
@@ -157,31 +167,13 @@ export interface SuiResource {
   /** The relative path the resource will have on Sui. */
   path: string
   /** Response, Representation and Payload headers. */
-  headers: Record<string, string>
-  /** The blob ID of the resource. */
-  blob_id: string
+  headers: Array<{ key: string; value: string }>
   /** The blob ID of the resource as a U256 (U256 from 32 little endian bytes). */
-  blob_id_le_u256: bigint
-  /** The hash of the blob contents. */
-  blob_hash: Uint8Array
+  blob_id: string
   /** The hash of the blob contents as a U256 (U256 from 32 little endian bytes). */
-  blob_hash_le_u256: bigint
+  blob_hash: string
   /** Byte ranges for the resource. */
   range?: { start?: number; end?: number }
-}
-
-// Resource and site data structures
-export interface Resource {
-  /** The full path of the resource on disk. */
-  full_path: string
-  // full_path: string
-  // content: Blob
-  // content_type: ContentType
-  // content_encoding: ContentEncoding
-  /** The unencoded length of the resource. */
-  unencoded_size: number
-  /** Additional information that is stored on chain */
-  info: SuiResource
 }
 
 // #endregion
@@ -190,27 +182,31 @@ export interface Resource {
 // #region Site Data Types
 // ##########################################################################
 
+/**
+ * Walrus Site Data. Used for fetching existing site data and computing diffs.
+ */
 export interface SiteData {
-  resources: Resource[]
+  resources: SuiResource[]
   routes?: Routes
   metadata?: Metadata
   site_name?: string
 }
 
+/**
+ * Calculated Walrus Site Data Diff. Used for building transactions and updates operations.
+ */
 export interface SiteDataDiff {
-  resource_ops: Array<{
-    type: 'created' | 'updated' | 'deleted'
-    resource: Resource
-  }>
-  route_ops: Array<{
-    type: 'created' | 'updated' | 'deleted'
-    path: string
-    resource?: string
-  }>
-  metadata_op: 'noop' | 'update'
-  site_name_op: 'noop' | 'update'
+  resources: { op: 'created' | 'deleted' | 'unchanged'; data: SuiResource }[]
+  routes: { op: 'noop' } | { op: 'update'; data: Routes }
+  metadata: { op: 'noop' } | { op: 'update'; data: Metadata }
+  site_name: { op: 'noop' } | { op: 'update'; data: string }
 }
 
+/**
+ * Asset to be deployed.
+ *
+ * @deprecated Use `IReadOnlyFileManager` to pass assets instead.
+ */
 export interface IAsset {
   path: string
   content: Uint8Array
@@ -226,78 +222,44 @@ export interface IAsset {
 // #region Deploy Flow Types
 // ##########################################################################
 
-enum DeployStatus {
-  Idle,
-  Preparing,
-  Uploading,
-  Certifying,
-  Updating,
-  CleaningUp,
-  Completed,
-  Failed
-}
-
-// Define the event map, associating event names with CustomEvent types
-interface FlowEvents {
-  progress: CustomEvent<{ status: DeployStatus; message?: string }>
-  transaction: CustomEvent<{ transaction: ITransaction }>
-}
-
-export type IFlowListener<K extends keyof FlowEvents = keyof FlowEvents> = (
-  event: FlowEvents[K]
-) => void
-
-export interface IWalrusSiteDeployFlow {
+/**
+ * Represents the deployment flow for a Walrus site.
+ *
+ * When the transactions to upload a blob are signed by a wallet in a browser,
+ * some wallets will use popups to prompt the user for a signature. If the
+ * popups are not opened in direct response to a user interaction,
+ * they may be blocked by the browser.
+ *
+ * To avoid this, we need to ensure that we execute the transactions that
+ * register and certify the blob in separate events handlers by creating
+ * separate buttons for the user to click for each step.
+ */
+export interface IUpdateWalrusSiteFlow {
   /**
-   * The assets to be deployed.
+   * Prepares the site's resources for deployment.
    */
-  assets: IAsset[]
+  prepareResources(): Promise<void>
 
   /**
-   * The resources associated with the site.
-   */
-  siteSettings: WSResources
-
-  /**
-   * Override addEventListener with strong typing for event listeners
-   */
-  addEventListener<K extends keyof FlowEvents>(
-    type: K,
-    listener: IFlowListener<K> | null,
-    options?: boolean | AddEventListenerOptions
-  ): void
-
-  /**
-   * Get the list of recorded transactions.
-   */
-  getTransactions(): ITransaction[]
-
-  /**
-   * Prepares the assets for deployment.
-   */
-  prepareAssets(): Promise<void>
-
-  /**
-   * Uploads the assets to the server.
+   * Writes the site's resources to Walrus.
    * @param epochs The number of epochs to store the blobs for.
    * @param permanent Make the stored resources permanent.
    */
-  uploadAssets(epochs: number | 'max', permanent?: boolean): Promise<void>
+  writeResources(epochs: number | 'max', permanent?: boolean): Promise<void>
 
   /**
-   * Certifies the uploaded assets.
+   * Certifies the written resources.
    */
-  certifyAssets(): Promise<ICertifiedBlob[]>
+  certifyResources(): Promise<{ certifiedBlobs: ICertifiedBlob[] }>
 
   /**
-   * Updates the site with the new assets.
+   * Update the Walrus Site on-chain with the certified resources and metadata.
+   * @return The site ID after the update.
    */
-  updateSite(): Promise<string | undefined>
+  writeSite(): Promise<{ siteId: string }>
 
-  /**
-   * Cleans up temporary assets and resources.
-   */
-  cleanupAssets(): Promise<void>
+  /** Get the list of transactions executed during the flow */
+  getTransactions(): ITransaction[]
 }
 
 // #endregion
@@ -306,56 +268,17 @@ export interface IWalrusSiteDeployFlow {
 // #region SDK Types
 // ##########################################################################
 
+/**
+ * Walrus Site Builder SDK interface.
+ */
 export interface IWalrusSiteBuilderSdk {
   /**
-   * The Walrus client used for interacting with the Walrus API.
+   * Start a deploy flow for deploying a Walrus Site.
    */
-  walrus: WalrusClient
-
-  /**
-   * The Sui client used for interacting with the Sui API.
-   */
-  sui: SuiClient
-
-  /**
-   * The active wallet account.
-   */
-  activeAccount: WalletAccount
-
-  /**
-   * The function used to sign and execute transactions.
-   */
-  signAndExecuteTransaction: ISignAndExecuteTransaction
-
-  /**
-   * Create a deploy flow for deploying a Walrus Site.
-   */
-  deployFlow(assets: IAsset[], wsResource?: WSResources): IWalrusSiteDeployFlow
-
-  /**
-   * Create transaction to update a Walrus Site
-   */
-  createSiteUpdateTransaction(params: {
-    siteId?: string
-    siteData: SiteData
-    ownerAddr: string
-  }): Transaction
-
-  /**
-   * Get site updates for a Walrus Site
-   */
-  getSiteUpdates(params: {
-    siteData: SiteData
-    siteId?: string
-  }): Promise<SiteDataDiff>
-
-  /**
-   * Get the site data from the provided assets.
-   * @param assets The assets to process.
-   * @param wsResource The Walrus resources.
-   * @returns The site data.
-   */
-  getSiteData(assets: IAsset[], wsResource: WSResources): Promise<SiteData>
+  executeSiteUpdateFlow(
+    target: IReadOnlyFileManager,
+    wsResource?: WSResources
+  ): IUpdateWalrusSiteFlow
 }
 
 // #endregion
