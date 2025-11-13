@@ -150,7 +150,7 @@ const PublishMenu: FC<PublishMenuProps> = ({
             {network === 'testnet' && (
               <Banner
                 title="You are publishing to the testnet"
-                description="You should run portal locally to see."
+                description="You must run a portal locally to view deployed site."
                 variant="info"
                 url="https://docs.wal.app/walrus-sites/portal.html"
                 urlName="Portal Documentation"

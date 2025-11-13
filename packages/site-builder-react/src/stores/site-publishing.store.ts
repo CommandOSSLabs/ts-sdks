@@ -36,6 +36,9 @@ export enum DeploymentStatus {
   Deployed
 }
 
+/**
+ * Site metadata structure used in the Site Builder SDK and store.
+ */
 export interface SiteMetadata {
   id?: string
   title?: string
@@ -45,6 +48,10 @@ export interface SiteMetadata {
   imageUrl?: string
   creator?: string
 }
+/**
+ * Same as SiteMetadata but allows imageUrl to be a File object for upload
+ * to the server or storage service.
+ */
 export interface SiteMetadataUpdate extends Omit<SiteMetadata, 'imageUrl'> {
   imageUrl?: string | File
 }

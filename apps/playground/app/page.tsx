@@ -3,25 +3,29 @@
 //SDK
 import type { IFileManager } from '@cmdoss/site-builder'
 import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder'
-import { PublishButton, useZenFsWorkspace } from '@cmdoss/site-builder-react'
+import {
+  PublishButton,
+  type SiteMetadata,
+  type SiteMetadataUpdate,
+  useZenFsWorkspace
+} from '@cmdoss/site-builder-react'
 //UI
 import { AnimatedBackground } from '@/components/AnimatedBackground'
 import { FileExplorer } from '@/components/file-explorer/file-explorer'
 import { Introduction } from '@/components/Introduction'
 import { Button } from '@/components/ui/button'
 import { CardContent } from '@/components/ui/card'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
 import '@cmdoss/site-builder-react/styles.css'
 
+import { useCurrentAccount } from '@mysten/dapp-kit'
 //React
 import { useCallback, useEffect } from 'react'
 import { testFiles } from './files'
-
-// const getContentByteLength = (content: string | Uint8Array): number => {
-//   if (typeof content === 'string')
-//     return new TextEncoder().encode(content).length
-
-//   return content.byteLength
-// }
 
 export default function Home() {
   // ZenFS Workspace Hook
@@ -32,13 +36,7 @@ export default function Home() {
     fileManager
   } = useZenFsWorkspace()
 
-  // Calculate File Size
-  // const fileSize = useMemo(() => {
-  //   return assets.reduce(
-  //     (sum, file) => sum + getContentByteLength(file.content),
-  //     0
-  //   )
-  // }, [assets])
+  const currentAccount = useCurrentAccount()
 
   // Site Builder handlers
   const handlePrepareAssetsForBuilder =
@@ -47,13 +45,20 @@ export default function Home() {
       return fileManager
     }, [fileManager])
 
-  // const handleUpdateSiteMetadataForBuilder = useCallback(
-  //   async (site: SiteMetadataUpdate) => {
-  //     // Playground has no backend; return the provided site to satisfy types
-  //     return site
-  //   },
-  //   []
-  // )
+  const handleUpdateSiteMetadataForBuilder = useCallback(
+    async (site: SiteMetadataUpdate): Promise<SiteMetadata> => {
+      // Playground has no backend; return the provided site to satisfy types
+      // but convert imageUrl to string if it's a File object
+      const imageUrl =
+        typeof site.imageUrl === 'string'
+          ? site.imageUrl
+          : typeof site.imageUrl === 'object'
+            ? URL.createObjectURL(site.imageUrl)
+            : ''
+      return { ...site, imageUrl }
+    },
+    []
+  )
 
   const handleBuilderError = useCallback((msg: string) => {
     console.error(msg)
@@ -120,14 +125,37 @@ export default function Home() {
 
           <hr className="my-4 border-t border-neutral-400 dark:border-neutral-700" />
           <div className=" flex flex-col gap-2">
-            <PublishButton
-              onPrepareAssets={handlePrepareAssetsForBuilder}
-              onError={handleBuilderError}
-            >
-              <Button className="w-full bg-[#97f0e5] text-[#0C0F1D] hover:bg-[#97f0e5]/90 border border-[#97F0E599]">
-                Publish
-              </Button>
-            </PublishButton>
+            {!currentAccount || !assets.length ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button
+                      className="w-full bg-[#97f0e5] text-[#0C0F1D] hover:bg-[#97f0e5]/90 border border-[#97F0E599]"
+                      disabled
+                    >
+                      Publish
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6} className="text-sm">
+                  {!assets.length
+                    ? 'Add files to publish your site'
+                    : !currentAccount
+                      ? 'Please connect your wallet to publish'
+                      : ''}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <PublishButton
+                onPrepareAssets={handlePrepareAssetsForBuilder}
+                onUpdateSiteMetadata={handleUpdateSiteMetadataForBuilder}
+                onError={handleBuilderError}
+              >
+                <Button className="w-full bg-[#97f0e5] text-[#0C0F1D] hover:bg-[#97f0e5]/90 border border-[#97F0E599]">
+                  Publish
+                </Button>
+              </PublishButton>
+            )}
           </div>
         </CardContent>
       </div>
