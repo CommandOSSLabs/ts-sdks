@@ -25,6 +25,7 @@ import '@cmdoss/site-builder-react/styles.css'
 import { useCurrentAccount } from '@mysten/dapp-kit'
 //React
 import { useCallback, useEffect } from 'react'
+import { toast } from 'sonner'
 import { testFiles } from './files'
 
 export default function Home() {
@@ -62,6 +63,7 @@ export default function Home() {
 
   const handleBuilderError = useCallback((msg: string) => {
     console.error(msg)
+    toast.error(msg)
   }, [])
 
   const addTestFiles = useCallback(async () => {
