@@ -151,7 +151,7 @@ export default function FileUpload({ onUploadComplete }: FileUploadProps) {
             <input
               type="file"
               ref={fileInputRef}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer [&::-webkit-file-upload-button]:hidden [&::file-selector-button]:hidden focus:outline-none focus:ring-0"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer [&::-webkit-file-upload-button]:hidden file:hidden focus:outline-none focus:ring-0"
               onChange={e => {
                 const selectedFile = e.target.files?.[0]
                 if (selectedFile) {
@@ -159,7 +159,7 @@ export default function FileUpload({ onUploadComplete }: FileUploadProps) {
                 }
               }}
             />
-            <div className="w-full p-2 border border-2 border-[#97F0E599] border-dashed rounded-md flex items-center justify-center min-h-[100px]">
+            <div className="w-full p-2 border border-[#97F0E599] border-dashed rounded-md flex items-center justify-center min-h-[100px]">
               {file ? (
                 <div className="flex flex-col items-center justify-center gap-2">
                   <Image size={56} strokeWidth={1} className="text-[#97F0E5]" />
