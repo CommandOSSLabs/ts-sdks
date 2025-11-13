@@ -1,4 +1,5 @@
-import type { SuiClient } from '@mysten/sui/client'
+import type { ClientWithExtensions } from '@mysten/sui/experimental'
+import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
 import type { WalrusClient } from '@mysten/walrus'
 import { UpdateWalrusSiteFlow } from './deploy-flow'
 import type {
@@ -15,13 +16,13 @@ import type {
 export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
   constructor(
     /**
-     * The Walrus client used for interacting with the Walrus API.
-     */
-    public walrus: WalrusClient,
-    /**
      * The Sui client used for interacting with the Sui API.
+     * Must also have the Walrus extension.
      */
-    public suiClient: SuiClient,
+    public client: ClientWithExtensions<
+      { walrus: WalrusClient },
+      SuiJsonRpcClient
+    >,
     /**
      * The active wallet account.
      */
@@ -59,8 +60,7 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
     wsResource: WSResources
   ): IUpdateWalrusSiteFlow {
     return new UpdateWalrusSiteFlow(
-      this.walrus,
-      this.suiClient,
+      this.client,
       target,
       wsResource,
       this.signAndExecuteTransaction,

@@ -81,14 +81,13 @@ export function useSitePublishing({
     })
 
   const sdk: IWalrusSiteBuilderSdk | undefined = useMemo(() => {
-    if (!suiClient || !walrusClient || !currentAccount) return
+    if (!walrusClient || !currentAccount) return
     return new WalrusSiteBuilderSdk(
       walrusClient,
-      suiClient,
       currentAccount.address,
       signAndExecuteTransaction
     )
-  }, [suiClient, walrusClient, currentAccount, signAndExecuteTransaction])
+  }, [walrusClient, currentAccount, signAndExecuteTransaction])
 
   const {
     data: nsDomains,

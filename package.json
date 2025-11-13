@@ -1,7 +1,7 @@
 {
   "name": "ts-sdk",
   "private": true,
-  "packageManager": "pnpm@10.17.1",
+  "packageManager": "pnpm@10.22.0",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",

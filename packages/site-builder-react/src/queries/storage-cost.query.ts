@@ -8,7 +8,10 @@ export function useStorageCostQuery(fileSize: number, epochs: number) {
     queryKey: queryKeys.storageCost(fileSize, epochs),
     queryFn: async () => {
       if (!walrusClient) throw new Error('Walrus client not available')
-      const storageCost = await walrusClient.storageCost(fileSize, epochs)
+      const storageCost = await walrusClient.walrus.storageCost(
+        fileSize,
+        epochs
+      )
       return {
         storageCost: storageCost.storageCost.toString(),
         writeCost: storageCost.writeCost.toString(),

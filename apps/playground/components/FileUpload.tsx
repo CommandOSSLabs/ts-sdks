@@ -22,7 +22,7 @@ export default function FileUpload({ onUploadComplete }: FileUploadProps) {
   const [file, setFile] = useState<File | null>(null)
   const [epochs, setEpochs] = useState(1)
   const [deletable, setDeletable] = useState(false)
-  const [tipAmountMist] = useState('105')
+  // const [tipAmountMist] = useState('105')
 
   // File validation
   const { error, validateFile, clearError } = useFileValidation(MAX_FILE_SIZE)

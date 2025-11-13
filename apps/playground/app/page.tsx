@@ -3,11 +3,7 @@
 //SDK
 import type { IFileManager } from '@cmdoss/site-builder'
 import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder'
-import {
-  PublishButton,
-  type SiteMetadataUpdate,
-  useZenFsWorkspace
-} from '@cmdoss/site-builder-react'
+import { PublishButton, useZenFsWorkspace } from '@cmdoss/site-builder-react'
 //UI
 import { AnimatedBackground } from '@/components/AnimatedBackground'
 import { FileExplorer } from '@/components/file-explorer/file-explorer'
@@ -17,15 +13,15 @@ import { CardContent } from '@/components/ui/card'
 import '@cmdoss/site-builder-react/styles.css'
 
 //React
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect } from 'react'
 import { testFiles } from './files'
 
-const getContentByteLength = (content: string | Uint8Array): number => {
-  if (typeof content === 'string')
-    return new TextEncoder().encode(content).length
+// const getContentByteLength = (content: string | Uint8Array): number => {
+//   if (typeof content === 'string')
+//     return new TextEncoder().encode(content).length
 
-  return content.byteLength
-}
+//   return content.byteLength
+// }
 
 export default function Home() {
   // ZenFS Workspace Hook
@@ -37,12 +33,12 @@ export default function Home() {
   } = useZenFsWorkspace()
 
   // Calculate File Size
-  const fileSize = useMemo(() => {
-    return assets.reduce(
-      (sum, file) => sum + getContentByteLength(file.content),
-      0
-    )
-  }, [assets])
+  // const fileSize = useMemo(() => {
+  //   return assets.reduce(
+  //     (sum, file) => sum + getContentByteLength(file.content),
+  //     0
+  //   )
+  // }, [assets])
 
   // Site Builder handlers
   const handlePrepareAssetsForBuilder =
@@ -51,13 +47,13 @@ export default function Home() {
       return fileManager
     }, [fileManager])
 
-  const handleUpdateSiteMetadataForBuilder = useCallback(
-    async (site: SiteMetadataUpdate) => {
-      // Playground has no backend; return the provided site to satisfy types
-      return site
-    },
-    []
-  )
+  // const handleUpdateSiteMetadataForBuilder = useCallback(
+  //   async (site: SiteMetadataUpdate) => {
+  //     // Playground has no backend; return the provided site to satisfy types
+  //     return site
+  //   },
+  //   []
+  // )
 
   const handleBuilderError = useCallback((msg: string) => {
     console.error(msg)
@@ -66,7 +62,7 @@ export default function Home() {
   const addTestFiles = useCallback(async () => {
     try {
       for (const [path, content] of Object.entries(testFiles)) {
-        await fileManager?.writeFile(path, content)
+        await fileManager?.writeFile(path, new TextEncoder().encode(content))
       }
     } catch (error) {
       console.error('Failed to create test files:', error)
