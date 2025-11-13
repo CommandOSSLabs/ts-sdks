@@ -1,6 +1,9 @@
 import type { SuiTransactionBlockResponse } from '@mysten/sui/client'
+import type { ClientWithExtensions } from '@mysten/sui/experimental'
+import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
 import type { Transaction } from '@mysten/sui/transactions'
 import type { SuiSignAndExecuteTransactionInput } from '@mysten/wallet-standard'
+import type { WalrusClient } from '@mysten/walrus'
 
 // ##########################################################################
 // #region Helper Types
@@ -23,6 +26,10 @@ export type ISignAndExecuteTransaction = (
   variables: UseSignAndExecuteTransactionArgs
 ) => Promise<SuiTransactionBlockResponse>
 
+export type SuiClientWithWalrus = ClientWithExtensions<
+  { walrus: WalrusClient },
+  SuiJsonRpcClient
+>
 // ##########################################################################
 // #region Core Entity Types
 // ##########################################################################

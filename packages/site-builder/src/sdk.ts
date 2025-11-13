@@ -1,12 +1,10 @@
-import type { ClientWithExtensions } from '@mysten/sui/experimental'
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
-import type { WalrusClient } from '@mysten/walrus'
 import { UpdateWalrusSiteFlow } from './deploy-flow'
 import type {
   IReadOnlyFileManager,
   ISignAndExecuteTransaction,
   IUpdateWalrusSiteFlow,
   IWalrusSiteBuilderSdk,
+  SuiClientWithWalrus,
   WSResources
 } from './types'
 
@@ -19,10 +17,7 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
      * The Sui client used for interacting with the Sui API.
      * Must also have the Walrus extension.
      */
-    public client: ClientWithExtensions<
-      { walrus: WalrusClient },
-      SuiJsonRpcClient
-    >,
+    public client: SuiClientWithWalrus,
     /**
      * The active wallet account.
      */

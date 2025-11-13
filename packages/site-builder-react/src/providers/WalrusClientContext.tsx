@@ -1,14 +1,11 @@
-import { isSupportedNetwork } from '@cmdoss/site-builder'
+import {
+  isSupportedNetwork,
+  type SuiClientWithWalrus
+} from '@cmdoss/site-builder'
 import { useSuiClient } from '@mysten/dapp-kit'
-import type { ClientWithExtensions } from '@mysten/sui/experimental'
 import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
-import { type WalrusClient, walrus } from '@mysten/walrus'
+import { walrus } from '@mysten/walrus'
 import { createContext, type ReactNode, useMemo } from 'react'
-
-export type SuiClientWithWalrus = ClientWithExtensions<
-  { walrus: WalrusClient },
-  SuiJsonRpcClient
->
 
 function createWalrusClient(
   suiClient: SuiJsonRpcClient | null

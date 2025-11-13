@@ -1,11 +1,6 @@
-import type { ClientWithExtensions } from '@mysten/sui/experimental'
 import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
 import type { Transaction } from '@mysten/sui/transactions'
-import {
-  type WalrusClient,
-  WalrusFile,
-  type WriteFilesFlow
-} from '@mysten/walrus'
+import { WalrusFile, type WriteFilesFlow } from '@mysten/walrus'
 import debug from 'debug'
 import { contentTypeFromFilePath } from './content'
 import { getSHA256Hash, sha256ToU256 } from './lib'
@@ -26,6 +21,7 @@ import type {
   IUpdateWalrusSiteFlow,
   SiteData,
   SiteDataDiff,
+  SuiClientWithWalrus,
   SuiResource,
   WSResources
 } from './types'
@@ -58,10 +54,7 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
      * The Sui client used for interacting with the Sui API.
      * Must also have the Walrus extension.
      */
-    private client: ClientWithExtensions<
-      { walrus: WalrusClient },
-      SuiJsonRpcClient
-    >,
+    private client: SuiClientWithWalrus,
     /**
      * The target file manager containing assets to be deployed.
      */
