@@ -4,14 +4,16 @@ import {
 } from '@cmdoss/site-builder'
 import { useSuiClient } from '@mysten/dapp-kit'
 import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
-import { walrus } from '@mysten/walrus'
-import { createContext, type ReactNode, useMemo } from 'react'
+import { createContext, type ReactNode, useEffect, useState } from 'react'
 
-function createWalrusClient(
+async function createWalrusClient(
   suiClient: SuiJsonRpcClient | null
-): SuiClientWithWalrus | null {
+): Promise<SuiClientWithWalrus | null> {
   if (typeof window === 'undefined') return null // SSR check
   if (!suiClient) return null
+
+  // Dynamically import to avoid SSR issues
+  const { walrus } = await import('@mysten/walrus')
   const network = suiClient.network
   if (!isSupportedNetwork(network))
     throw new Error(`Unsupported network: ${network}`)
@@ -19,6 +21,8 @@ function createWalrusClient(
 
   return suiClient.$extend(
     walrus({
+      wasmUrl:
+        'https://unpkg.com/@mysten/walrus-wasm@latest/web/walrus_wasm_bg.wasm',
       uploadRelay: {
         timeout: 600000,
         host: `https://upload-relay.${network}.walrus.space`,
@@ -35,13 +39,18 @@ export const WalrusClientProvider: React.FC<{
   children: ReactNode
   createClient?: (
     suiClient: SuiJsonRpcClient | null
-  ) => SuiClientWithWalrus | null
+  ) => Promise<SuiClientWithWalrus | null>
 }> = ({ children, createClient = createWalrusClient }) => {
   const suiClient = useSuiClient()
-  const walrusClient = useMemo(
-    () => createClient(suiClient),
-    [suiClient, createClient]
+  const [walrusClient, setWalrusClient] = useState<SuiClientWithWalrus | null>(
+    null
   )
+  useEffect(() => {
+    if (!suiClient) return
+    Promise.all([createClient(suiClient)]).then(([client]) =>
+      setWalrusClient(client)
+    )
+  }, [suiClient, createClient])
   return (
     <WalrusClientContext.Provider value={walrusClient}>
       {children}

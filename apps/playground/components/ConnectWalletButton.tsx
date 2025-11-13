@@ -27,7 +27,6 @@ export default function ConnectWalletButton({
   const { data: suiNSName } = useResolveSuiNSName(account?.address)
   const { mutate: disconnect } = useDisconnectWallet()
   const { mutate: switchAccount } = useSwitchAccount()
-  const [open, setOpen] = useState(false)
   const [alignment, setAlignment] = useState<'center' | 'end'>('center')
 
   useEffect(() => {
@@ -95,7 +94,7 @@ export default function ConnectWalletButton({
                 <Image
                   src={'/images/walrus-pfp.png'}
                   alt="PP"
-                  className="rounded-full w-[40px] h-[40px]"
+                  className="rounded-full size-10"
                   width={40}
                   height={40}
                 />
@@ -128,7 +127,7 @@ export default function ConnectWalletButton({
                       <Image
                         src={acc.icon || '/icons/walrus-pfp.png'}
                         alt="Wallet"
-                        className="rounded-full w-[32px] h-[32px]"
+                        className="rounded-full size-8"
                         width={32}
                         height={32}
                       />
@@ -197,15 +196,15 @@ export default function ConnectWalletButton({
         </div>
       ) : (
         <ConnectModal
+          defaultOpen={false}
           trigger={
             <Button
+              type="button"
               className={`bg-[#C684F6] text-[#0C0F1D] px-4 py-2 rounded-md hover:bg-[#C684F6] hover:opacity-80 ${fullWidth ? 'w-full' : ''}`}
             >
               CONNECT WALLET
             </Button>
           }
-          open={open}
-          onOpenChange={isOpen => setOpen(isOpen)}
         />
       )}
     </>

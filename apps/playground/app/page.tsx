@@ -65,8 +65,13 @@ export default function Home() {
   }, [])
 
   const addTestFiles = useCallback(async () => {
+    if (!fileManager) {
+      console.error('File manager not ready')
+      return
+    }
     try {
       for (const [path, content] of Object.entries(testFiles)) {
+        console.log('Adding test file:', path)
         await fileManager?.writeFile(path, new TextEncoder().encode(content))
       }
     } catch (error) {
@@ -113,9 +118,7 @@ export default function Home() {
               <FileExplorer className="h-[300px]" assets={assets} />
 
               <Button
-                onClick={() => {
-                  clearWorkspace()
-                }}
+                onClick={clearWorkspace}
                 className="w-full text-[#97f0e5] hover:opacity-80 border border-[#97F0E599]"
               >
                 Clear Files

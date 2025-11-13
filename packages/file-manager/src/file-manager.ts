@@ -36,10 +36,11 @@ export class ZenFsFileManager implements IFileManager {
       .catch(() => false)
     if (isAccessible) {
       log('⚠️ Workspace directory is already mounted')
-      if (!force) throw new Error('Workspace directory is already mounted')
 
-      log('🚪 Unmounting existing workspace before remounting')
-      fs.umount(this.workspaceDir) // Unmount existing instance
+      if (force) {
+        log('🚪 Unmounting existing workspace...')
+        fs.umount(this.workspaceDir) // Unmount existing instance
+      }
     }
     log('🔧 Configuring filesystem...')
     await configure({
@@ -115,8 +116,10 @@ export class ZenFsFileManager implements IFileManager {
       withFileTypes: true
     })
     for (const file of files) {
+      log('🗑️ Removing', file.name, '...')
       const filePath = path.join(file.parentPath, file.name)
       await fs.promises.rm(filePath, { recursive: true, force: true })
+      log('✅ Removed', file.name)
     }
     log('✅ Workspace directory cleared, removed', files.length, 'items')
   }
