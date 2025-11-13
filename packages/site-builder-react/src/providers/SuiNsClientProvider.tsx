@@ -25,5 +25,10 @@ export const SuiNsClientProvider: React.FC<{ children: ReactNode }> = ({
     [suiClient, network]
   )
 
-  return <SuiNsClientContext value={suinsClient}>{children}</SuiNsClientContext>
+  return (
+    <SuiNsClientContext.Provider value={suinsClient}>
+      {children}
+    </SuiNsClientContext.Provider>
+  )
 }
+SuiNsClientProvider.displayName = 'SuiNsClientProvider'

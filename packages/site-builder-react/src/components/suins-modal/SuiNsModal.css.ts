@@ -57,7 +57,10 @@ export const section = style({
 
 export const sectionTitle = style({
   fontSize: '0.875rem',
-  fontWeight: 500
+  fontWeight: 500,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between'
 })
 
 export const domainList = style({

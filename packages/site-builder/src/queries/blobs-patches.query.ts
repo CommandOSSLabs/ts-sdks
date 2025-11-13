@@ -1,4 +1,4 @@
-import { isSupportedNetwork, mainPackage } from '../lib'
+import { isSupportedNetwork, mainPackage } from '~/lib'
 
 /**
  * Response item for a patch in a quilt.

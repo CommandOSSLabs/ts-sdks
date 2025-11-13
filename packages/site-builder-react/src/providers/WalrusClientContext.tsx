@@ -1,15 +1,16 @@
-import { useSuiClient, useSuiClientContext } from '@mysten/dapp-kit'
+import { isSupportedNetwork } from '@cmdoss/site-builder'
+import { useSuiClient } from '@mysten/dapp-kit'
 import type { SuiClient } from '@mysten/sui/client'
 import { WalrusClient } from '@mysten/walrus'
 import { createContext, type ReactNode, useMemo } from 'react'
 
-function createWalrusClient(
-  suiClient: SuiClient,
-  network: string
-): WalrusClient | null {
+function createWalrusClient(suiClient: SuiClient): WalrusClient | null {
   if (typeof window === 'undefined') return null // SSR check
-  if (network !== 'mainnet' && network !== 'testnet')
+  if (!suiClient) return null
+  const network = suiClient.network
+  if (!isSupportedNetwork(network))
     throw new Error(`Unsupported network: ${network}`)
+  console.log('Creating WalrusClient for network:', network)
 
   return new WalrusClient({
     network,
@@ -29,13 +30,12 @@ export const WalrusClientProvider: React.FC<{ children: ReactNode }> = ({
   children
 }) => {
   const suiClient = useSuiClient()
-  const { network } = useSuiClientContext()
-  const walrusClient = useMemo(
-    () => createWalrusClient(suiClient, network),
-    [suiClient, network]
-  )
+  const walrusClient = useMemo(() => createWalrusClient(suiClient), [suiClient])
 
   return (
-    <WalrusClientContext value={walrusClient}>{children}</WalrusClientContext>
+    <WalrusClientContext.Provider value={walrusClient}>
+      {children}
+    </WalrusClientContext.Provider>
   )
 }
+WalrusClientProvider.displayName = 'WalrusClientProvider'

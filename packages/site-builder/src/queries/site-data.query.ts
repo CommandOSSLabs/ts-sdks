@@ -3,9 +3,9 @@ import type {
   ObjectResponseError,
   SuiClient
 } from '@mysten/sui/client'
-import { mainPackage } from '../lib'
-import { isSupportedNetwork } from '../lib/utils'
-import type { SiteData, SuiResource } from '../types'
+import { mainPackage } from '~/lib'
+import { isSupportedNetwork } from '~/lib/utils'
+import type { SiteData, SuiResource } from '~/types'
 
 interface WalrusSiteDisplayData {
   creator: string

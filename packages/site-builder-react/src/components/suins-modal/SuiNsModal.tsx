@@ -186,7 +186,9 @@ const SuiNsModal: FC<SuiNsModalProps> = ({ siteId, onAssociateDomain }) => {
             {/* Available Domains */}
             <div className={styles.section} style={{ marginTop: '0.5rem' }}>
               <div className={styles.sectionTitle}>
-                Select a domain to associate with your website
+                <span>Select a domain to associate with your website</span>
+
+                <button type="button">Buy a domain</button>
               </div>
 
               {/* Loading state */}

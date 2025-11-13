@@ -1,4 +1,8 @@
-import type { FileChangedCallback, IFileManager } from '@cmdoss/site-builder'
+import type {
+  FileChangedCallback,
+  IFileManager,
+  MountOptions
+} from '@cmdoss/site-builder'
 import { Iso, Zip } from '@zenfs/archives'
 import { configure, fs } from '@zenfs/core'
 import * as path from '@zenfs/core/path'
@@ -8,29 +12,24 @@ import debug from 'debug'
 const log = debug('file-manager')
 
 export class ZenFsFileManager implements IFileManager {
-  private changeListeners = new Set<FileChangedCallback>()
+  protected changeListeners: Set<FileChangedCallback> = new Set()
+  constructor(protected workspaceDir = '/workspace') {}
 
-  constructor(
-    private workspaceDir = '/workspace',
-    private backend: 'indexeddb' | 'zip' | 'iso' = 'indexeddb'
-  ) {}
-
-  async mount(data?: ArrayBuffer, force = false): Promise<void> {
-    log(
-      '⚡️ Mounting workspace at',
-      this.workspaceDir,
-      'with backend',
-      this.backend
-    )
-    const backend =
-      this.backend === 'indexeddb'
+  async mount({
+    data,
+    force,
+    backend = 'indexeddb'
+  }: MountOptions = {}): Promise<void> {
+    log('⚡️ Mounting workspace at', this.workspaceDir, 'with backend', backend)
+    const backendClass =
+      backend === 'indexeddb'
         ? IndexedDB
-        : this.backend === 'zip'
+        : backend === 'zip'
           ? Zip
-          : this.backend === 'iso'
+          : backend === 'iso'
             ? Iso
             : null
-    if (!backend) throw new Error('Invalid backend specified')
+    if (!backendClass) throw new Error('Invalid backend specified')
     const isAccessible = await fs.promises
       .access(this.workspaceDir)
       .then(() => true)
@@ -38,11 +37,38 @@ export class ZenFsFileManager implements IFileManager {
     if (isAccessible) {
       log('⚠️ Workspace directory is already mounted')
       if (!force) throw new Error('Workspace directory is already mounted')
-      this.unmount() // Unmount existing instance
+
+      log('🚪 Unmounting existing workspace before remounting')
+      fs.umount(this.workspaceDir) // Unmount existing instance
     }
     log('🔧 Configuring filesystem...')
-    await configure({ mounts: { [this.workspaceDir]: { backend, data } } })
+    await configure({
+      mounts: { [this.workspaceDir]: { backend: backendClass, data } }
+    })
     log('✅ Filesystem configured')
+  }
+
+  async readFile(filePath: string): Promise<Uint8Array> {
+    log('📂 Reading file from', filePath)
+    filePath = ensureLeadingSlash(filePath)
+    const workspaceFilePath = path.join(this.workspaceDir, filePath)
+    const content = await fs.promises.readFile(workspaceFilePath)
+    log('✅ File read from', filePath, '(', content.byteLength, 'bytes )')
+    return content
+  }
+
+  async listFiles(): Promise<string[]> {
+    log('📄 Listing files in workspace')
+    const files = await fs.promises.readdir(this.workspaceDir, {
+      withFileTypes: true,
+      recursive: true
+    })
+    const result = files
+      .filter(f => f.isFile())
+      .map(f => path.resolve(f.parentPath, f.name))
+      .map(ensureLeadingSlash)
+    log('✅ Files currently in workspace', result)
+    return result
   }
 
   async writeFile(
@@ -68,29 +94,6 @@ export class ZenFsFileManager implements IFileManager {
     await fs.promises.rm(workspaceFilePath)
     log('✅ File removed at', filePath)
     this.notifyChange({ type: 'removed', path: filePath })
-  }
-
-  async readFile(filePath: string): Promise<Uint8Array> {
-    log('📂 Reading file from', filePath)
-    filePath = ensureLeadingSlash(filePath)
-    const workspaceFilePath = path.join(this.workspaceDir, filePath)
-    const content = await fs.promises.readFile(workspaceFilePath)
-    log('✅ File read from', filePath, '(', content.byteLength, 'bytes )')
-    return content
-  }
-
-  async listFiles(): Promise<string[]> {
-    log('📄 Listing files in workspace')
-    const files = await fs.promises.readdir(this.workspaceDir, {
-      withFileTypes: true,
-      recursive: true
-    })
-    const result = files
-      .filter(f => f.isFile())
-      .map(f => path.resolve(f.parentPath, f.name))
-      .map(ensureLeadingSlash)
-    log('✅ Files currently in workspace', result)
-    return result
   }
 
   onFileChange(callback: FileChangedCallback): () => void {

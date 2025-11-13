@@ -13,7 +13,7 @@
     "tag": "latest"
   },
   "scripts": {
-    "dev": "tsdown --watch --no-clean",
+    "dev": "tsdown --watch --ignore-watch .turbo --no-clean",
     "test": "node --test",
     "check-types": "tsc --noEmit",
     "build": "tsdown"
@@ -23,7 +23,7 @@
     "@cmdoss/site-builder": "workspace:*",
     "@mysten/dapp-kit": "catalog:",
     "@mysten/sui": "catalog:",
-    "@mysten/suins": "^0.9.3",
+    "@mysten/suins": "catalog:",
     "@mysten/wallet-standard": "catalog:",
     "@mysten/walrus": "catalog:",
     "@tanstack/react-query": "^5.85.9",
@@ -38,10 +38,10 @@
   "dependencies": {
     "@nanostores/react": "^1.0.0",
     "@radix-ui/react-dialog": "^1.1.15",
-    "@radix-ui/react-dropdown-menu": "^2.1.4",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
     "lucide-react": "^0.468.0",
     "nanostores": "^1.0.1",
-    "sonner": "^2.0.6"
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -50,7 +50,7 @@
     "@vanilla-extract/css-utils": "^0.1.6",
     "@vanilla-extract/dynamic": "^2.1.5",
     "@vanilla-extract/recipes": "^0.5.7",
-    "@vanilla-extract/rollup-plugin": "^1.4.2",
-    "tsdown": "^0.15.9"
+    "@vanilla-extract/rollup-plugin": "npm:@toanzzz/vanilla-extract-rollup-plugin@1.4.2",
+    "tsdown": "catalog:"
   }
 }

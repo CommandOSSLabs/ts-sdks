@@ -10,7 +10,7 @@
     "tag": "latest"
   },
   "scripts": {
-    "dev": "tsdown --platform browser --watch --ignore-watch .turbo",
+    "dev": "tsdown --platform browser --watch --ignore-watch .turbo --no-clean",
     "test": "node --test",
     "check-types": "tsc --noEmit",
     "build": "tsdown --platform browser --minify"
@@ -21,11 +21,11 @@
     "@mysten/walrus": "catalog:"
   },
   "devDependencies": {
-    "@types/debug": "^4.1.12",
+    "@types/debug": "catalog:",
     "@types/node": "catalog:",
-    "tsdown": "^0.15.4"
+    "tsdown": "catalog:"
   },
   "dependencies": {
-    "debug": "^4.4.3"
+    "debug": "catalog:"
   }
 }

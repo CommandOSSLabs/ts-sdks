@@ -157,7 +157,6 @@ async function fetchWalrusSiteData(
 export function useWalrusSiteQuery(id: string | undefined) {
   const suiClient = useSuiClient()
   const { network } = useSuiClientContext()
-  console.log('🔍 Network:', network)
   const packageId = useMemo(
     () => mainPackage[network as keyof typeof mainPackage].packageId,
     [network]

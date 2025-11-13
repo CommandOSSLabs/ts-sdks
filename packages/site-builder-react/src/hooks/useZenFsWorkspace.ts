@@ -23,7 +23,7 @@ export function useZenFsWorkspace(workspaceDir = '/workspace') {
     setFileManager(fm)
 
     // Load existing files once the file manager is ready
-    fm.mount(undefined, true).then(async () => {
+    fm.mount({ force: true }).then(async () => {
       try {
         const assets: IAsset[] = []
         const files = await fm.listFiles()

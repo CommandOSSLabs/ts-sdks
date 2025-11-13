@@ -229,7 +229,7 @@ const PublishModal: FC<PublishModalProps> = ({
                                   Number(storageCost.writeCost)) /
                                 1_000_000_000
                               ).toFixed(9)}{' '}
-                              SUI
+                              WAL
                             </span>
                           </>
                         )}
@@ -254,16 +254,7 @@ const PublishModal: FC<PublishModalProps> = ({
                               {(
                                 Number(storageCost.storageCost) / 1_000_000_000
                               ).toFixed(9)}{' '}
-                              SUI
-                            </span>
-                            <span
-                              style={{
-                                fontSize: '0.75rem',
-                                color: 'var(--muted-foreground)',
-                                marginLeft: '0.5rem'
-                              }}
-                            >
-                              ({storageCost.storageCost.toLocaleString()} MIST)
+                              WAL
                             </span>
                           </div>
                           <div style={{ fontSize: '0.875rem' }}>
@@ -272,16 +263,7 @@ const PublishModal: FC<PublishModalProps> = ({
                               {(
                                 Number(storageCost.writeCost) / 1_000_000_000
                               ).toFixed(9)}{' '}
-                              SUI
-                            </span>
-                            <span
-                              style={{
-                                fontSize: '0.75rem',
-                                color: 'var(--muted-foreground)',
-                                marginLeft: '0.5rem'
-                              }}
-                            >
-                              ({storageCost.writeCost.toLocaleString()} MIST)
+                              WAL
                             </span>
                           </div>
                           <div
@@ -299,33 +281,10 @@ const PublishModal: FC<PublishModalProps> = ({
                                   Number(storageCost.writeCost)) /
                                 1_000_000_000
                               ).toFixed(9)}{' '}
-                              SUI
-                            </span>
-                            <span
-                              style={{
-                                fontSize: '0.75rem',
-                                color: 'var(--muted-foreground)',
-                                marginLeft: '0.5rem'
-                              }}
-                            >
-                              (
-                              {(
-                                Number(storageCost.storageCost) +
-                                Number(storageCost.writeCost)
-                              ).toLocaleString()}{' '}
-                              MIST)
+                              WAL
                             </span>
                           </div>
                         </div>
-                        <p
-                          style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--muted-foreground)',
-                            marginTop: '0.2rem'
-                          }}
-                        >
-                          Note: 1 SUI = 1,000,000,000 MIST
-                        </p>
                       </div>
                     )}
                   </div>

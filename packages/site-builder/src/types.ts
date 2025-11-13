@@ -64,6 +64,15 @@ export type FileChangedCallback = (arg: {
   path: string
 }) => void
 
+export interface MountOptions {
+  /** Data to initialize the workspace */
+  data?: ArrayBuffer
+  /** If true, will unmount any existing workspace before mounting */
+  force?: boolean
+  /** Vendor specific backend */
+  backend?: string
+}
+
 /**
  * File Manager interface for managing site files.
  */
@@ -74,7 +83,7 @@ export interface IFileManager extends IReadOnlyFileManager {
    * If `data` is provided, it will be used to initialize the workspace.
    * If `force` is true, it will unmount any existing workspace before mounting.
    */
-  mount(data?: ArrayBuffer, force?: boolean): Promise<void>
+  mount(options: MountOptions): Promise<void>
   /** Write a file to the workspace */
   writeFile(path: string, content: Uint8Array): Promise<void>
   /** Remove a file from the workspace */

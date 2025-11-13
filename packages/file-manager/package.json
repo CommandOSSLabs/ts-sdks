@@ -10,26 +10,26 @@
     "tag": "latest"
   },
   "scripts": {
-    "dev": "tsdown --platform browser --watch --ignore-watch .turbo",
+    "dev": "tsdown --platform browser --watch --ignore-watch .turbo --no-clean",
     "test": "node --test",
     "check-types": "tsc --noEmit",
     "build": "tsdown --platform browser --minify"
   },
   "peerDependencies": {
-    "@zenfs/archives": "^1.3.1",
-    "@zenfs/core": "^2.4.2",
-    "@zenfs/dom": "^1.2.4"
+    "@zenfs/archives": "catalog:",
+    "@zenfs/core": "catalog:",
+    "@zenfs/dom": "catalog:"
   },
   "dependencies": {
     "@cmdoss/site-builder": "workspace:*",
-    "@zenfs/archives": "^1.3.1",
-    "@zenfs/core": "^2.4.2",
-    "@zenfs/dom": "^1.2.5",
-    "debug": "^4.4.3"
+    "@zenfs/archives": "catalog:",
+    "@zenfs/core": "catalog:",
+    "@zenfs/dom": "catalog:",
+    "debug": "catalog:"
   },
   "devDependencies": {
-    "@types/debug": "^4.1.12",
+    "@types/debug": "catalog:",
     "@types/node": "catalog:",
-    "tsdown": "^0.15.4"
+    "tsdown": "catalog:"
   }
 }

@@ -1,4 +1,4 @@
-import type { SiteData, SiteDataDiff } from '../types'
+import type { SiteData, SiteDataDiff } from '~/types'
 
 export function hasUpdate(
   diff: SiteDataDiff | undefined

@@ -1,6 +1,6 @@
 import type { Transaction, TransactionArgument } from '@mysten/sui/transactions'
 import debug from 'debug'
-import type { SiteDataDiff } from '../types'
+import type { SiteDataDiff } from '~/types'
 import { WalrusSiteTransaction } from './walrus-site-transaction'
 
 const log = debug('site-builder:tx-builder')

@@ -12,9 +12,9 @@
     "publish-packages": "turbo run check build test && changeset version && changeset publish"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.4",
-    "@changesets/cli": "^2.29.7",
-    "lefthook": "^1.12.3",
+    "@biomejs/biome": "latest",
+    "@changesets/cli": "latest",
+    "lefthook": "latest",
     "turbo": "latest"
   }
 }
