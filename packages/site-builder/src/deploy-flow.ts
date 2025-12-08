@@ -1,6 +1,10 @@
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
+import type { SuiClient } from '@mysten/sui/client'
 import type { Transaction } from '@mysten/sui/transactions'
-import { WalrusFile, type WriteFilesFlow } from '@mysten/walrus'
+import {
+  type WalrusClient,
+  WalrusFile,
+  type WriteFilesFlow
+} from '@mysten/walrus'
 import debug from 'debug'
 import { contentTypeFromFilePath } from './content'
 import { getSHA256Hash, sha256ToU256 } from './lib'
@@ -21,7 +25,6 @@ import type {
   IUpdateWalrusSiteFlow,
   SiteData,
   SiteDataDiff,
-  SuiClientWithWalrus,
   SuiResource,
   WSResources
 } from './types'
@@ -51,10 +54,13 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
 
   constructor(
     /**
-     * The Sui client used for interacting with the Sui API.
-     * Must also have the Walrus extension.
+     * The Walrus client used for interacting with the Walrus API.
      */
-    private client: SuiClientWithWalrus,
+    private walrus: WalrusClient,
+    /**
+     * The Sui client used for interacting with the Sui API.
+     */
+    private suiClient: SuiClient,
     /**
      * The target file manager containing assets to be deployed.
      */
@@ -116,7 +122,7 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     }
 
     // Step 1: Prepare the files for upload
-    this.state.writeFilesFlow = this.client.walrus.writeFilesFlow({ files })
+    this.state.writeFilesFlow = this.walrus.writeFilesFlow({ files })
 
     log('📦 Getting', files.length, 'files ready for upload...')
     await this.state.writeFilesFlow.encode()
@@ -222,7 +228,7 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     log('⚡️ Getting site updates')
     const existingSiteData = !siteId
       ? { resources: [] } // Empty site data for new site
-      : await getSiteDataFromChain(this.client as SuiJsonRpcClient, siteId)
+      : await getSiteDataFromChain(this.suiClient, siteId)
 
     return computeSiteDataDiff(siteData, existingSiteData)
   }
@@ -275,7 +281,7 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
   }): Transaction {
     log('⚡️ Creating site update transaction')
 
-    const network = this.client.network
+    const network = this.suiClient.network
     if (!isSupportedNetwork(network))
       throw new Error(`Unsupported network: ${network}`)
     const packageId = mainPackage[network].packageId
@@ -289,7 +295,10 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     log('🔄 Calculating site updates with certified files...')
     const uniqueBlobIds = Array.from(new Set(files.map(f => f.blobId)))
     log('🔄 Fetching patches for blob IDs:', uniqueBlobIds)
-    const patches = await fetchBlobsPatches(uniqueBlobIds, this.client.network)
+    const patches = await fetchBlobsPatches(
+      uniqueBlobIds,
+      this.suiClient.network
+    )
     log('🧩 Fetched patches:', patches)
     const fileIdentifierByPatchId = new Map(
       patches.map(p => [p.patch_id, p.identifier])

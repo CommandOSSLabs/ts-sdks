@@ -1,9 +1,5 @@
-import type {
-  FileChangedCallback,
-  IFileManager,
-  MountOptions
-} from '@cmdoss/site-builder'
-import { Iso, Zip } from '@zenfs/archives'
+import type { FileChangedCallback, IFileManager } from '@cmdoss/site-builder'
+import { Zip } from '@zenfs/archives'
 import { configure, fs } from '@zenfs/core'
 import * as path from '@zenfs/core/path'
 import { IndexedDB } from '@zenfs/dom'
@@ -13,40 +9,40 @@ const log = debug('file-manager')
 
 export class ZenFsFileManager implements IFileManager {
   protected changeListeners: Set<FileChangedCallback> = new Set()
-  constructor(protected workspaceDir = '/workspace') {}
+  constructor(
+    public workspaceDir = '/workspace',
+    public mountDir = '/workspace'
+  ) {}
 
-  async mount({
-    data,
-    force,
-    backend = 'indexeddb'
-  }: MountOptions = {}): Promise<void> {
-    log('⚡️ Mounting workspace at', this.workspaceDir, 'with backend', backend)
-    const backendClass =
-      backend === 'indexeddb'
-        ? IndexedDB
-        : backend === 'zip'
-          ? Zip
-          : backend === 'iso'
-            ? Iso
-            : null
-    if (!backendClass) throw new Error('Invalid backend specified')
-    const isAccessible = await fs.promises
-      .access(this.workspaceDir)
-      .then(() => true)
-      .catch(() => false)
-    if (isAccessible) {
-      log('⚠️ Workspace directory is already mounted')
-
-      if (force) {
-        log('🚪 Unmounting existing workspace...')
-        fs.umount(this.workspaceDir) // Unmount existing instance
-      }
-    }
+  async initialize(): Promise<void> {
     log('🔧 Configuring filesystem...')
+    log(`📁 Mounting workspace at ${this.mountDir}`)
     await configure({
-      mounts: { [this.workspaceDir]: { backend: backendClass, data } }
+      mounts: {
+        [this.mountDir]: {
+          backend: IndexedDB,
+          storeName: this.mountDir
+        }
+      }
     })
     log('✅ Filesystem configured')
+  }
+
+  async writeZipArchive(zipData: ArrayBuffer): Promise<void> {
+    const tmpDir = `/tmp/zip-write-${crypto.randomUUID()}`
+    log('📦 Mounting ZIP archive to temporary directory...')
+    await configure({
+      mounts: {
+        [tmpDir]: {
+          backend: Zip,
+          data: zipData,
+          lazy: false // Extract all files immediately
+        }
+      }
+    })
+    log('📂 Copying files from ZIP archive to workspace...')
+    await fs.promises.cp(tmpDir, this.workspaceDir, { recursive: true })
+    log('✅ Files copied to workspace from ZIP archive')
   }
 
   async readFile(filePath: string): Promise<Uint8Array> {
@@ -66,10 +62,32 @@ export class ZenFsFileManager implements IFileManager {
     })
     const result = files
       .filter(f => f.isFile())
-      .map(f => path.resolve(f.parentPath, f.name))
+      .map(f => path.join(f.parentPath, f.name))
       .map(ensureLeadingSlash)
     log('✅ Files currently in workspace', result)
     return result
+  }
+
+  async getSize(): Promise<number> {
+    log('📏 Calculating total size of files in workspace')
+    let totalSize = 0
+    const files = await fs.promises.readdir(this.workspaceDir, {
+      withFileTypes: true,
+      recursive: true
+    })
+    for (const file of files) {
+      if (file.isFile()) {
+        const filePath = path.join(
+          this.workspaceDir,
+          file.parentPath,
+          file.name
+        )
+        const stats = await fs.promises.stat(filePath)
+        totalSize += stats.size
+      }
+    }
+    log('✅ Total size of files in workspace:', totalSize, 'bytes')
+    return totalSize
   }
 
   async writeFile(
@@ -88,12 +106,12 @@ export class ZenFsFileManager implements IFileManager {
     this.notifyChange({ type: 'updated', path: filePath })
   }
 
-  async removeFile(filePath: string): Promise<void> {
-    log('🗑️ Removing file at', filePath)
+  async deleteFile(filePath: string): Promise<void> {
+    log('🗑️ Deleting file at', filePath)
     filePath = ensureLeadingSlash(filePath)
     const workspaceFilePath = path.join(this.workspaceDir, filePath)
     await fs.promises.rm(workspaceFilePath)
-    log('✅ File removed at', filePath)
+    log('✅ File deleted at', filePath)
     this.notifyChange({ type: 'removed', path: filePath })
   }
 
@@ -110,24 +128,15 @@ export class ZenFsFileManager implements IFileManager {
     }
   }
 
-  async clear(): Promise<void> {
-    log('🧹 Clearing workspace directory (', this.workspaceDir, ')')
-    const files = await fs.promises.readdir(this.workspaceDir, {
-      withFileTypes: true
-    })
-    for (const file of files) {
-      log('🗑️ Removing', file.name, '...')
-      const filePath = path.join(file.parentPath, file.name)
-      await fs.promises.rm(filePath, { recursive: true, force: true })
-      log('✅ Removed', file.name)
-    }
-    log('✅ Workspace directory cleared, removed', files.length, 'items')
-  }
-
   unmount(): void {
     log('🚪 Unmounting workspace directory (', this.workspaceDir, ')')
     this.changeListeners.clear()
-    fs.umount(this.workspaceDir)
+    if (this.mountDir === this.workspaceDir) {
+      // Unmount only if mountDir and workspaceDir are the same
+      fs.umount(this.mountDir)
+    } else {
+      log('⚠️ Skipping unmount: mountDir and workspaceDir are different')
+    }
   }
 }
 

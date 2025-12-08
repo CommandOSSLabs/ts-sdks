@@ -1,4 +1,5 @@
 import type { IReadOnlyFileManager } from '@cmdoss/site-builder'
+import { useSuiClient } from '@mysten/dapp-kit'
 import { useQuery } from '@tanstack/react-query'
 import { useWalrusClient } from '~/hooks'
 import { queryKeys } from './keys'
@@ -6,7 +7,8 @@ import { queryKeys } from './keys'
 export function useAssetsSizeQuery(
   onPrepareAssets: () => Promise<IReadOnlyFileManager>
 ) {
-  const walrusClient = useWalrusClient()
+  const suiClient = useSuiClient()
+  const walrusClient = useWalrusClient(suiClient)
   return useQuery({
     queryKey: queryKeys.assetsSize(onPrepareAssets),
     queryFn: async () => {

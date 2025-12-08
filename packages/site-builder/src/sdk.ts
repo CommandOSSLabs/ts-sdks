@@ -1,10 +1,11 @@
+import type { SuiClient } from '@mysten/sui/client'
+import type { WalrusClient } from '@mysten/walrus'
 import { UpdateWalrusSiteFlow } from './deploy-flow'
 import type {
   IReadOnlyFileManager,
   ISignAndExecuteTransaction,
   IUpdateWalrusSiteFlow,
   IWalrusSiteBuilderSdk,
-  SuiClientWithWalrus,
   WSResources
 } from './types'
 
@@ -14,10 +15,13 @@ import type {
 export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
   constructor(
     /**
-     * The Sui client used for interacting with the Sui API.
-     * Must also have the Walrus extension.
+     * The Walrus client used for interacting with the Walrus API.
      */
-    public client: SuiClientWithWalrus,
+    public walrus: WalrusClient,
+    /**
+     * The Sui client used for interacting with the Sui API.
+     */
+    public suiClient: SuiClient,
     /**
      * The active wallet account.
      */
@@ -55,7 +59,8 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
     wsResource: WSResources
   ): IUpdateWalrusSiteFlow {
     return new UpdateWalrusSiteFlow(
-      this.client,
+      this.walrus,
+      this.suiClient,
       target,
       wsResource,
       this.signAndExecuteTransaction,

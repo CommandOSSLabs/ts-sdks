@@ -12,23 +12,23 @@
   "scripts": {
     "dev": "tsdown --platform browser --watch --ignore-watch .turbo --no-clean",
     "test": "node --test",
-    "check-types": "tsc --noEmit",
+    "check:types": "tsc --noEmit",
     "build": "tsdown --platform browser --minify"
   },
   "peerDependencies": {
-    "@zenfs/archives": "catalog:",
-    "@zenfs/core": "catalog:",
-    "@zenfs/dom": "catalog:"
+    "@zenfs/archives": "^1.3.1",
+    "@zenfs/core": "^2.4.2",
+    "@zenfs/dom": "^1.2.4"
   },
   "dependencies": {
     "@cmdoss/site-builder": "workspace:*",
-    "@zenfs/archives": "catalog:",
-    "@zenfs/core": "catalog:",
-    "@zenfs/dom": "catalog:",
-    "debug": "catalog:"
+    "@types/debug": "^4.1.12",
+    "@zenfs/archives": "^1.3.1",
+    "@zenfs/core": "^2.4.4",
+    "@zenfs/dom": "^1.2.5",
+    "debug": "^4.4.3"
   },
   "devDependencies": {
-    "@types/debug": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:"
   }

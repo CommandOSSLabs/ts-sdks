@@ -1,4 +1,4 @@
-import { useSuiClientContext } from '@mysten/dapp-kit'
+import { useSuiClient } from '@mysten/dapp-kit'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { ExternalLink, Globe2 } from 'lucide-react'
 import type { FC, ReactNode } from 'react'
@@ -22,7 +22,7 @@ const PublishMenu: FC<PublishMenuProps> = ({
 }) => {
   const isDeployed = !!siteId
   const walrusSiteUrl = useDefaultWalrusSiteUrl(siteId)
-  const { network } = useSuiClientContext()
+  const { network } = useSuiClient()
 
   const truncateUrl = (url: string) => {
     try {
@@ -150,7 +150,7 @@ const PublishMenu: FC<PublishMenuProps> = ({
             {network === 'testnet' && (
               <Banner
                 title="You are publishing to the testnet"
-                description="You must run a portal locally to view deployed site."
+                description="You must run a local Walrus Site Portal to view published site."
                 variant="info"
                 url="https://docs.wal.app/walrus-sites/portal.html"
                 urlName="Portal Documentation"

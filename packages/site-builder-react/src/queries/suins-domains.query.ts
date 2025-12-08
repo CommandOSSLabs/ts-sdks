@@ -1,8 +1,4 @@
-import {
-  useCurrentAccount,
-  useSuiClient,
-  useSuiClientContext
-} from '@mysten/dapp-kit'
+import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit'
 import { mainPackage } from '@mysten/suins'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
@@ -35,7 +31,7 @@ export interface ISuiNsDomainQuery {
 export function useSuiNsDomainsQuery(): ISuiNsDomainQuery {
   const currentAccount = useCurrentAccount()
   const suiClient = useSuiClient()
-  const { network } = useSuiClientContext()
+  const { network } = suiClient
   const suinsClient = useSuiNsClient()
 
   const onchainDataQuery = useQuery({

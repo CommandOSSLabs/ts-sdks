@@ -1,4 +1,4 @@
-import { useSuiClientContext } from '@mysten/dapp-kit'
+import { useSuiClient } from '@mysten/dapp-kit'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Loader2, X } from 'lucide-react'
@@ -31,7 +31,7 @@ const SuiNsModal: FC<SuiNsModalProps> = ({ siteId, onAssociateDomain }) => {
   const isOpen = useStore(isDomainDialogOpen)
   const isAssigning = useStore(isAssigningDomain)
   const walrusSiteUrl = useDefaultWalrusSiteUrl(siteId)
-  const { network } = useSuiClientContext()
+  const { network } = useSuiClient()
 
   const {
     data: nsDomains,
@@ -218,15 +218,26 @@ const SuiNsModal: FC<SuiNsModalProps> = ({ siteId, onAssociateDomain }) => {
               )}
 
               {/* Empty state */}
-              {!isLoadingDomains && !isErrorDomains && !nsDomains.length && (
-                <Banner
-                  title="You don't own any SuiNS domains yet."
-                  description="Get your own .sui domain name to give your website a memorable and easy-to-share address."
-                  url="https://suins.io/"
-                  urlName="Visit SuiNS"
-                  variant="alert"
-                />
-              )}
+              {!isLoadingDomains &&
+                !isErrorDomains &&
+                !nsDomains.length &&
+                (network === 'testnet' ? (
+                  <Banner
+                    title="You don't own any SuiNS(Testnet) domains yet."
+                    description="Get your own .sui domain name to give your website a memorable and easy-to-share address."
+                    url="https://testnet.suins.io/"
+                    urlName="Visit SuiNS"
+                    variant="alert"
+                  />
+                ) : (
+                  <Banner
+                    title="You don't own any SuiNS domains yet."
+                    description="Get your own .sui domain name to give your website a memorable and easy-to-share address."
+                    url="https://suins.io/"
+                    urlName="Visit SuiNS"
+                    variant="alert"
+                  />
+                ))}
 
               {/* Domain cards */}
               {!isLoadingDomains && !isErrorDomains && nsDomains.length > 0 && (
@@ -262,7 +273,7 @@ const SuiNsModal: FC<SuiNsModalProps> = ({ siteId, onAssociateDomain }) => {
             {network === 'testnet' && (
               <Banner
                 title="You are publishing to the testnet"
-                description="You should run portal locally to see."
+                description="You must run a local Walrus Site Portal to view published site."
                 variant="info"
                 url="https://docs.wal.app/walrus-sites/portal.html"
                 urlName="Portal Documentation"

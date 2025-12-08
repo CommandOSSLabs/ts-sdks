@@ -116,11 +116,8 @@ unsubscribe();
 <TabItem label="Cleanup">
 
 ```typescript
-// Clear all files in workspace
-await fileManager.clear();
-
 // Remove specific file
-await fileManager.removeFile('/old-file.txt');
+await fileManager.deleteFile('/old-file.txt');
 
 // Unmount file system (cleanup)
 fileManager.unmount();
@@ -260,7 +257,7 @@ function FileExplorer({ className }: FileExplorerProps) {
     if (!fileManager) return;
     
     try {
-      await fileManager.removeFile(asset.path);
+      await fileManager.deleteFile(asset.path);
       console.log(`Deleted: ${asset.path}`);
     } catch (error) {
       console.error(`Failed to delete ${asset.path}:`, error);

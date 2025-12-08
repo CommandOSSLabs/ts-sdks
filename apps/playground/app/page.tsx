@@ -1,8 +1,11 @@
 'use client'
 
+import { ZenFsFileManager } from '@cmdoss/file-manager'
 //SDK
-import type { IFileManager } from '@cmdoss/site-builder'
-import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder'
+import {
+  type IReadOnlyFileManager,
+  objectIdToWalrusSiteUrl
+} from '@cmdoss/site-builder'
 import {
   PublishButton,
   type SiteMetadata,
@@ -29,22 +32,24 @@ import { toast } from 'sonner'
 import { testFiles } from './files'
 
 export default function Home() {
-  // ZenFS Workspace Hook
-  const {
-    assets,
-    loading: isFileSystemLoading,
-    clear: clearWorkspace,
-    fileManager
-  } = useZenFsWorkspace()
-
+  const { loading, fileManager: fm } = useZenFsWorkspace('/sites/site-01')
   const currentAccount = useCurrentAccount()
 
   // Site Builder handlers
   const handlePrepareAssetsForBuilder =
-    useCallback(async (): Promise<IFileManager> => {
-      if (!fileManager) throw new Error('File manager not ready')
-      return fileManager
-    }, [fileManager])
+    useCallback(async (): Promise<IReadOnlyFileManager> => {
+      if (!fm) throw new Error('FileManager not initialized')
+
+      try {
+        for (const [path, content] of Object.entries(testFiles)) {
+          console.log('Adding test file:', path)
+          await fm.writeFile(path, new TextEncoder().encode(content))
+        }
+      } catch (error) {
+        console.error('Failed to create test files:', error)
+      }
+      return fm
+    }, [fm])
 
   const handleUpdateSiteMetadataForBuilder = useCallback(
     async (site: SiteMetadataUpdate): Promise<SiteMetadata> => {
@@ -67,19 +72,17 @@ export default function Home() {
   }, [])
 
   const addTestFiles = useCallback(async () => {
-    if (!fileManager) {
-      console.error('File manager not ready')
-      return
-    }
+    const fm = new ZenFsFileManager(`/sites/site-01`, '/sites')
+    await fm.initialize().catch(() => {}) // Ignore already mounted error
     try {
       for (const [path, content] of Object.entries(testFiles)) {
         console.log('Adding test file:', path)
-        await fileManager?.writeFile(path, new TextEncoder().encode(content))
+        await fm.writeFile(path, new TextEncoder().encode(content))
       }
     } catch (error) {
       console.error('Failed to create test files:', error)
     }
-  }, [fileManager])
+  }, [])
 
   useEffect(() => {
     Object.assign(window, { objectIdToWalrusSiteUrl })
@@ -92,7 +95,7 @@ export default function Home() {
       <div className="flex flex-col items-center gap-6 w-full mx-auto">
         <CardContent className="relative w-full">
           <h1 className="mb-1">Assets</h1>
-          {isFileSystemLoading && (
+          {loading && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">
@@ -101,7 +104,7 @@ export default function Home() {
               </div>
             </div>
           )}
-          {!assets.length ? (
+          {/* {!assets.length ? (
             <div className="space-y-4">
               <div className="pt-2">
                 <Button
@@ -126,11 +129,11 @@ export default function Home() {
                 Clear Files
               </Button>
             </div>
-          )}
+          )} */}
 
           <hr className="my-4 border-t border-neutral-400 dark:border-neutral-700" />
           <div className=" flex flex-col gap-2">
-            {!currentAccount || !assets.length ? (
+            {!currentAccount ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
@@ -142,13 +145,13 @@ export default function Home() {
                     </Button>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent sideOffset={6} className="text-sm">
+                {/* <TooltipContent sideOffset={6} className="text-sm">
                   {!assets.length
                     ? 'Add files to publish your site'
                     : !currentAccount
                       ? 'Please connect your wallet to publish'
                       : ''}
-                </TooltipContent>
+                </TooltipContent> */}
               </Tooltip>
             ) : (
               <PublishButton

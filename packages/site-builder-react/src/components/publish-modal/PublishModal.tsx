@@ -1,10 +1,8 @@
-import type { IReadOnlyFileManager } from '@cmdoss/site-builder'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { ChevronDown, Info, Pencil, Upload, X } from 'lucide-react'
 import type { FC } from 'react'
 import { useRef, useState } from 'react'
-import { useAssetsSizeQuery } from '~/queries/assets-size.query'
 import { useStorageCostQuery } from '~/queries/storage-cost.query'
 import { siteMetadataStore } from '~/stores/site-metadata.store'
 import { sitePublishingStore } from '~/stores/site-publishing.store'
@@ -19,14 +17,12 @@ interface PublishModalProps {
   siteId: string | undefined
   onDeploy?: () => void
   onSaveMetadata?: () => Promise<void>
-  onPrepareAssets: () => Promise<IReadOnlyFileManager>
 }
 
 const PublishModal: FC<PublishModalProps> = ({
   siteId,
   onDeploy,
-  onSaveMetadata,
-  onPrepareAssets
+  onSaveMetadata
 }) => {
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false)
   const [isMoreInfoExpanded, setIsMoreInfoExpanded] = useState(true)
@@ -37,6 +33,7 @@ const PublishModal: FC<PublishModalProps> = ({
   const isWorking = useStore(sitePublishingStore.isWorking)
   const deployStatusText = useStore(sitePublishingStore.deployStatusText)
   const deployStepIndex = useStore(sitePublishingStore.deploymentStepIndex)
+  const assetsSize = useStore(sitePublishingStore.assetsSize)
   const imageDisplayUrl = useStore(siteMetadataStore.imageDisplayUrl)
   const link = useStore(siteMetadataStore.link)
   const projectUrl = useStore(siteMetadataStore.projectUrl)
@@ -44,7 +41,6 @@ const PublishModal: FC<PublishModalProps> = ({
   const isDirty = useStore(siteMetadataStore.isDirty)
   const isLoading = useStore(siteMetadataStore.loading)
 
-  const { data: assetsSize = 0 } = useAssetsSizeQuery(onPrepareAssets)
   const {
     data: storageCost = {
       storageCost: '0',
@@ -165,11 +161,11 @@ const PublishModal: FC<PublishModalProps> = ({
             <div className={styles.rightColumn}>
               <div className={styles.metadataFields}>
                 {/* Storage Cost Section */}
-                {storageCost && (
-                  <div className={styles.storageCostSection}>
-                    <div className={styles.storageCostSummary}>
-                      <div className={styles.storageCostLabel}>
-                        <span style={{ fontWeight: 500 }}>Storage Cost</span>
+                <div className={styles.storageCostSection}>
+                  <div className={styles.storageCostSummary}>
+                    <div className={styles.storageCostLabel}>
+                      <span style={{ fontWeight: 500 }}>Storage Cost</span>
+                      {assetsSize !== null && (
                         <button
                           type="button"
                           onClick={() =>
@@ -198,97 +194,107 @@ const PublishModal: FC<PublishModalProps> = ({
                         >
                           <Info size={16} />
                         </button>
-                      </div>
-                      <div className={styles.storageCostValue}>
-                        {storageCostLoading ? (
-                          <span style={{ color: 'var(--muted-foreground)' }}>
-                            Calculating...
-                          </span>
-                        ) : storageCostError ? (
-                          <span style={{ color: 'var(--destructive)' }}>
-                            Cost unavailable
-                          </span>
-                        ) : (
-                          <>
-                            <span
-                              style={{
-                                fontSize: '0.875rem',
-                                color: 'var(--muted-foreground)'
-                              }}
-                            >
-                              {(assetsSize / 1024).toFixed(2)} KB •{' '}
-                            </span>
-                            <span
-                              style={{
-                                fontWeight: 600,
-                                color: 'var(--foreground)'
-                              }}
-                            >
-                              {(
-                                (Number(storageCost.storageCost) +
-                                  Number(storageCost.writeCost)) /
-                                1_000_000_000
-                              ).toFixed(9)}{' '}
-                              WAL
-                            </span>
-                          </>
-                        )}
-                      </div>
+                      )}
                     </div>
-
-                    {/* Storage Details Collapsible */}
-                    {isStorageDetailsExpanded && (
-                      <div className={styles.storageDetailsBox}>
-                        <div
+                    <div className={styles.storageCostValue}>
+                      {assetsSize === null ? (
+                        <span
                           style={{
+                            color: 'var(--warning, #f59e0b)',
                             display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.2rem'
+                            alignItems: 'center',
+                            gap: '0.375rem'
                           }}
                         >
-                          <div style={{ fontSize: '0.875rem' }}>
-                            <span style={{ fontWeight: 500 }}>
-                              Storage Cost:
-                            </span>{' '}
-                            <span style={{ color: '#10b981' }}>
-                              {(
-                                Number(storageCost.storageCost) / 1_000_000_000
-                              ).toFixed(9)}{' '}
-                              WAL
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '0.875rem' }}>
-                            <span style={{ fontWeight: 500 }}>Write Cost:</span>{' '}
-                            <span style={{ color: '#f97316' }}>
-                              {(
-                                Number(storageCost.writeCost) / 1_000_000_000
-                              ).toFixed(9)}{' '}
-                              WAL
-                            </span>
-                          </div>
-                          <div
+                          <Info size={14} />
+                          Assets not prepared yet
+                        </span>
+                      ) : storageCostLoading ? (
+                        <span style={{ color: 'var(--muted-foreground)' }}>
+                          Calculating...
+                        </span>
+                      ) : storageCostError ? (
+                        <span style={{ color: 'var(--destructive)' }}>
+                          Cost unavailable
+                        </span>
+                      ) : (
+                        <>
+                          <span
                             style={{
                               fontSize: '0.875rem',
-                              borderTop: '1px solid var(--border)',
-                              paddingTop: '0.1rem',
-                              marginTop: '0.1rem'
+                              color: 'var(--muted-foreground)'
                             }}
                           >
-                            <span style={{ fontWeight: 500 }}>Total Cost:</span>{' '}
-                            <span style={{ color: '#3b82f6', fontWeight: 600 }}>
-                              {(
-                                (Number(storageCost.storageCost) +
-                                  Number(storageCost.writeCost)) /
-                                1_000_000_000
-                              ).toFixed(9)}{' '}
-                              WAL
-                            </span>
-                          </div>
+                            {(assetsSize / 1024).toFixed(2)} KB •{' '}
+                          </span>
+                          <span
+                            style={{
+                              fontWeight: 600,
+                              color: 'var(--foreground)'
+                            }}
+                          >
+                            {(
+                              (Number(storageCost.storageCost) +
+                                Number(storageCost.writeCost)) /
+                              1_000_000_000
+                            ).toFixed(9)}{' '}
+                            WAL
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Storage Details Collapsible */}
+                  {isStorageDetailsExpanded && (
+                    <div className={styles.storageDetailsBox}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.2rem'
+                        }}
+                      >
+                        <div style={{ fontSize: '0.875rem' }}>
+                          <span style={{ fontWeight: 500 }}>Storage Cost:</span>{' '}
+                          <span style={{ color: '#10b981' }}>
+                            {(
+                              Number(storageCost.storageCost) / 1_000_000_000
+                            ).toFixed(9)}{' '}
+                            WAL
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.875rem' }}>
+                          <span style={{ fontWeight: 500 }}>Write Cost:</span>{' '}
+                          <span style={{ color: '#f97316' }}>
+                            {(
+                              Number(storageCost.writeCost) / 1_000_000_000
+                            ).toFixed(9)}{' '}
+                            WAL
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '0.875rem',
+                            borderTop: '1px solid var(--border)',
+                            paddingTop: '0.1rem',
+                            marginTop: '0.1rem'
+                          }}
+                        >
+                          <span style={{ fontWeight: 500 }}>Total Cost:</span>{' '}
+                          <span style={{ color: '#3b82f6', fontWeight: 600 }}>
+                            {(
+                              (Number(storageCost.storageCost) +
+                                Number(storageCost.writeCost)) /
+                              1_000_000_000
+                            ).toFixed(9)}{' '}
+                            WAL
+                          </span>
                         </div>
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
 
                 {/* More Information Collapsible */}
                 <div>

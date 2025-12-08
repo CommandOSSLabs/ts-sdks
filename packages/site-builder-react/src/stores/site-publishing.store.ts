@@ -36,9 +36,6 @@ export enum DeploymentStatus {
   Deployed
 }
 
-/**
- * Site metadata structure used in the Site Builder SDK and store.
- */
 export interface SiteMetadata {
   id?: string
   title?: string
@@ -48,10 +45,6 @@ export interface SiteMetadata {
   imageUrl?: string
   creator?: string
 }
-/**
- * Same as SiteMetadata but allows imageUrl to be a File object for upload
- * to the server or storage service.
- */
 export interface SiteMetadataUpdate extends Omit<SiteMetadata, 'imageUrl'> {
   imageUrl?: string | File
 }
@@ -67,6 +60,7 @@ class SitePublishingStore {
   // UI state
   isPublishDialogOpen = atom(false)
   certifiedBlobs = atom<ICertifiedBlob[]>([])
+  assetsSize = atom<number | null>(null)
 
   // Deployment state
   deployStatus = atom(DeploymentStatus.Idle)
@@ -127,6 +121,7 @@ class SitePublishingStore {
   })
 
   private currentFlow?: IUpdateWalrusSiteFlow
+  private siteId?: string
 
   async runDeploymentStep(
     sdk: IWalrusSiteBuilderSdk,
@@ -142,6 +137,9 @@ class SitePublishingStore {
         this.deployStatus.set(DeploymentStatus.Preparing)
         try {
           const fm = await onPrepareAssets()
+          const assetsSize = await fm.getSize()
+          if (!assetsSize) throw new Error('No assets to deploy')
+          this.assetsSize.set(assetsSize)
           this.currentFlow = sdk.executeSiteUpdateFlow(fm, {
             object_id: site.id,
             site_name: site.title,
@@ -158,8 +156,10 @@ class SitePublishingStore {
           return this.runDeploymentStep(sdk, site, onPrepareAssets)
         } catch (e) {
           console.error('Failed to prepare assets:', e)
+          const msg =
+            e instanceof Error ? e.message : 'Failed to prepare assets'
           this.deployStatus.set(DeploymentStatus.Idle)
-          return failed('Failed to prepare assets')
+          return failed(msg)
         }
       }
 
@@ -192,7 +192,9 @@ class SitePublishingStore {
         } catch (e) {
           console.error('Failed to certify assets:', e)
           this.deployStatus.set(DeploymentStatus.Uploaded)
-          return failed('Failed to certify assets')
+          const msg =
+            e instanceof Error ? e.message : 'Failed to certify assets'
+          return failed(msg)
         }
       }
 
@@ -203,13 +205,21 @@ class SitePublishingStore {
           const { siteId } = await this.currentFlow.writeSite()
           if (!siteId) throw new Error('No site ID returned')
           this.deployStatus.set(DeploymentStatus.Deployed)
+          this.siteId = siteId
           return ok(siteId)
         } catch (e) {
           console.error('Failed to deploy site:', e)
           this.deployStatus.set(DeploymentStatus.Certified)
-          return failed('Failed to deploy site')
+          const msg = e instanceof Error ? e.message : 'Failed to deploy site'
+          return failed(msg)
         }
       }
+      case DeploymentStatus.Deployed:
+        if (!this.siteId) return failed('Invalid state')
+        // Deployment completed, close dialog
+        this.reset()
+        this.closePublishDialog()
+        return ok(this.siteId)
 
       default:
         return failed('Invalid deployment step')

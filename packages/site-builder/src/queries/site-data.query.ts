@@ -1,5 +1,8 @@
-import type { DynamicFieldInfo, ObjectResponseError } from '@mysten/sui/client'
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
+import type {
+  DynamicFieldInfo,
+  ObjectResponseError,
+  SuiClient
+} from '@mysten/sui/client'
 import { mainPackage } from '~/lib'
 import { isSupportedNetwork } from '~/lib/utils'
 import type { SiteData, SuiResource } from '~/types'
@@ -51,7 +54,7 @@ function handleError(error: ObjectResponseError): never {
 }
 
 async function fetchSiteDynamicFields(
-  suiClient: SuiJsonRpcClient,
+  suiClient: SuiClient,
   siteId: string
 ): Promise<DynamicFieldInfo[]> {
   const dynamicFields: DynamicFieldInfo[] = []
@@ -66,7 +69,7 @@ async function fetchSiteDynamicFields(
 }
 
 async function fetchSiteResources(
-  suiClient: SuiJsonRpcClient,
+  suiClient: SuiClient,
   siteId: string
 ): Promise<SuiResource[]> {
   const network = suiClient.network
@@ -107,7 +110,7 @@ async function fetchSiteResources(
 }
 
 export async function getSiteDataFromChain(
-  suiClient: SuiJsonRpcClient,
+  suiClient: SuiClient,
   siteId: string
 ): Promise<SiteData> {
   // Fetch site object and display data

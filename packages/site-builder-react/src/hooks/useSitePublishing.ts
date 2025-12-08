@@ -1,5 +1,5 @@
 import {
-  type IFileManager,
+  type IReadOnlyFileManager,
   type IWalrusSiteBuilderSdk,
   objectIdToWalrusSiteUrl,
   WalrusSiteBuilderSdk
@@ -7,8 +7,7 @@ import {
 import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
-  useSuiClient,
-  useSuiClientContext
+  useSuiClient
 } from '@mysten/dapp-kit'
 import { Transaction } from '@mysten/sui/transactions'
 import { ALLOWED_METADATA, SuinsTransaction } from '@mysten/suins'
@@ -40,7 +39,7 @@ export interface UseSitePublishingParams {
    * Mandatory callback to prepare assets for publishing. It should return the `IFileManager` instance
    * containing the files to be published
    */
-  onPrepareAssets: () => Promise<IFileManager>
+  onPrepareAssets: () => Promise<IReadOnlyFileManager>
   /**
    * Optional callback to update site metadata after publishing. The site ID will
    * be available in the `site` parameter.
@@ -64,9 +63,9 @@ export function useSitePublishing({
   const queryClient = useQueryClient()
   const suinsClient = useSuiNsClient()
   const suiClient = useSuiClient()
-  const walrusClient = useWalrusClient()
+  const walrusClient = useWalrusClient(suiClient)
   const currentAccount = useCurrentAccount()
-  const { network } = useSuiClientContext()
+  const { network } = suiClient
   const { mutateAsync: signAndExecuteTransaction } =
     useSignAndExecuteTransaction({
       execute: async ({ bytes, signature }) =>
@@ -81,13 +80,14 @@ export function useSitePublishing({
     })
 
   const sdk: IWalrusSiteBuilderSdk | undefined = useMemo(() => {
-    if (!walrusClient || !currentAccount) return
+    if (!suiClient || !walrusClient || !currentAccount) return
     return new WalrusSiteBuilderSdk(
       walrusClient,
+      suiClient,
       currentAccount.address,
       signAndExecuteTransaction
     )
-  }, [walrusClient, currentAccount, signAndExecuteTransaction])
+  }, [suiClient, walrusClient, currentAccount, signAndExecuteTransaction])
 
   const {
     data: nsDomains,

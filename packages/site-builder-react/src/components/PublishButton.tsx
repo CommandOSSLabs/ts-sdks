@@ -50,7 +50,6 @@ const PublishButton: FC<Props> = ({
         siteId={siteId}
         onDeploy={handleRunDeploymentStep}
         onSaveMetadata={handleSaveSiteMetadata}
-        onPrepareAssets={onPrepareAssets}
       />
       <SuiNsModal siteId={siteId} onAssociateDomain={handleAssociateDomain} />
     </ThemeProvider>

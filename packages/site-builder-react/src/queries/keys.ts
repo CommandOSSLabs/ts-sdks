@@ -4,7 +4,9 @@ export const queryKeys = {
   suinsDomainDetail: (name: string, network: string) =>
     ['suins-domain-detail', name, network] as const,
   walrusSite: (siteId: string | undefined) => ['walrus-site', siteId] as const,
-  storageCost: (fileSize: number, epochs: number) =>
+  walrusSites: (address: string | undefined, network: string) =>
+    ['walrus-sites', address, network] as const,
+  storageCost: (fileSize: number | null, epochs: number) =>
     ['storage-cost', fileSize, epochs] as const,
   // biome-ignore lint/complexity/noBannedTypes: no issue
   assetsSize: (onPrepareAssets: Function) =>

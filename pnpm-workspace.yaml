@@ -3,20 +3,21 @@ packages:
   - packages/*
 
 catalog:
-  '@mysten/dapp-kit': ^0.19.8
-  '@mysten/sui': ^1.44.0
-  '@mysten/suins': ^0.9.9
-  '@mysten/wallet-standard': ^0.19.2
-  '@mysten/walrus': ^0.8.3
+  '@mysten/dapp-kit': ^0.19.11
+  '@mysten/sui': ^1.45.2
+  '@mysten/suins': ^0.9.12
+  '@mysten/wallet-standard': ^0.19.9
+  '@mysten/walrus': ^0.8.6
+  '@tanstack/react-query': ^5.90.12
   '@types/debug': ^4.1.12
   '@types/node': ^22.19.1
   '@zenfs/archives': ^1.3.1
   '@zenfs/core': ^2.4.3
   '@zenfs/dom': ^1.2.5
   debug: ^4.4.3
-  tsdown: ^0.16.4
+  tsdown: ^0.16.8
   typescript: ^5.9.3
-  wrangler: ^4.47.0
+  wrangler: ^4.53.0
 
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
@@ -24,7 +25,3 @@ onlyBuiltDependencies:
   - lefthook
   - sharp
   - workerd
-
-overrides:
-  # Temp fix while waiting for vanilla-extract to publish a 1.4.2 version
-  '@vanilla-extract/rollup-plugin': npm:@toanzzz/vanilla-extract-rollup-plugin@1.4.2

@@ -1,9 +1,6 @@
 import type { SuiTransactionBlockResponse } from '@mysten/sui/client'
-import type { ClientWithExtensions } from '@mysten/sui/experimental'
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
 import type { Transaction } from '@mysten/sui/transactions'
 import type { SuiSignAndExecuteTransactionInput } from '@mysten/wallet-standard'
-import type { WalrusClient } from '@mysten/walrus'
 
 // ##########################################################################
 // #region Helper Types
@@ -26,10 +23,6 @@ export type ISignAndExecuteTransaction = (
   variables: UseSignAndExecuteTransactionArgs
 ) => Promise<SuiTransactionBlockResponse>
 
-export type SuiClientWithWalrus = ClientWithExtensions<
-  { walrus: WalrusClient },
-  SuiJsonRpcClient
->
 // ##########################################################################
 // #region Core Entity Types
 // ##########################################################################
@@ -71,53 +64,28 @@ export type FileChangedCallback = (arg: {
   path: string
 }) => void
 
-export interface MountOptions {
-  /** Data to initialize the workspace */
-  data?: ArrayBuffer
-  /** If true, will unmount any existing workspace before mounting */
-  force?: boolean
-  /** Vendor specific backend */
-  backend?: string
-}
-
 /**
  * File Manager interface for managing site files.
  */
 export interface IFileManager extends IReadOnlyFileManager {
-  /**
-   * Mount and initialize the file manager
-   *
-   * If `data` is provided, it will be used to initialize the workspace.
-   * If `force` is true, it will unmount any existing workspace before mounting.
-   */
-  mount(options: MountOptions): Promise<void>
   /** Write a file to the workspace */
   writeFile(path: string, content: Uint8Array): Promise<void>
-  /** Remove a file from the workspace */
-  removeFile(path: string): Promise<void>
-  /**
-   * Clear all files in the workspace
-   *
-   * Note: **WILL NOT** trigger onFileChange callbacks
-   */
-  clear(): Promise<void>
-  /** Unmount the file manager and release resources */
-  unmount(): void
+  /** Delete a file from the workspace */
+  deleteFile(path: string): Promise<void>
 }
 
 /**
  * Read-only File Manager interface for reading site files.
  */
 export interface IReadOnlyFileManager {
+  /** Initialize the file manager */
+  initialize(): Promise<void>
   /** Read a file from the workspace */
   readFile(path: string): Promise<Uint8Array>
   /** List all files in the workspace recursively */
   listFiles(): Promise<string[]>
-  /**
-   * Register a callback to be invoked when a file is changed (added, updated, or removed)
-   * Returns an unsubscribe function to remove the listener
-   */
-  onFileChange(callback: FileChangedCallback): () => void
+  /** Get the total size of all files in the workspace */
+  getSize(): Promise<number>
 }
 
 /**
