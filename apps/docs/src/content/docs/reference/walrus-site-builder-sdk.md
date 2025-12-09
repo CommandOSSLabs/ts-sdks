@@ -15,11 +15,9 @@ The [`WalrusSiteBuilderSdk`](/reference/walrus-site-builder-sdk) class is the ma
 ```typescript
 new WalrusSiteBuilderSdk(
   walrus: WalrusClient,
-  sui: SuiClient,
-  activeAccount: WalletAccount,
-  signAndExecuteTransaction: ISignAndExecuteTransaction,
-  wallet: WalletWithRequiredFeatures,
-  config?: IWalrusSiteConfig
+  suiClient: SuiClient,
+  walletAddr: string,
+  signAndExecuteTransaction: ISignAndExecuteTransaction
 )
 ```
 
@@ -30,50 +28,56 @@ The Walrus client used for interacting with the Walrus API.
 
 **Type:** `WalrusClient`
 
-#### `sui`
+#### `suiClient`
 The Sui client used for interacting with the Sui API.
 
 **Type:** `SuiClient`
 
-#### `activeAccount`
-The active wallet account.
+#### `walletAddr`
+The active wallet address.
 
-**Type:** `WalletAccount`
+**Type:** `string`
 
 #### `signAndExecuteTransaction`
-The function used to sign and execute transactions. Get by calling `useSignAndExecuteTransaction` hook.
+The function used to sign and execute transactions. Get by calling `useSignAndExecuteTransaction` hook in `@mysten/dapp-kit`.
 
 **Type:** `ISignAndExecuteTransaction`
 
-#### `wallet`
-The wallet used for interacting with the user's wallet.
-
-**Type:** `WalletWithRequiredFeatures`
-
-#### `config`
-The Walrus Site Builder SDK configuration.
-
-**Type:** [`IWalrusSiteConfig`](/reference/i-walrus-site-config) (optional)
+```typescript
+// Example: Getting signAndExecuteTransaction from dapp-kit
+const { mutateAsync: signAndExecuteTransaction } =
+  useSignAndExecuteTransaction({
+    execute: async ({ bytes, signature }) =>
+      await suiClient.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: {
+          showRawEffects: true,
+          showObjectChanges: true
+        }
+      })
+  })
+```
 
 ## Methods
 
-### `deployFlow(assets, wsResource?)`
+### `executeSiteUpdateFlow(target, wsResource)`
 
 Creates a deploy flow for deploying a Walrus Site.
 
-**Returns:** [`IWalrusSiteDeployFlow`](/reference/i-walrus-site-deploy-flow)
+**Returns:** [`IUpdateWalrusSiteFlow`](/reference/i-update-walrus-site-flow)
 
 #### Parameters
 
-##### `assets`
-The assets to be deployed.
+##### `target`
+The file manager containing assets to be deployed.
 
-**Type:** [`IAsset`](/reference/i-asset)[]
+**Type:** [`IReadOnlyFileManager`](/reference/i-read-only-file-manager)
 
 ##### `wsResource`
 The Walrus resources configuration.
 
-**Type:** [`WSResources`](/reference/ws-resources) (optional)
+**Type:** [`WSResources`](/reference/ws-resources)
 
 #### Example usage
 
@@ -81,14 +85,18 @@ The Walrus resources configuration.
   <TabItem label="Basic deployment">
 
 ```typescript
-const deployFlow = sdk.deployFlow(assets);
+import { ZenFsFileManager } from '@cmdoss/file-manager';
+
+const fileManager = new ZenFsFileManager('/workspace');
+await fileManager.initialize();
+
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResource);
 
 // Execute deployment steps
-await deployFlow.prepareAssets();
-await deployFlow.uploadAssets(57, false);
-await deployFlow.certifyAssets();
-await deployFlow.updateSite();
-await deployFlow.cleanupAssets();
+await deployFlow.prepareResources();
+await deployFlow.writeResources(57, false);
+const { certifiedBlobs } = await deployFlow.certifyResources();
+const { siteId } = await deployFlow.writeSite();
 ```
 
   </TabItem>
@@ -101,116 +109,16 @@ const wsResources: WSResources = {
     description: 'A site built with Site Builder SDK',
     creator: 'Developer Name'
   },
-  routes: {
-    '/': '/index.html',
-    '/about': '/about.html'
-  }
+  routes: [
+    ['/*', '/index.html']  // SPA routing
+  ]
 };
 
-const deployFlow = sdk.deployFlow(assets, wsResources);
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
 ```
 
   </TabItem>
 </Tabs>
-
-### `createSiteUpdateTransaction(params)`
-
-Creates a transaction to update a Walrus Site.
-
-**Returns:** `Transaction`
-
-#### Parameters
-
-##### `params.siteId`
-The ID of the site to update (optional for new sites).
-
-**Type:** `string` (optional)
-
-##### `params.siteData`
-The site data containing resources, routes, and metadata.
-
-**Type:** [`SiteData`](/reference/site-data)
-
-##### `params.ownerAddr`
-The address of the site owner.
-
-**Type:** `string`
-
-#### Example usage
-
-```typescript
-const transaction = sdk.createSiteUpdateTransaction({
-  siteId: '0x123...',
-  siteData: {
-    resources: [...],
-    routes: { '/': '/index.html' },
-    metadata: { description: 'Updated site' },
-    site_name: 'My Site'
-  },
-  ownerAddr: '0xabc...'
-});
-
-const result = await signAndExecuteTransaction({ transaction });
-```
-
-### `getSiteUpdates(params)`
-
-Gets site updates for a Walrus Site by comparing current and new site data.
-
-**Returns:** `Promise<`[`SiteDataDiff`](/reference/site-data-diff)`>`
-
-#### Parameters
-
-##### `params.siteData`
-The new site data to compare against.
-
-**Type:** [`SiteData`](/reference/site-data)
-
-##### `params.siteId`
-The ID of the existing site (optional).
-
-**Type:** `string` (optional)
-
-#### Example usage
-
-```typescript
-const siteUpdates = await sdk.getSiteUpdates({
-  siteData: newSiteData,
-  siteId: '0x123...'
-});
-
-console.log('Resource operations:', siteUpdates.resource_ops);
-console.log('Route operations:', siteUpdates.route_ops);
-console.log('Metadata update:', siteUpdates.metadata_op);
-```
-
-### `getSiteData(assets, wsResource)`
-
-Gets the site data from the provided assets and Walrus resources.
-
-**Returns:** `Promise<`[`SiteData`](/reference/SiteData)`>`
-
-#### Parameters
-
-##### `assets`
-The assets to process.
-
-**Type:** [`IAsset`](/reference/i-asset)[]
-
-##### `wsResource`
-The Walrus resources configuration.
-
-**Type:** [`WSResources`](/reference/WSResources)
-
-#### Example usage
-
-```typescript
-const siteData = await sdk.getSiteData(assets, wsResources);
-
-console.log('Resources:', siteData.resources.length);
-console.log('Routes:', siteData.routes);
-console.log('Site name:', siteData.site_name);
-```
 
 ## Properties
 
@@ -219,30 +127,20 @@ The Walrus client instance.
 
 **Type:** `WalrusClient`
 
-### `sui`
+### `suiClient`
 The Sui client instance.
 
 **Type:** `SuiClient`
 
-### `activeAccount`
-The active wallet account.
+### `walletAddr`
+The active wallet address.
 
-**Type:** `WalletAccount`
+**Type:** `string`
 
 ### `signAndExecuteTransaction`
 The transaction signing function.
 
 **Type:** `ISignAndExecuteTransaction`
-
-### `wallet`
-The wallet instance.
-
-**Type:** `WalletWithRequiredFeatures`
-
-### `config`
-The SDK configuration.
-
-**Type:** [`IWalrusSiteConfig`](/reference/i-walrus-site-config)
 
 ## Complete Example
 
@@ -251,18 +149,36 @@ The SDK configuration.
 
 ```typescript
 import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { ZenFsFileManager } from '@cmdoss/file-manager';
+import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { WalrusClient } from '@mysten/walrus';
 
-// Initialize SDK with required dependencies
+// In a React component
+const suiClient = useSuiClient();
+const currentAccount = useCurrentAccount();
+const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction({
+  execute: async ({ bytes, signature }) =>
+    await suiClient.executeTransactionBlock({
+      transactionBlock: bytes,
+      signature,
+      options: {
+        showRawEffects: true,
+        showObjectChanges: true
+      }
+    })
+});
+
+const walrusClient = new WalrusClient({
+  aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
+  publisherUrl: 'https://publisher.walrus-testnet.walrus.space'
+});
+
+// Initialize SDK
 const sdk = new WalrusSiteBuilderSdk(
   walrusClient,
   suiClient,
-  activeAccount,
-  signAndExecuteTransaction,
-  wallet,
-  {
-    package: '0xf99aee9f21493e1590e7e5a9aea6f343a1f381031a04a732724871fc294be799',
-    gasBudget: 1000000
-  }
+  currentAccount?.address ?? '',
+  signAndExecuteTransaction
 );
 ```
 
@@ -270,15 +186,15 @@ const sdk = new WalrusSiteBuilderSdk(
   <TabItem label="Deploy Flow">
 
 ```typescript
-// Prepare assets
-const assets: IAsset[] = [
-  {
-    path: '/index.html',
-    content: new TextEncoder().encode('<h1>Hello World</h1>'),
-    hash: new Uint8Array(32),
-    hashU256: 0n
-  }
-];
+import { ZenFsFileManager } from '@cmdoss/file-manager';
+
+// Initialize file manager
+const fileManager = new ZenFsFileManager('/workspace');
+await fileManager.initialize();
+
+// Add files to the workspace
+await fileManager.writeFile('/index.html', new TextEncoder().encode('<h1>Hello World</h1>'));
+await fileManager.writeFile('/style.css', new TextEncoder().encode('body { color: blue; }'));
 
 // Configure site
 const wsResources: WSResources = {
@@ -286,25 +202,32 @@ const wsResources: WSResources = {
   metadata: {
     description: 'A decentralized website',
     creator: 'Developer'
-  }
+  },
+  routes: [
+    ['/*', '/index.html']  // SPA fallback route
+  ]
 };
 
 // Create and execute deploy flow
-const deployFlow = sdk.deployFlow(assets, wsResources);
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
 
-deployFlow.addEventListener('progress', (event) => {
-  console.log('Deploy status:', event.detail.status);
-});
+// Step 1: Prepare resources
+await deployFlow.prepareResources();
 
-deployFlow.addEventListener('transaction', (event) => {
-  console.log('Transaction:', event.detail.transaction);
-});
+// Step 2: Write resources to Walrus (epochs, permanent)
+await deployFlow.writeResources(57, false);
 
-await deployFlow.prepareAssets();
-await deployFlow.uploadAssets(57, false);
-await deployFlow.certifyAssets();
-await deployFlow.updateSite();
-await deployFlow.cleanupAssets();
+// Step 3: Certify resources on-chain
+const { certifiedBlobs } = await deployFlow.certifyResources();
+console.log('Certified blobs:', certifiedBlobs.length);
+
+// Step 4: Write site to blockchain
+const { siteId } = await deployFlow.writeSite();
+console.log('Site deployed with ID:', siteId);
+
+// Get transaction history
+const transactions = deployFlow.getTransactions();
+console.log('Transactions:', transactions);
 ```
 
   </TabItem>
@@ -312,8 +235,10 @@ await deployFlow.cleanupAssets();
 
 ## Related Types
 
-- [`IWalrusSiteConfig`](/reference/i-walrus-site-config) - SDK configuration
 - [`WSResources`](/reference/ws-resources) - Site resources and metadata
 - [`SiteData`](/reference/site-data) - Complete site data structure
-- [`IAsset`](/reference/i-asset) - Asset interface
-- [`IWalrusSiteDeployFlow`](/reference/i-walrus-site-deploy-flow) - Deploy flow interface
+- [`SiteDataDiff`](/reference/site-data-diff) - Site data differences for updates
+- [`IReadOnlyFileManager`](/reference/i-read-only-file-manager) - File manager interface for reading site files
+- [`IUpdateWalrusSiteFlow`](/reference/i-update-walrus-site-flow) - Deploy flow interface
+- [`ITransaction`](/reference/i-transaction) - Transaction information
+- [`ICertifiedBlob`](/reference/i-certified-blob) - Certified blob information

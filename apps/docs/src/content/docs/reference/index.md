@@ -11,16 +11,10 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 
 <CardGrid stagger>
 	<LinkCard title="WalrusSiteBuilderSdk" icon="rocket" href="/reference/walrus-site-builder-sdk">
-		Main SDK class for interacting with Walrus and Sui networks. Provides site creation, deployment, and management capabilities.
+		Main SDK class for interacting with Walrus and Sui networks. Provides site deployment and management capabilities.
 	</LinkCard>
-	<Card title="WalrusSiteDeployFlow" icon="deploy">
-		Manages the complete deployment flow from asset preparation to site updates on-chain.
-	</Card>
-	<Card title="SiteManager" icon="setting">
-		Handles site operations including updates, metadata management, and transaction creation.
-	</Card>
-	<Card title="ResourceManager" icon="folder">
-		Manages site resources, file processing, and asset organization.
+	<Card title="UpdateWalrusSiteFlow" icon="deploy">
+		Manages the complete deployment flow from resource preparation to site updates on-chain.
 	</Card>
 	<Card title="ZenFsFileManager" icon="file">
 		Browser-based file system manager using ZenFS for workspace operations.
@@ -30,18 +24,12 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 ## Configuration Types
 
 <CardGrid stagger>
-	<Card title="IWalrusSiteConfig" icon="gear">
-		Configuration interface for Walrus Site Builder SDK settings including package ID and gas budget.
-	</Card>
 	<LinkCard title="WSResources" icon="database" href="/reference/ws-resources">
 		Walrus Site Resources & Metadata configuration including headers, routes, and site metadata.
 	</LinkCard>
 	<LinkCard title="Metadata" icon="tag" href="/reference/metadata">
 		Site metadata including link, image URL, description, project URL, and creator information.
 	</LinkCard>
-	<Card title="Routes" icon="route">
-		Route mapping interface for defining URL patterns and their corresponding resources.
-	</Card>
 </CardGrid>
 
 ## Data Types
@@ -53,14 +41,11 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 	<Card title="SiteDataDiff" icon="diff">
 		Represents differences between current and updated site data for efficient updates.
 	</Card>
-	<Card title="Resource" icon="file">
-		File resource with full path, size information, and on-chain metadata.
-	</Card>
 	<Card title="SuiResource" icon="blockchain">
 		On-chain resource information including blob ID, hash, headers, and byte ranges.
 	</Card>
-	<LinkCard title="IAsset" icon="package" href="/reference/i-asset">
-		Asset interface containing path, content, and hash information for file processing.
+	<LinkCard title="IAsset (Deprecated)" icon="package" href="/reference/i-asset">
+		Legacy asset interface. Use IReadOnlyFileManager instead.
 	</LinkCard>
 </CardGrid>
 
@@ -73,11 +58,8 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 	<Card title="ICertifiedBlob" icon="certificate">
 		Certified blob information with blob ID, Sui object ID, end epoch, and patch details.
 	</Card>
-	<Card title="DeployStatus" icon="status">
-		Enumeration of deployment flow statuses from Idle to Completed/Failed.
-	</Card>
-	<Card title="IFlowListener" icon="listener">
-		Type-safe event listener for deployment flow progress and transaction events.
+	<Card title="IUpdateWalrusSiteFlow" icon="status">
+		Interface for the deployment flow with methods: prepareResources, writeResources, certifyResources, writeSite.
 	</Card>
 </CardGrid>
 
@@ -88,10 +70,13 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 		Comprehensive enum of MIME types for content classification and HTTP headers.
 	</LinkCard>
 	<Card title="IFileManager" icon="folder-open">
-		Interface for file system operations including read, write, and change monitoring.
+		Full interface for file system operations including read, write, and change monitoring.
 	</Card>
-	<Card title="FileChangeCallback" icon="notification">
-		Callback function type for file system change events (created, updated, removed).
+	<Card title="IReadOnlyFileManager" icon="folder">
+		Read-only file manager interface for passing to the deploy flow.
+	</Card>
+	<Card title="FileChangedCallback" icon="notification">
+		Callback function type for file system change events (updated, removed).
 	</Card>
 </CardGrid>
 
@@ -116,26 +101,34 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 
 ```typescript
 import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { ZenFsFileManager } from '@cmdoss/file-manager';
+
+// Initialize file manager
+const fileManager = new ZenFsFileManager('/workspace');
+await fileManager.initialize();
 
 // Initialize the SDK
 const sdk = new WalrusSiteBuilderSdk(
   walrusClient,
   suiClient,
-  activeAccount,
-  signAndExecuteTransaction,
-  wallet,
-  config
+  walletAddr,
+  signAndExecuteTransaction
 );
 
-// Create a deploy flow
-const deployFlow = sdk.deployFlow(assets, siteResources);
+// Configure site resources
+const wsResources = {
+  site_name: 'My Site',
+  metadata: { description: 'A decentralized website' },
+  routes: [['/*', '/index.html']] as [string, string][]
+};
 
-// Execute deployment steps
-await deployFlow.prepareAssets();
-await deployFlow.uploadAssets(57, false);
-await deployFlow.certifyAssets();
-await deployFlow.updateSite();
-await deployFlow.cleanupAssets();
+// Create and execute deploy flow
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
+
+await deployFlow.prepareResources();
+await deployFlow.writeResources(57, false);
+const { certifiedBlobs } = await deployFlow.certifyResources();
+const { siteId } = await deployFlow.writeSite();
 ```
 
 ## Navigation

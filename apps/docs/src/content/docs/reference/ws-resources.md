@@ -14,8 +14,8 @@ The [`WSResources`](/reference/ws-resources) interface represents the deserializ
 
 ```typescript
 interface WSResources {
-  headers?: Record<string, string>
-  routes?: Routes
+  headers?: { key: string; value: string }[]
+  routes?: Array<[string, string]>
   metadata?: Metadata
   site_name?: string
   object_id?: string
@@ -28,7 +28,7 @@ interface WSResources {
 ### `headers`
 The HTTP headers to be set for the resources.
 
-**Type:** `Record<string, string>` (optional)
+**Type:** `{ key: string; value: string }[]` (optional)
 
 **Default:** `undefined`
 
@@ -39,10 +39,10 @@ Headers are applied to all resources unless overridden by specific resource head
 
 ```typescript
 const wsResources: WSResources = {
-  headers: {
-    'Cache-Control': 'public, max-age=3600',
-    'X-Content-Type-Options': 'nosniff'
-  }
+  headers: [
+    { key: 'Cache-Control', value: 'public, max-age=3600' },
+    { key: 'X-Content-Type-Options', value: 'nosniff' }
+  ]
 };
 ```
 
@@ -51,11 +51,11 @@ const wsResources: WSResources = {
 
 ```typescript
 const wsResources: WSResources = {
-  headers: {
-    'X-Frame-Options': 'DENY',
-    'X-XSS-Protection': '1; mode=block',
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
-  }
+  headers: [
+    { key: 'X-Frame-Options', value: 'DENY' },
+    { key: 'X-XSS-Protection', value: '1; mode=block' },
+    { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' }
+  ]
 };
 ```
 
@@ -65,22 +65,22 @@ const wsResources: WSResources = {
 ### `routes`
 The routes for a site, mapping URL patterns to resource paths.
 
-**Type:** [`Routes`](/reference/routes) (optional)
+**Type:** `Array<[string, string]>` (optional)
 
 **Default:** `undefined`
 
-Routes define how URLs are mapped to specific resources. Supports both exact matches and pattern-based routing.
+Routes define how URLs are mapped to specific resources. Each route is a tuple of `[pattern, target]`.
 
 <Tabs>
   <TabItem label="Basic routing">
 
 ```typescript
 const wsResources: WSResources = {
-  routes: {
-    '/': '/index.html',
-    '/about': '/about.html',
-    '/contact': '/contact.html'
-  }
+  routes: [
+    ['/', '/index.html'],
+    ['/about', '/about.html'],
+    ['/contact', '/contact.html']
+  ]
 };
 ```
 
@@ -89,11 +89,9 @@ const wsResources: WSResources = {
 
 ```typescript
 const wsResources: WSResources = {
-  routes: {
-    '/': '/index.html',
-    '/app/*': '/index.html',  // All app routes serve index.html
-    '/api/*': '/api/index.html'
-  }
+  routes: [
+    ['/*', '/index.html'],  // All routes serve index.html for SPA
+  ]
 };
 ```
 
@@ -207,15 +205,15 @@ const wsResources: WSResources = {
 
 ```typescript
 const wsResources: WSResources = {
-  headers: {
-    'Cache-Control': 'public, max-age=3600',
-    'X-Content-Type-Options': 'nosniff'
-  },
-  routes: {
-    '/': '/index.html',
-    '/about': '/about.html',
-    '/api/*': '/api/index.html'
-  },
+  headers: [
+    { key: 'Cache-Control', value: 'public, max-age=3600' },
+    { key: 'X-Content-Type-Options', value: 'nosniff' }
+  ],
+  routes: [
+    ['/', '/index.html'],
+    ['/about', '/about.html'],
+    ['/*', '/index.html']  // SPA fallback
+  ],
   metadata: {
     link: 'https://mysite.walrus.xyz',
     image_url: 'https://mysite.walrus.xyz/og-image.png',
@@ -232,6 +230,7 @@ const wsResources: WSResources = {
 
 ```typescript
 import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { ZenFsFileManager } from '@cmdoss/file-manager';
 
 const wsResources: WSResources = {
   site_name: 'My Site',
@@ -239,13 +238,16 @@ const wsResources: WSResources = {
     description: 'A decentralized website',
     creator: 'Developer'
   },
-  routes: {
-    '/': '/index.html'
-  }
+  routes: [
+    ['/', '/index.html']
+  ]
 };
 
+const fileManager = new ZenFsFileManager('/workspace');
+await fileManager.initialize();
+
 const sdk = new WalrusSiteBuilderSdk(/* ... */);
-const deployFlow = sdk.deployFlow(assets, wsResources);
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
 
 // After successful deployment, object_id will be populated
 console.log('Site object ID:', wsResources.object_id);
@@ -266,7 +268,7 @@ The `WSResources` interface is used throughout the deployment process:
 
 ## Related Types
 
-- [`Routes`](/reference/routes) - Route mapping interface
 - [`Metadata`](/reference/metadata) - Site metadata interface
 - [`SiteData`](/reference/site-data) - Complete site data structure
 - [`WalrusSiteBuilderSdk`](/reference/walrus-site-builder-sdk) - Main SDK class
+- [`IReadOnlyFileManager`](/reference/i-read-only-file-manager) - File manager interface

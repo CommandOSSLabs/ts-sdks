@@ -15,10 +15,10 @@ The deployment flow consists of 4 sequential steps:
 
 <Steps>
 
-1. **Prepare Assets** - Register and validate your files for deployment
-2. **Upload Assets** - Upload files to the Walrus decentralized storage network
-3. **Certify Assets** - Create on-chain certificates for uploaded files on Sui
-4. **Update Site** - Create or update your site with the certified assets
+1. **Prepare Resources** - Encode and validate your files for deployment
+2. **Write Resources** - Register and upload files to the Walrus decentralized storage network
+3. **Certify Resources** - Create on-chain certificates for uploaded files on Sui
+4. **Write Site** - Create or update your site with the certified resources
 
 </Steps>
 
@@ -39,13 +39,24 @@ Before starting the deployment flow, ensure you have:
 
 ```typescript
 import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { ZenFsFileManager } from '@cmdoss/file-manager';
 import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { WalrusClient } from '@mysten/walrus';
 
 function MyDeployComponent() {
   const suiClient = useSuiClient();
   const currentAccount = useCurrentAccount();
-  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction({
+    execute: async ({ bytes, signature }) =>
+      await suiClient.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: {
+          showRawEffects: true,
+          showObjectChanges: true
+        }
+      })
+  });
   
   // Initialize Walrus client
   const walrusClient = new WalrusClient({
@@ -57,90 +68,88 @@ function MyDeployComponent() {
   const sdk = new WalrusSiteBuilderSdk(
     walrusClient,
     suiClient,
-    currentAccount,
+    currentAccount?.address ?? '',
     signAndExecuteTransaction
   );
 }
+```
 ```
 
 ### Create Deploy Flow
 
 ```typescript
-import { getSHA256Hash, sha256ToU256 } from '@cmdoss/site-builder';
+import { ZenFsFileManager } from '@cmdoss/file-manager';
 
-// Prepare your assets
-const assets = [
-  {
-    path: '/index.html',
-    content: new TextEncoder().encode('<h1>Hello Walrus!</h1>'),
-    hash: await getSHA256Hash(content),
-    hashU256: sha256ToU256(hash)
-  }
-  // ... more assets
-];
+// Initialize file manager and add files
+const fileManager = new ZenFsFileManager('/workspace');
+await fileManager.initialize();
 
-// Create deploy flow instance
-const deployFlow = sdk.deployFlow(assets, {
+// Add your site files to the workspace
+await fileManager.writeFile('/index.html', new TextEncoder().encode('<h1>Hello Walrus!</h1>'));
+await fileManager.writeFile('/style.css', new TextEncoder().encode('body { color: blue; }'));
+
+// Configure site resources
+const wsResources: WSResources = {
   site_name: 'My Decentralized Website',
   metadata: {
     description: 'A website deployed on Walrus + Sui',
     creator: 'Your Name'
-  }
-});
+  },
+  routes: [
+    ['/*', '/index.html']  // SPA fallback route
+  ]
+};
+
+// Create deploy flow instance
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
 ```
 
 ## Step-by-Step Deployment
 
-### Step 1: Prepare Assets
+### Step 1: Prepare Resources
 
-The first step registers your files and validates them for deployment:
+The first step encodes and validates your files for deployment:
 
 ```typescript
-const handlePrepareAssets = async () => {
+const handlePrepareResources = async () => {
   try {
-    console.log('🚀 Starting asset preparation...');
+    console.log('🚀 Starting resource preparation...');
     
-    // Add progress listener
-    deployFlow.addEventListener('progress', (event) => {
-      console.log('Progress:', event.detail.status, event.detail.message);
-    });
-    
-    await deployFlow.prepareAssets();
-    console.log('✅ Assets prepared successfully');
+    await deployFlow.prepareResources();
+    console.log('✅ Resources prepared successfully');
     
     // Get transaction details
     const transactions = deployFlow.getTransactions();
     console.log('Transactions recorded:', transactions.length);
   } catch (error) {
-    console.error('❌ Asset preparation failed:', error);
+    console.error('❌ Resource preparation failed:', error);
   }
 };
 ```
 
 **What happens during preparation:**
-- Files are validated for deployment compatibility
-- Asset metadata and hashes are generated
-- Initial blob registration transactions are prepared
-- File paths are normalized and validated
+- Files are read from the file manager
+- Files are encoded and validated for deployment compatibility
+- Initial blob data is prepared for upload
 
-### Step 2: Upload Assets
+### Step 2: Write Resources
 
-Upload your prepared assets to the Walrus network with configurable storage options:
+Register and upload your prepared resources to the Walrus network with configurable storage options:
 
 <Tabs syncKey="upload-options">
 <TabItem label="Basic Upload">
 
 ```typescript
-const handleUploadAssets = async () => {
+const handleWriteResources = async () => {
   try {
-    console.log('📤 Starting asset upload...');
+    console.log('📤 Starting resource upload...');
     
-    // Upload for 1 epoch (non-permanent)
-    await deployFlow.uploadAssets(1, false);
+    // Write for 1 epoch (non-permanent)
+    await deployFlow.writeResources(1, false);
     
-    console.log('✅ Assets uploaded successfully');
+    console.log('✅ Resources uploaded successfully');
   } catch (error) {
-    console.error('❌ Asset upload failed:', error);
+    console.error('❌ Resource upload failed:', error);
   }
 };
 ```
@@ -149,14 +158,14 @@ const handleUploadAssets = async () => {
 <TabItem label="Extended Storage">
 
 ```typescript
-const handleUploadAssets = async () => {
+const handleWriteResources = async () => {
   try {
-    console.log('📤 Uploading assets for extended storage...');
+    console.log('📤 Uploading resources for extended storage...');
     
-    // Upload for 5 epochs (approximately 5 days on testnet)
-    await deployFlow.uploadAssets(5, false);
+    // Write for 5 epochs (approximately 5 days on testnet)
+    await deployFlow.writeResources(5, false);
     
-    console.log('✅ Assets uploaded for 5 epochs');
+    console.log('✅ Resources uploaded for 5 epochs');
   } catch (error) {
     console.error('❌ Upload failed:', error);
   }
@@ -167,14 +176,14 @@ const handleUploadAssets = async () => {
 <TabItem label="Permanent Storage">
 
 ```typescript
-const handleUploadAssets = async () => {
+const handleWriteResources = async () => {
   try {
-    console.log('📤 Uploading assets for permanent storage...');
+    console.log('📤 Uploading resources for permanent storage...');
     
-    // Upload with maximum epochs and permanent flag
-    await deployFlow.uploadAssets('max', true);
+    // Write with maximum epochs and permanent flag
+    await deployFlow.writeResources('max', true);
     
-    console.log('✅ Assets uploaded permanently');
+    console.log('✅ Resources uploaded permanently');
   } catch (error) {
     console.error('❌ Upload failed:', error);
   }
@@ -184,34 +193,34 @@ const handleUploadAssets = async () => {
 </TabItem>
 </Tabs>
 
-**Upload Parameters:**
+**Write Parameters:**
 - **epochs**: Storage duration (`number` or `'max'`)
   - `1-100`: Specific number of epochs
-  - `'max'`: Maximum available epochs
+  - `'max'`: Maximum available epochs (57 on mainnet)
 - **permanent**: Whether files should be stored permanently (`boolean`)
 
 **Storage Cost Calculation:**
 ```typescript
 // Calculate storage cost before upload
-const fileSize = assets.reduce((sum, asset) => sum + asset.content.byteLength, 0);
-const costPerEpoch = Math.ceil(fileSize / 1000); // Approximate cost in MIST
+const totalSize = await fileManager.getSize();
+const costPerEpoch = Math.ceil(totalSize / 1000); // Approximate cost in MIST
 const totalCost = costPerEpoch * epochs;
 
 console.log(`Estimated cost: ${totalCost} MIST for ${epochs} epochs`);
 ```
 
-### Step 3: Certify Assets
+### Step 3: Certify Resources
 
-Certify your uploaded assets on the Sui blockchain for immutable proof:
+Certify your uploaded resources on the Sui blockchain for immutable proof:
 
 ```typescript
-const handleCertifyAssets = async () => {
+const handleCertifyResources = async () => {
   try {
-    console.log('🔐 Starting asset certification...');
+    console.log('🔐 Starting resource certification...');
     
-    const certifiedBlobs = await deployFlow.certifyAssets();
+    const { certifiedBlobs } = await deployFlow.certifyResources();
     
-    console.log('✅ Assets certified successfully');
+    console.log('✅ Resources certified successfully');
     console.log(`Certified ${certifiedBlobs.length} blobs`);
     
     // Process certified blobs
@@ -225,7 +234,7 @@ const handleCertifyAssets = async () => {
     });
     
   } catch (error) {
-    console.error('❌ Asset certification failed:', error);
+    console.error('❌ Resource certification failed:', error);
   }
 };
 ```
@@ -236,18 +245,18 @@ const handleCertifyAssets = async () => {
 - 🌐 **Sui integration** for decentralized verification
 - 📝 **Audit trail** of all deployment transactions
 
-### Step 4: Update Site
+### Step 4: Write Site
 
-Create or update your site with the certified assets:
+Create or update your site with the certified resources:
 
 ```typescript
 import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder';
 
-const handleUpdateSite = async () => {
+const handleWriteSite = async () => {
   try {
     console.log('🌐 Creating/updating site...');
     
-    const siteId = await deployFlow.updateSite();
+    const { siteId } = await deployFlow.writeSite();
     
     if (siteId) {
       console.log('✅ Site deployed successfully');
@@ -276,14 +285,16 @@ const handleUpdateSite = async () => {
 Here's a complete React component implementing the deployment flow:
 
 ```typescript
-import { useState, useEffect } from 'react';
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
-import { useZenFsWorkspace } from '@cmdoss/site-builder-react';
+import { useState } from 'react';
+import { WalrusSiteBuilderSdk, type ICertifiedBlob } from '@cmdoss/site-builder';
+import { ZenFsFileManager } from '@cmdoss/file-manager';
+import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { WalrusClient } from '@mysten/walrus';
 
 enum DeploySteps {
   Idle,
   Prepared,
-  Uploaded, 
+  Written, 
   Certified,
   Deployed
 }
@@ -292,44 +303,52 @@ function DeploymentComponent() {
   const [currentStep, setCurrentStep] = useState(DeploySteps.Idle);
   const [loading, setLoading] = useState(false);
   const [deployedSiteId, setDeployedSiteId] = useState<string | null>(null);
-  const [certifiedBlobs, setCertifiedBlobs] = useState([]);
+  const [certifiedBlobs, setCertifiedBlobs] = useState<ICertifiedBlob[]>([]);
+  const [fileManager] = useState(() => new ZenFsFileManager('/workspace'));
+  const [deployFlow, setDeployFlow] = useState<ReturnType<typeof sdk.executeSiteUpdateFlow> | null>(null);
   
-  const { assets } = useZenFsWorkspace('/workspace');
+  const suiClient = useSuiClient();
+  const currentAccount = useCurrentAccount();
+  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction({
+    execute: async ({ bytes, signature }) =>
+      await suiClient.executeTransactionBlock({
+        transactionBlock: bytes,
+        signature,
+        options: {
+          showRawEffects: true,
+          showObjectChanges: true
+        }
+      })
+  });
   
-  // Initialize SDK (implement this based on your setup)
-  const sdk = useSiteBuilderSdk();
+  const walrusClient = new WalrusClient({
+    aggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
+    publisherUrl: 'https://publisher.walrus-testnet.walrus.space'
+  });
   
-  const deployFlow = sdk.deployFlow(assets, {
+  const sdk = new WalrusSiteBuilderSdk(
+    walrusClient,
+    suiClient,
+    currentAccount?.address ?? '',
+    signAndExecuteTransaction
+  );
+  
+  const wsResources = {
     site_name: 'My Decentralized Website',
     metadata: {
       description: 'Deployed with CommandOSS SDKs',
       creator: 'Your Name'
-    }
-  });
+    },
+    routes: [['/*', '/index.html']] as [string, string][]
+  };
   
-  // Add event listeners
-  useEffect(() => {
-    const handleProgress = (event) => {
-      console.log('Deploy progress:', event.detail);
-    };
-    
-    const handleTransaction = (event) => {
-      console.log('New transaction:', event.detail);
-    };
-    
-    deployFlow.addEventListener('progress', handleProgress);
-    deployFlow.addEventListener('transaction', handleTransaction);
-    
-    return () => {
-      deployFlow.removeEventListener('progress', handleProgress);
-      deployFlow.removeEventListener('transaction', handleTransaction);
-    };
-  }, [deployFlow]);
-  
-  const handlePrepareAssets = async () => {
+  const handlePrepareResources = async () => {
     setLoading(true);
     try {
-      await deployFlow.prepareAssets();
+      await fileManager.initialize();
+      const flow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
+      setDeployFlow(flow);
+      await flow.prepareResources();
       setCurrentStep(DeploySteps.Prepared);
     } catch (error) {
       console.error('Preparation failed:', error);
@@ -338,23 +357,25 @@ function DeploymentComponent() {
     }
   };
   
-  const handleUploadAssets = async (epochs: number) => {
+  const handleWriteResources = async (epochs: number) => {
     setLoading(true);
     try {
-      await deployFlow.uploadAssets(epochs, false);
-      setCurrentStep(DeploySteps.Uploaded);
+      await deployFlow?.writeResources(epochs, false);
+      setCurrentStep(DeploySteps.Written);
     } catch (error) {
-      console.error('Upload failed:', error);
+      console.error('Write failed:', error);
     } finally {
       setLoading(false);
     }
   };
   
-  const handleCertifyAssets = async () => {
+  const handleCertifyResources = async () => {
     setLoading(true);
     try {
-      const blobs = await deployFlow.certifyAssets();
-      setCertifiedBlobs(blobs);
+      const result = await deployFlow?.certifyResources();
+      if (result) {
+        setCertifiedBlobs(result.certifiedBlobs);
+      }
       setCurrentStep(DeploySteps.Certified);
     } catch (error) {
       console.error('Certification failed:', error);
@@ -363,11 +384,13 @@ function DeploymentComponent() {
     }
   };
   
-  const handleUpdateSite = async () => {
+  const handleWriteSite = async () => {
     setLoading(true);
     try {
-      const siteId = await deployFlow.updateSite();
-      setDeployedSiteId(siteId);
+      const result = await deployFlow?.writeSite();
+      if (result) {
+        setDeployedSiteId(result.siteId);
+      }
       setCurrentStep(DeploySteps.Deployed);
     } catch (error) {
       console.error('Site update failed:', error);
@@ -382,35 +405,35 @@ function DeploymentComponent() {
       
       <div className="deploy-steps">
         <button 
-          onClick={handlePrepareAssets}
+          onClick={handlePrepareResources}
           disabled={currentStep !== DeploySteps.Idle || loading}
           className={currentStep > DeploySteps.Idle ? 'completed' : ''}
         >
-          {currentStep > DeploySteps.Idle ? '✅ Prepared' : '1. Prepare Assets'}
+          {currentStep > DeploySteps.Idle ? '✅ Prepared' : '1. Prepare Resources'}
         </button>
         
         <button 
-          onClick={() => handleUploadAssets(5)}
+          onClick={() => handleWriteResources(5)}
           disabled={currentStep !== DeploySteps.Prepared || loading}
           className={currentStep > DeploySteps.Prepared ? 'completed' : ''}
         >
-          {currentStep > DeploySteps.Prepared ? '✅ Uploaded' : '2. Upload Assets'}
+          {currentStep > DeploySteps.Prepared ? '✅ Written' : '2. Write Resources'}
         </button>
         
         <button 
-          onClick={handleCertifyAssets}
-          disabled={currentStep !== DeploySteps.Uploaded || loading}
-          className={currentStep > DeploySteps.Uploaded ? 'completed' : ''}
+          onClick={handleCertifyResources}
+          disabled={currentStep !== DeploySteps.Written || loading}
+          className={currentStep > DeploySteps.Written ? 'completed' : ''}
         >
-          {currentStep > DeploySteps.Uploaded ? '✅ Certified' : '3. Certify Assets'}
+          {currentStep > DeploySteps.Written ? '✅ Certified' : '3. Certify Resources'}
         </button>
         
         <button 
-          onClick={handleUpdateSite}
+          onClick={handleWriteSite}
           disabled={currentStep !== DeploySteps.Certified || loading}
           className={currentStep > DeploySteps.Certified ? 'completed' : ''}
         >
-          {currentStep > DeploySteps.Certified ? '✅ Deployed' : '4. Update Site'}
+          {currentStep > DeploySteps.Certified ? '✅ Deployed' : '4. Write Site'}
         </button>
       </div>
       
@@ -441,7 +464,7 @@ function DeploymentComponent() {
 ```typescript
 const deployWithErrorHandling = async () => {
   try {
-    await deployFlow.prepareAssets();
+    await deployFlow.prepareResources();
   } catch (error) {
     if (error.message.includes('insufficient funds')) {
       console.error('❌ Insufficient funds for gas fees');
@@ -459,7 +482,7 @@ const deployWithErrorHandling = async () => {
 ### Best Practices
 
 1. **Always check wallet connection** before starting deployment
-2. **Validate assets** before calling `prepareAssets()`
+2. **Initialize file manager** before calling `prepareResources()`
 3. **Handle network errors** gracefully with retry logic
 4. **Show progress indicators** to users during long operations
 5. **Store deployment results** for future reference

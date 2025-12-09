@@ -1,14 +1,18 @@
 ---
 title: IAsset interface
-description: Reference docs for the asset interface used in file processing
+description: Reference docs for the asset interface used in file processing (deprecated)
 badge:
-    text: Interface
-    variant: tip
+    text: Deprecated
+    variant: caution
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-The [`IAsset`](/reference/i-asset) interface represents a file asset with its content, path, and hash information. It's used throughout the Site Builder SDK for processing files before deployment to the Walrus network.
+<Aside type="caution" title="Deprecated">
+The `IAsset` interface is deprecated. Use [`IReadOnlyFileManager`](/reference/i-read-only-file-manager) instead for passing assets to the deploy flow. The `IAsset` interface is kept for backward compatibility but will be removed in a future version.
+</Aside>
+
+The [`IAsset`](/reference/i-asset) interface represents a file asset with its content, path, and hash information. It was previously used throughout the Site Builder SDK for processing files before deployment to the Walrus network.
 
 ## Definition
 
@@ -237,12 +241,38 @@ const htmlAsset = createTextAsset(
   </TabItem>
 </Tabs>
 
-### Using Assets in Deploy Flow
+### Using IReadOnlyFileManager (Recommended)
+
+The new recommended approach is to use `IReadOnlyFileManager` instead of manually creating `IAsset` arrays:
+
+```typescript
+import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { ZenFsFileManager } from '@cmdoss/file-manager';
+
+// Initialize file manager
+const fileManager = new ZenFsFileManager('/workspace');
+await fileManager.initialize();
+
+// Add files to workspace
+await fileManager.writeFile('/index.html', new TextEncoder().encode('<h1>Hello</h1>'));
+await fileManager.writeFile('/style.css', new TextEncoder().encode('body { color: blue; }'));
+
+// Use file manager with SDK
+const sdk = new WalrusSiteBuilderSdk(walrusClient, suiClient, walletAddr, signAndExecuteTransaction);
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
+
+await deployFlow.prepareResources();
+await deployFlow.writeResources(57, false);
+const { certifiedBlobs } = await deployFlow.certifyResources();
+const { siteId } = await deployFlow.writeSite();
+```
+
+### Using Assets in Deploy Flow (Deprecated)
 
 ```typescript
 import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
 
-// Create assets
+// Note: This approach is deprecated
 const assets: IAsset[] = [
   {
     path: '/index.html',
@@ -258,14 +288,8 @@ const assets: IAsset[] = [
   }
 ];
 
-// Use in SDK
-const sdk = new WalrusSiteBuilderSdk(/* ... */);
-const deployFlow = sdk.deployFlow(assets, wsResources);
-
-await deployFlow.prepareAssets();
-await deployFlow.uploadAssets(57, false);
-await deployFlow.certifyAssets();
-await deployFlow.updateSite();
+// The recommended approach is to use IReadOnlyFileManager instead
+// See the "Using IReadOnlyFileManager (Recommended)" section above
 ```
 
 ### Asset Processing and Validation
@@ -326,7 +350,8 @@ Assets go through several stages in the deployment process:
 
 ## Related Types
 
-- [`Resource`](/reference/resource) - Processed asset with additional metadata
+- [`IReadOnlyFileManager`](/reference/i-read-only-file-manager) - Recommended replacement for IAsset
+- [`IFileManager`](/reference/i-file-manager) - Full file manager interface with write operations
 - [`SuiResource`](/reference/sui-resource) - On-chain representation of asset
 - [`SiteData`](/reference/site-data) - Collection of processed assets
 - [`WSResources`](/reference/ws-resources) - Site configuration that may affect asset processing

@@ -54,32 +54,38 @@ npm install @mysten/sui @mysten/wallet-standard @mysten/walrus
 
 ```typescript
 import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder'
-import { getSuiClient } from '@mysten/sui/client'
-import { getWalrusClient } from '@mysten/walrus'
+import { ZenFsFileManager } from '@cmdoss/file-manager'
+import { WalrusClient } from '@mysten/walrus'
+import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit'
+
+// Initialize file manager
+const fileManager = new ZenFsFileManager('/workspace')
+await fileManager.initialize()
+
+// Add your files
+await fileManager.writeFile('/index.html', new TextEncoder().encode('<h1>Hello Walrus!</h1>'))
 
 // Initialize the SDK
 const sdk = new WalrusSiteBuilderSdk(
   walrusClient,
   suiClient,
-  activeAccount,
+  walletAddr,
   signAndExecuteTransaction
 )
 
-// Deploy a website
-const assets = [
-  {
-    path: '/index.html',
-    content: new TextEncoder().encode('<h1>Hello Walrus!</h1>'),
-    hash: await getSHA256Hash(content),
-    hashU256: sha256ToU256(hash)
-  }
-]
+// Configure site resources
+const wsResources = {
+  site_name: 'My Site',
+  metadata: { description: 'A decentralized website' },
+  routes: [['/*', '/index.html']] as [string, string][]
+}
 
-const deployFlow = sdk.deployFlow(assets)
-await deployFlow.prepareAssets()
-await deployFlow.uploadAssets(5) // Store for 5 epochs
-await deployFlow.certifyAssets()
-await deployFlow.updateSite()
+// Create and execute deploy flow
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources)
+await deployFlow.prepareResources()
+await deployFlow.writeResources(5, false) // Store for 5 epochs
+const { certifiedBlobs } = await deployFlow.certifyResources()
+const { siteId } = await deployFlow.writeSite()
 ```
 
 ### React Integration
@@ -139,7 +145,7 @@ packages/
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - PNPM 8+
 - Git
 

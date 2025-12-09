@@ -419,35 +419,32 @@ await createTemplate('basic-html');
 
 ### File Processing Pipeline
 
-Process files before deployment:
+When using the file manager with the SDK, files are automatically processed during deployment. You don't need to manually calculate hashes - the SDK handles this for you:
 
 ```typescript
-import { getSHA256Hash, sha256ToU256 } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { ZenFsFileManager } from '@cmdoss/file-manager';
 
-const processAssets = async (rawFiles: { path: string; content: Uint8Array }[]) => {
-  const processedAssets = [];
-  
-  for (const file of rawFiles) {
-    // Calculate hashes
-    const hash = await getSHA256Hash(file.content);
-    const hashU256 = sha256ToU256(hash);
-    
-    // Optional: Compress content
-    let processedContent = file.content;
-    if (file.path.endsWith('.html') || file.path.endsWith('.css') || file.path.endsWith('.js')) {
-      // Minify text files (implement your minification logic)
-      processedContent = minifyContent(file.content, file.path);
-    }
-    
-    processedAssets.push({
-      path: file.path,
-      content: processedContent,
-      hash,
-      hashU256,
-      originalSize: file.content.byteLength,
-      processedSize: processedContent.byteLength
-    });
-  }
+// Initialize file manager
+const fileManager = new ZenFsFileManager('/workspace');
+await fileManager.initialize();
+
+// Add files to workspace
+await fileManager.writeFile('/index.html', new TextEncoder().encode('<h1>Hello</h1>'));
+await fileManager.writeFile('/style.css', new TextEncoder().encode('body { color: blue; }'));
+
+// The SDK will automatically process files during deployment
+const sdk = new WalrusSiteBuilderSdk(walrusClient, suiClient, walletAddr, signAndExecuteTransaction);
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
+
+// All file processing (encoding, hashing) happens automatically
+await deployFlow.prepareResources();
+await deployFlow.writeResources(57, false);
+const { certifiedBlobs } = await deployFlow.certifyResources();
+const { siteId } = await deployFlow.writeSite();
+```
+
+For advanced use cases where you need to process files before adding them to the workspace:
   
   return processedAssets;
 };

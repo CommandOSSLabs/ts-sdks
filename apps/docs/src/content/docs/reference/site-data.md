@@ -14,8 +14,8 @@ The [`SiteData`](/reference/site-data) interface represents the complete structu
 
 ```typescript
 interface SiteData {
-  resources: Resource[]
-  routes?: Routes
+  resources: SuiResource[]
+  routes?: Array<[string, string]>
   metadata?: Metadata
   site_name?: string
 }
@@ -26,11 +26,11 @@ interface SiteData {
 ### `resources`
 Array of all resources (files) that make up the site.
 
-**Type:** [`Resource`](/reference/resource)[]
+**Type:** [`SuiResource`](/reference/sui-resource)[]
 
 **Required:** Yes
 
-Each resource represents a file with its path, content information, and on-chain metadata.
+Each resource represents a file with its path, blob ID, hash, and headers for on-chain storage.
 
 <Tabs>
   <TabItem label="Basic resources">
@@ -39,19 +39,13 @@ Each resource represents a file with its path, content information, and on-chain
 const siteData: SiteData = {
   resources: [
     {
-      full_path: '/index.html',
-      unencoded_size: 1024,
-      info: {
-        path: '/index.html',
-        blob_id: 'abc123...',
-        blob_id_le_u256: 1234567890n,
-        blob_hash: new Uint8Array(32),
-        blob_hash_le_u256: 9876543210n,
-        headers: {
-          'content-type': 'text/html',
-          'content-encoding': 'identity'
-        }
-      }
+      path: '/index.html',
+      blob_id: 'abc123...',
+      blob_hash: 'hash123...',
+      headers: [
+        { key: 'content-type', value: 'text/html' },
+        { key: 'content-encoding', value: 'identity' }
+      ]
     }
   ]
 };
@@ -64,28 +58,16 @@ const siteData: SiteData = {
 const siteData: SiteData = {
   resources: [
     {
-      full_path: '/index.html',
-      unencoded_size: 1024,
-      info: {
-        path: '/index.html',
-        blob_id: 'html123...',
-        blob_id_le_u256: 1234567890n,
-        blob_hash: new Uint8Array(32),
-        blob_hash_le_u256: 9876543210n,
-        headers: { 'content-type': 'text/html' }
-      }
+      path: '/index.html',
+      blob_id: 'html123...',
+      blob_hash: 'hashHtml...',
+      headers: [{ key: 'content-type', value: 'text/html' }]
     },
     {
-      full_path: '/style.css',
-      unencoded_size: 512,
-      info: {
-        path: '/style.css',
-        blob_id: 'css456...',
-        blob_id_le_u256: 2345678901n,
-        blob_hash: new Uint8Array(32),
-        blob_hash_le_u256: 8765432109n,
-        headers: { 'content-type': 'text/css' }
-      }
+      path: '/style.css',
+      blob_id: 'css456...',
+      blob_hash: 'hashCss...',
+      headers: [{ key: 'content-type', value: 'text/css' }]
     }
   ]
 };
@@ -97,11 +79,11 @@ const siteData: SiteData = {
 ### `routes`
 The routes for the site, mapping URL patterns to resource paths.
 
-**Type:** [`Routes`](/reference/routes) (optional)
+**Type:** `Array<[string, string]>` (optional)
 
 **Default:** `undefined`
 
-Routes define how URLs are mapped to specific resources. This is optional and can be undefined for sites without custom routing.
+Routes define how URLs are mapped to specific resources. Each route is a tuple of `[pattern, target]`. This is optional and can be undefined for sites without custom routing.
 
 <Tabs>
   <TabItem label="Simple routing">
@@ -109,10 +91,10 @@ Routes define how URLs are mapped to specific resources. This is optional and ca
 ```typescript
 const siteData: SiteData = {
   resources: [...],
-  routes: {
-    '/': '/index.html',
-    '/about': '/about.html'
-  }
+  routes: [
+    ['/', '/index.html'],
+    ['/about', '/about.html']
+  ]
 };
 ```
 
@@ -122,12 +104,10 @@ const siteData: SiteData = {
 ```typescript
 const siteData: SiteData = {
   resources: [...],
-  routes: {
-    '/': '/index.html',
-    '/api/v1/*': '/api/index.html',
-    '/docs/*': '/docs/index.html',
-    '/assets/*': '/static/*'
-  }
+  routes: [
+    ['/', '/index.html'],
+    ['/*', '/index.html']  // SPA fallback
+  ]
 };
 ```
 
@@ -193,108 +173,101 @@ const siteData: SiteData = {
 
 ## Usage Examples
 
-### Creating SiteData from Assets
+### Creating SiteData
 
-<Tabs>
-  <TabItem label="Using ResourceManager">
+Site data is typically created automatically by the SDK during the deployment flow. You don't need to manually construct it:
 
 ```typescript
-import { ResourceManager } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { ZenFsFileManager } from '@cmdoss/file-manager';
 
-const resourceManager = new ResourceManager(walrusClient, wsResources);
-const siteData = await resourceManager.getSiteData(assets);
+// Initialize file manager with your files
+const fileManager = new ZenFsFileManager('/workspace');
+await fileManager.initialize();
+await fileManager.writeFile('/index.html', new TextEncoder().encode('<h1>Hello</h1>'));
 
-console.log('Site data created:', {
-  resourceCount: siteData.resources.length,
-  routes: siteData.routes,
-  siteName: siteData.site_name
-});
+// The SDK handles site data creation internally
+const sdk = new WalrusSiteBuilderSdk(walrusClient, suiClient, walletAddr, signAndExecuteTransaction);
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
+
+// Site data is created and managed during the flow
+await deployFlow.prepareResources();
+await deployFlow.writeResources(57, false);
+const { certifiedBlobs } = await deployFlow.certifyResources();
+const { siteId } = await deployFlow.writeSite();
 ```
 
-  </TabItem>
-  <TabItem label="Manual construction">
+### Using the Deploy Flow
 
 ```typescript
-const siteData: SiteData = {
-  resources: assets.map(asset => ({
-    full_path: asset.path,
-    unencoded_size: asset.content.length,
-    info: {
-      path: asset.path,
-      blob_id: '<unknown>',
-      blob_id_le_u256: 0n,
-      blob_hash: asset.hash,
-      blob_hash_le_u256: asset.hashU256,
-      headers: {
-        'content-type': contentTypeFromFilePath(asset.path),
-        'content-encoding': 'identity'
-      }
-    }
-  })),
-  routes: {
-    '/': '/index.html',
-    '/about': '/about.html'
-  },
+import { ZenFsFileManager } from '@cmdoss/file-manager';
+
+// Initialize file manager
+const fileManager = new ZenFsFileManager('/workspace');
+await fileManager.initialize();
+
+// Configure site resources
+const wsResources: WSResources = {
+  site_name: 'My Site',
   metadata: {
-    description: 'My decentralized website',
+    description: 'A decentralized website',
     creator: 'Developer'
   },
-  site_name: 'My Site'
+  routes: [
+    ['/', '/index.html'],
+    ['/*', '/index.html']  // SPA fallback
+  ]
 };
-```
 
-  </TabItem>
-</Tabs>
+// Create and execute deploy flow
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
 
-### Using SiteData in Deploy Flow
-
-```typescript
-// Get site data from assets
-const siteData = await sdk.getSiteData(assets, wsResources);
-
-// Create deploy flow
-const deployFlow = sdk.deployFlow(assets, wsResources);
-
-// The deploy flow will use the site data for:
-// - Preparing assets for upload
+// The deploy flow handles:
+// - Reading files from the file manager
+// - Creating site data structure
+// - Uploading to Walrus
 // - Creating blockchain transactions
-// - Updating site metadata
-// - Managing resource lifecycle
 
-await deployFlow.prepareAssets();
-await deployFlow.uploadAssets(57, false);
-await deployFlow.certifyAssets();
-await deployFlow.updateSite();
+await deployFlow.prepareResources();
+await deployFlow.writeResources(57, false);
+const { certifiedBlobs } = await deployFlow.certifyResources();
+const { siteId } = await deployFlow.writeSite();
 ```
 
-### SiteData Diff and Updates
+### Site Updates
+
+The deploy flow automatically computes differences when updating an existing site:
 
 ```typescript
-// Get current site data
-const currentSiteData = await sdk.getSiteData(currentAssets, wsResources);
+// For updating an existing site, include the object_id in wsResources
+const wsResources: WSResources = {
+  object_id: '0x123...',  // Existing site ID
+  site_name: 'Updated Site Name',
+  metadata: {
+    description: 'Updated description',
+    creator: 'Developer'
+  }
+};
 
-// Get updated site data
-const updatedSiteData = await sdk.getSiteData(updatedAssets, updatedWsResources);
+const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
 
-// Compare for differences
-const siteUpdates = await sdk.getSiteUpdates({
-  siteData: updatedSiteData,
-  siteId: existingSiteId
-});
+// The flow will:
+// 1. Fetch existing site data from chain
+// 2. Compare with new file manager contents
+// 3. Only upload changed resources
+// 4. Update site metadata if changed
 
-console.log('Updates needed:', {
-  resourceOps: siteUpdates.resource_ops.length,
-  routeOps: siteUpdates.route_ops.length,
-  metadataOp: siteUpdates.metadata_op,
-  siteNameOp: siteUpdates.site_name_op
-});
+await deployFlow.prepareResources();
+await deployFlow.writeResources(57, false);
+const { certifiedBlobs } = await deployFlow.certifyResources();
+const { siteId } = await deployFlow.writeSite();
 ```
 
 ## Data Flow
 
 The `SiteData` interface is central to the deployment process:
 
-1. **Creation**: Built from assets and WSResources configuration
+1. **Creation**: Built from file manager contents and WSResources configuration
 2. **Processing**: Resources are processed and metadata is applied
 3. **Comparison**: Compared with existing site data to determine updates
 4. **Deployment**: Used to create blockchain transactions
@@ -302,9 +275,8 @@ The `SiteData` interface is central to the deployment process:
 
 ## Related Types
 
-- [`Resource`](/reference/resource) - Individual file resource structure
-- [`Routes`](/reference/routes) - Route mapping interface
-- [`Metadata`](/reference/metadata) - Site metadata interface
+- [`SuiResource`](/reference/sui-resource) - On-chain resource information
 - [`SiteDataDiff`](/reference/site-data-diff) - Differences between site data versions
-- [`IAsset`](/reference/i-asset) - Asset interface for file processing
+- [`Metadata`](/reference/metadata) - Site metadata interface
 - [`WSResources`](/reference/ws-resources) - Site configuration interface
+- [`IReadOnlyFileManager`](/reference/i-read-only-file-manager) - File manager interface
