@@ -86,6 +86,8 @@ export interface IReadOnlyFileManager {
   listFiles(): Promise<string[]>
   /** Get the total size of all files in the workspace */
   getSize(): Promise<number>
+  /** The workspace path */
+  readonly workspaceDir: string
 }
 
 /**

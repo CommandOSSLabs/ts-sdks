@@ -1,11 +1,10 @@
 import { mainPackage } from '@cmdoss/site-builder'
-import { useSuiClient } from '@mysten/dapp-kit'
 import type {
   DynamicFieldInfo,
   ObjectResponseError,
   SuiClient
 } from '@mysten/sui/client'
-import { useQuery } from '@tanstack/react-query'
+import { type QueryClient, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { queryKeys } from './keys'
 
@@ -154,22 +153,30 @@ async function fetchWalrusSiteData(
   return finalSiteData
 }
 
-export function useWalrusSiteQuery(id: string | undefined) {
-  const suiClient = useSuiClient()
-  const { network } = suiClient
+export function useWalrusSiteQuery(
+  id: string | undefined,
+  clients: {
+    suiClient: SuiClient
+    queryClient: QueryClient
+  }
+) {
+  const { network } = clients.suiClient
   const packageId = useMemo(
     () => mainPackage[network as keyof typeof mainPackage].packageId,
     [network]
   )
 
-  return useQuery({
-    queryKey: queryKeys.walrusSite(id),
-    queryFn: async () => {
-      if (!id) throw new Error('No site ID provided')
-      return fetchWalrusSiteData(suiClient, id, packageId)
+  return useQuery(
+    {
+      queryKey: queryKeys.walrusSite(id),
+      queryFn: async () => {
+        if (!id) throw new Error('No site ID provided')
+        return fetchWalrusSiteData(clients.suiClient, id, packageId)
+      },
+      enabled: !!id
     },
-    enabled: !!id
-  })
+    clients.queryClient
+  )
 }
 
 async function fetchWalrusSitesListPaginated(
@@ -281,41 +288,48 @@ async function fetchWalrusSitesListPaginated(
 
 export function useWalrusSitesQuery(
   address: string | undefined,
-  options?: {
+  options: {
     limit?: number
     cursor?: string | null
+  },
+  clients: {
+    suiClient: SuiClient
+    queryClient: QueryClient
   }
 ) {
-  const suiClient = useSuiClient()
+  const { suiClient, queryClient } = clients
   const { network } = suiClient
   const packageId = useMemo(
     () => mainPackage[network as keyof typeof mainPackage].packageId,
     [network]
   )
 
-  // console.log('🔍 Fetching Walrus sites list for address:', address, packageId)
+  console.log('🔍 Fetching Walrus sites list for address:', address, packageId)
 
-  const sitesListQuery = useQuery({
-    queryKey: [
-      ...queryKeys.walrusSites(address, network),
-      options?.cursor,
-      options?.limit
-    ],
-    queryFn: async () => {
-      if (!address) return { sites: [], nextCursor: null, hasNextPage: false }
-      return fetchWalrusSitesListPaginated(
-        suiClient,
-        address,
-        packageId,
-        options?.limit,
-        options?.cursor
-      )
+  const sitesListQuery = useQuery(
+    {
+      queryKey: [
+        ...queryKeys.walrusSites(address, network),
+        options?.cursor,
+        options?.limit
+      ],
+      queryFn: async () => {
+        if (!address) return { sites: [], nextCursor: null, hasNextPage: false }
+        return fetchWalrusSitesListPaginated(
+          suiClient,
+          address,
+          packageId,
+          options?.limit,
+          options?.cursor
+        )
+      },
+      enabled: !!address,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 2,
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000)
     },
-    enabled: !!address,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: 2,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000)
-  })
+    queryClient
+  )
 
   // Return paginated data directly - no need to fetch full details for list view
   return {

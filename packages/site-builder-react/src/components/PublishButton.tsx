@@ -19,7 +19,10 @@ const PublishButton: FC<Props> = ({
   onPrepareAssets,
   onUpdateSiteMetadata,
   onAssociatedDomain,
-  onError
+  onError,
+  currentAccount,
+  signAndExecuteTransaction,
+  clients
 }) => {
   const {
     actions: {
@@ -34,8 +37,12 @@ const PublishButton: FC<Props> = ({
     onPrepareAssets,
     onUpdateSiteMetadata,
     onAssociatedDomain,
-    onError
+    onError,
+    currentAccount,
+    signAndExecuteTransaction,
+    clients
   })
+  const network = clients.suiClient.network
 
   return (
     <ThemeProvider>
@@ -43,6 +50,7 @@ const PublishButton: FC<Props> = ({
         siteId={siteId}
         onPublishClick={handleOpenPublishingDialog}
         onDomainClick={handleOpenDomainDialog}
+        network={network === 'mainnet' ? 'mainnet' : 'testnet'}
       >
         {children || <Button>Publish</Button>}
       </PublishMenu>
@@ -50,8 +58,14 @@ const PublishButton: FC<Props> = ({
         siteId={siteId}
         onDeploy={handleRunDeploymentStep}
         onSaveMetadata={handleSaveSiteMetadata}
+        clients={clients}
       />
-      <SuiNsModal siteId={siteId} onAssociateDomain={handleAssociateDomain} />
+      <SuiNsModal
+        siteId={siteId}
+        onAssociateDomain={handleAssociateDomain}
+        currentAccount={currentAccount}
+        clients={clients}
+      />
     </ThemeProvider>
   )
 }

@@ -1,5 +1,7 @@
+import type { SuiClient } from '@mysten/sui/client'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
+import type { QueryClient } from '@tanstack/react-query'
 import { ChevronDown, Info, Pencil, Upload, X } from 'lucide-react'
 import type { FC } from 'react'
 import { useRef, useState } from 'react'
@@ -17,12 +19,17 @@ interface PublishModalProps {
   siteId: string | undefined
   onDeploy?: () => void
   onSaveMetadata?: () => Promise<void>
+  clients: {
+    suiClient: SuiClient
+    queryClient: QueryClient
+  }
 }
 
 const PublishModal: FC<PublishModalProps> = ({
   siteId,
   onDeploy,
-  onSaveMetadata
+  onSaveMetadata,
+  clients: { suiClient, queryClient }
 }) => {
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false)
   const [isMoreInfoExpanded, setIsMoreInfoExpanded] = useState(true)
@@ -49,7 +56,7 @@ const PublishModal: FC<PublishModalProps> = ({
     },
     isLoading: storageCostLoading,
     isError: storageCostError
-  } = useStorageCostQuery(assetsSize, epochs)
+  } = useStorageCostQuery(assetsSize, epochs, { suiClient, queryClient })
 
   const deploymentSteps = [
     {

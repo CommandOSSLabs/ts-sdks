@@ -1,18 +1,17 @@
 import {
   type IReadOnlyFileManager,
+  type ISignAndExecuteTransaction,
   type IWalrusSiteBuilderSdk,
   objectIdToWalrusSiteUrl,
   WalrusSiteBuilderSdk
 } from '@cmdoss/site-builder'
-import {
-  useCurrentAccount,
-  useSignAndExecuteTransaction,
-  useSuiClient
-} from '@mysten/dapp-kit'
+import { useSignAndExecuteTransaction } from '@mysten/dapp-kit'
+import type { SuiClient } from '@mysten/sui/client'
 import { Transaction } from '@mysten/sui/transactions'
 import { ALLOWED_METADATA, SuinsTransaction } from '@mysten/suins'
+import type { WalletAccount } from '@mysten/wallet-standard'
 import { useStore } from '@nanostores/react'
-import { useQueryClient } from '@tanstack/react-query'
+import type { QueryClient, UseMutateAsyncFunction } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { useWalrusSiteQuery } from '~/queries'
 import { queryKeys } from '~/queries/keys'
@@ -51,6 +50,18 @@ export interface UseSitePublishingParams {
   onAssociatedDomain?: (nftId: string, siteId: string) => Promise<void>
   /** Optional callback for handling errors. */
   onError?: (msg: string) => void
+  /**
+   * Sui and Query clients needed for on-chain operations.
+   */
+  clients: {
+    suiClient: SuiClient
+    queryClient: QueryClient
+  }
+  /** Current wallet account information. */
+  currentAccount: WalletAccount | null
+
+  /** Callback for signing and executing transactions. */
+  signAndExecuteTransaction: ISignAndExecuteTransaction
 }
 
 export function useSitePublishing({
@@ -58,26 +69,26 @@ export function useSitePublishing({
   onPrepareAssets,
   onUpdateSiteMetadata,
   onAssociatedDomain,
-  onError
+  onError,
+  currentAccount,
+  signAndExecuteTransaction,
+  clients: { suiClient, queryClient }
 }: UseSitePublishingParams) {
-  const queryClient = useQueryClient()
-  const suinsClient = useSuiNsClient()
-  const suiClient = useSuiClient()
+  const suinsClient = useSuiNsClient(suiClient)
   const walrusClient = useWalrusClient(suiClient)
-  const currentAccount = useCurrentAccount()
   const { network } = suiClient
-  const { mutateAsync: signAndExecuteTransaction } =
-    useSignAndExecuteTransaction({
-      execute: async ({ bytes, signature }) =>
-        await suiClient.executeTransactionBlock({
-          transactionBlock: bytes,
-          signature,
-          options: {
-            showRawEffects: true,
-            showEffects: true
-          }
-        })
-    })
+  // const { mutateAsync: signAndExecuteTransaction } =
+  //   useSignAndExecuteTransaction({
+  //     execute: async ({ bytes, signature }) =>
+  //       await suiClient.executeTransactionBlock({
+  //         transactionBlock: bytes,
+  //         signature,
+  //         options: {
+  //           showRawEffects: true,
+  //           showEffects: true
+  //         }
+  //       })
+  //   })
 
   const sdk: IWalrusSiteBuilderSdk | undefined = useMemo(() => {
     if (!suiClient || !walrusClient || !currentAccount) return
@@ -93,9 +104,12 @@ export function useSitePublishing({
     data: nsDomains,
     isLoading: isLoadingNsDomains,
     isError: isErrorNsDomains
-  } = useSuiNsDomainsQuery()
+  } = useSuiNsDomainsQuery(currentAccount, { suiClient, queryClient })
 
-  const { data: walrusSiteData } = useWalrusSiteQuery(siteId)
+  const { data: walrusSiteData } = useWalrusSiteQuery(siteId, {
+    suiClient,
+    queryClient
+  })
 
   // Store state
   const isPublishDialogOpen = useStore(sitePublishingStore.isPublishDialogOpen)

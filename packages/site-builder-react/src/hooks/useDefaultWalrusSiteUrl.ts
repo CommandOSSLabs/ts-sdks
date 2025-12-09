@@ -1,9 +1,10 @@
 import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder'
-import { useSuiClient } from '@mysten/dapp-kit'
 import { useMemo } from 'react'
 
-export function useDefaultWalrusSiteUrl(siteId: string | null | undefined) {
-  const { network } = useSuiClient()
+export function useDefaultWalrusSiteUrl(
+  siteId: string | null | undefined,
+  network: 'mainnet' | 'testnet' = 'testnet'
+): string | null {
   const walrusSiteUrl = useMemo(() => {
     if (!siteId) return null
     if (network === 'mainnet')

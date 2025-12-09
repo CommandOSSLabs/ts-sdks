@@ -10,18 +10,37 @@ const log = debug('file-manager')
 export class ZenFsFileManager implements IFileManager {
   protected changeListeners: Set<FileChangedCallback> = new Set()
   constructor(
-    public workspaceDir = '/workspace',
-    public mountDir = '/workspace'
-  ) {}
+    /** The directory of the workspace. Any files within this directory are considered part of the workspace. */
+    public readonly workspaceDir = '/workspace',
+    /** The directory where the workspace is mounted in the virtual filesystem. */
+    public readonly mountDir?: string
+  ) {
+    if (!this.mountDir) {
+      this.mountDir = this.workspaceDir
+    }
+    if (this.mountDir !== this.workspaceDir) {
+      // Ensure workspaceDir is a subdirectory of mountDir
+      const normalizedWorkspace = path.normalize(this.workspaceDir)
+      const normalizedMount = path.normalize(this.mountDir)
+      if (
+        !normalizedWorkspace.startsWith(normalizedMount + '/') &&
+        normalizedWorkspace !== normalizedMount
+      ) {
+        throw new Error(
+          `workspaceDir (${this.workspaceDir}) must be a subdirectory of mountDir (${this.mountDir})`
+        )
+      }
+    }
+  }
 
   async initialize(): Promise<void> {
     log('🔧 Configuring filesystem...')
     log(`📁 Mounting workspace at ${this.mountDir}`)
     await configure({
       mounts: {
-        [this.mountDir]: {
+        [this.mountDir ?? this.workspaceDir]: {
           backend: IndexedDB,
-          storeName: this.mountDir
+          storeName: this.mountDir ?? this.workspaceDir
         }
       }
     })

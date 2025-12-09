@@ -1,6 +1,9 @@
 import { useSuiClient } from '@mysten/dapp-kit'
+import type { SuiClient } from '@mysten/sui/client'
+import type { WalletAccount } from '@mysten/wallet-standard'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
+import { type QueryClient, useQueryClient } from '@tanstack/react-query'
 import { Loader2, X } from 'lucide-react'
 import type { FC } from 'react'
 import { useDefaultWalrusSiteUrl } from '~/hooks/useDefaultWalrusSiteUrl'
@@ -25,19 +28,31 @@ export interface SuiNsDomain {
 interface SuiNsModalProps {
   siteId: string | undefined
   onAssociateDomain?: (nftId: string, siteId: string) => void
+  currentAccount: WalletAccount | null
+  /**
+   * Sui and Query clients needed for on-chain operations.
+   */
+  clients: {
+    suiClient: SuiClient
+    queryClient: QueryClient
+  }
 }
 
-const SuiNsModal: FC<SuiNsModalProps> = ({ siteId, onAssociateDomain }) => {
+const SuiNsModal: FC<SuiNsModalProps> = ({
+  siteId,
+  onAssociateDomain,
+  currentAccount,
+  clients: { suiClient, queryClient }
+}) => {
   const isOpen = useStore(isDomainDialogOpen)
   const isAssigning = useStore(isAssigningDomain)
   const walrusSiteUrl = useDefaultWalrusSiteUrl(siteId)
-  const { network } = useSuiClient()
-
+  const { network } = suiClient
   const {
     data: nsDomains,
     isLoading: isLoadingDomains,
     isError: isErrorDomains
-  } = useSuiNsDomainsQuery()
+  } = useSuiNsDomainsQuery(currentAccount, { suiClient, queryClient })
 
   const associatedDomains = nsDomains.filter(d => d.walrusSiteId === siteId)
 

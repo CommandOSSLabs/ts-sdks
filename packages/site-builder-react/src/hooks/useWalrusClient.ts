@@ -3,6 +3,9 @@ import type { SuiClient } from '@mysten/sui/client'
 import { WalrusClient } from '@mysten/walrus'
 import { useMemo } from 'react'
 
+const WALRUS_WASM_CDN =
+  'https://unpkg.com/@mysten/walrus-wasm@latest/web/walrus_wasm_bg.wasm'
+
 export function useWalrusClient(
   suiClient: SuiClient | null
 ): WalrusClient | null {
@@ -14,6 +17,7 @@ export function useWalrusClient(
     return new WalrusClient({
       network,
       suiClient,
+      wasmUrl: WALRUS_WASM_CDN,
       uploadRelay: {
         timeout: 600000,
         host: `https://upload-relay.${network}.walrus.space`,

@@ -1,4 +1,3 @@
-import { useSuiClient } from '@mysten/dapp-kit'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { ExternalLink, Globe2 } from 'lucide-react'
 import type { FC, ReactNode } from 'react'
@@ -12,17 +11,18 @@ interface PublishMenuProps {
   siteId: string | undefined
   onPublishClick?: () => void
   onDomainClick?: () => void
+  network?: 'mainnet' | 'testnet'
 }
 
 const PublishMenu: FC<PublishMenuProps> = ({
   children,
   siteId,
   onPublishClick,
-  onDomainClick
+  onDomainClick,
+  network = 'testnet'
 }) => {
   const isDeployed = !!siteId
   const walrusSiteUrl = useDefaultWalrusSiteUrl(siteId)
-  const { network } = useSuiClient()
 
   const truncateUrl = (url: string) => {
     try {

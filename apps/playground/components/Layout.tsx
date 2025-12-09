@@ -1,5 +1,3 @@
-'use client'
-
 import ConnectWalletButton from '@/components/ConnectWalletButton'
 import Footer from '@/components/Footer'
 import WalletDetails from '@/components/WalletDetails'
