@@ -121,7 +121,7 @@ This monorepo is built with:
 
 ### Package Architecture
 
-```
+```text
 packages/
 ├── site-builder/          # Core SDK - Walrus + Sui integration
 │   ├── src/
@@ -185,7 +185,7 @@ pnpm publish-packages # Build, test, and publish to npm
 
 ### Project Structure
 
-```
+```text
 ts-sdks/
 ├── apps/
 │   ├── docs/                    # Documentation site (Astro)
