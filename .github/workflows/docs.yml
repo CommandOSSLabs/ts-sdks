@@ -25,7 +25,7 @@ jobs:
       - name: 📦 Install dependencies
         run: pnpm install
       - name: 🏗 Build (Docs & Playground)
-        run: pnpm -F docs -F playground build
+        run: pnpm build --filter @cmdoss/docs --filter @cmdoss/playground
       - name: 🚀 Publish 🌐 DOCS to Cloudflare
         uses: cloudflare/wrangler-action@v3
         with:
