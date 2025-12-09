@@ -1,4 +1,4 @@
-name: Document Deploy
+name: Update Docs
 
 on:
   push:
@@ -24,8 +24,8 @@ jobs:
         with: { node-version-file: .node-version, cache: pnpm }
       - name: 📦 Install dependencies
         run: pnpm install
-      - name: 🏗 Build
-        run: pnpm -F docs build
+      - name: 🏗 Build (Docs & Playground)
+        run: pnpm -F docs -F playground build
       - name: 🚀 Publish 🌐 DOCS to Cloudflare
         uses: cloudflare/wrangler-action@v3
         with:
