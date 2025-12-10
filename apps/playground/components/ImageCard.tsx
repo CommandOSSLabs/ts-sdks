@@ -14,7 +14,7 @@ const AGGREGATOR_URL = 'https://aggregator.walrus-testnet.walrus.space'
 
 export function PlaceholderCard() {
   return (
-    <div className="w-[480px] h-full max-h-[158px] min-h-[158px] bg-[#0C0F1D] rounded-2xl border border-2 border-dashed border-[#97F0E533] flex flex-row items-center justify-center gap-4 opacity-60">
+    <div className="w-[480px] h-full max-h-[158px] min-h-[158px] bg-[#0C0F1D] rounded-2xl border-2 border-dashed border-[#97F0E533] flex flex-row items-center justify-center gap-4 opacity-60">
       <div className="w-[142px] h-[142px] relative rounded-lg overflow-hidden bg-[#97F0E514] flex items-center justify-center">
         <Upload className="w-12 h-12 text-[#97F0E5]" strokeWidth={1} />
       </div>
@@ -34,7 +34,7 @@ export default function ImageCard(props: ImageCardProps) {
   const [hasError, setHasError] = useState(false)
 
   return (
-    <div className="w-[480px] h-full max-h-[158px] min-h-[158px] bg-[#0C0F1D] rounded-2xl border border-2 border-[#97F0E533] flex flex-row items-center justify-center gap-2">
+    <div className="w-[480px] h-full max-h-[158px] min-h-[158px] bg-[#0C0F1D] rounded-2xl border-2 border-[#97F0E533] flex flex-row items-center justify-center gap-2">
       <div className="w-[142px] h-[142px] relative rounded-lg overflow-hidden">
         {hasError ? (
           <div className="w-full h-full bg-[#97F0E514] rounded-lg flex items-center justify-center">

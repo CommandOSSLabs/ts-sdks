@@ -197,7 +197,7 @@ export default function Home() {
               <PublishedSiteInfo
                 siteId={siteId}
                 network={networkConfig.network}
-                onClearSiteId={() => $siteId.set(undefined)}
+                onClearSiteId={() => $siteId.set('')}
               />
             )}
           </div>
