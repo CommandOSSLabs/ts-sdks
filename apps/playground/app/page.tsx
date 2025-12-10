@@ -14,6 +14,17 @@ import {
 import { AnimatedBackground } from '@/components/AnimatedBackground'
 import { FileExplorer } from '@/components/file-explorer/file-explorer'
 import { Introduction } from '@/components/Introduction'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { CardContent } from '@/components/ui/card'
 import {
@@ -21,6 +32,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from '@/components/ui/tooltip'
+import { useNetworkConfig } from '@/configs/networkConfig'
 import '@cmdoss/site-builder-react/styles.css'
 import {
   useCurrentAccount,
@@ -30,6 +42,7 @@ import {
 import { persistentAtom } from '@nanostores/persistent'
 import { useStore } from '@nanostores/react'
 import { useQueryClient } from '@tanstack/react-query'
+import { Copy, ExternalLink, Trash2 } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import { testFiles } from './files'
@@ -41,6 +54,7 @@ export default function Home() {
   const queryClient = useQueryClient()
   const suiClient = useSuiClient()
   const siteId = useStore($siteId)
+  const networkConfig = useNetworkConfig()
 
   const { loading, fileManager: fm } = useZenFsWorkspace(
     '/sites/site-01',
@@ -91,7 +105,10 @@ export default function Home() {
             ? URL.createObjectURL(site.imageUrl)
             : ''
 
-      if (site.id) $siteId.set(site.id) // Store published site ID persistently
+      if (site.id) {
+        console.log('💾 Storing published site ID:', site.id)
+        $siteId.set(site.id) // Store published site ID persistently
+      }
 
       return { ...site, imageUrl }
     },
@@ -196,7 +213,7 @@ export default function Home() {
                       className="w-full bg-[#97f0e5] text-[#0C0F1D] hover:bg-[#97f0e5]/90 border border-[#97F0E599]"
                       disabled
                     >
-                      Publish
+                      {siteId ? 'Update Site' : 'Publish'}
                     </Button>
                   </div>
                 </TooltipTrigger>
@@ -219,9 +236,79 @@ export default function Home() {
                 signAndExecuteTransaction={signAndExecuteTransaction}
               >
                 <Button className="w-full bg-[#97f0e5] text-[#0C0F1D] hover:bg-[#97f0e5]/90 border border-[#97F0E599]">
-                  Publish
+                  {siteId ? 'Update Site' : 'Publish'}
                 </Button>
               </PublishButton>
+            )}
+            {siteId && (
+              <div className="flex items-center gap-2 mt-2 p-3 rounded-lg bg-[#97f0e5]/10 border border-[#97F0E599]/30">
+                <p className="text-xs text-gray-300">Published Site ID:</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs text-[#97f0e5] font-mono">
+                    {siteId.slice(0, 6)}...{siteId.slice(-4)}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(siteId)
+                      toast.success('Copied to clipboard')
+                    }}
+                    className="text-[#97f0e5] hover:text-[#97f0e5]/80 p-1 rounded hover:bg-[#97f0e5]/10"
+                    title="Copy full ID"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+                <a
+                  href={`https://suiscan.xyz/${networkConfig.network === 'mainnet' ? 'mainnet' : 'testnet'}/object/${siteId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#97f0e5] hover:text-[#97f0e5]/80 flex items-center gap-1 text-xs shrink-0"
+                >
+                  View on Suiscan
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-red-400/10 ml-auto"
+                      title="Clear stored site ID"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Clear Published Site Info
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will clear the stored information about your
+                        currently published site. You will be able to publish a
+                        new site after this action.
+                        <br />
+                        <br />
+                        <strong>Note:</strong> This does not delete the site
+                        from the blockchain, it only removes the local
+                        reference.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          $siteId.set(undefined)
+                          toast.success('Site info cleared')
+                        }}
+                        className="bg-red-500 hover:bg-red-600"
+                      >
+                        Clear
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             )}
           </div>
         </CardContent>
