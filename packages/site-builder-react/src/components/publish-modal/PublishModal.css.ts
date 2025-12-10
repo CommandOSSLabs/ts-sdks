@@ -1,5 +1,10 @@
-import { style } from '@vanilla-extract/css'
+import { keyframes, style } from '@vanilla-extract/css'
 import { themeVars } from '~/theme.css'
+
+const spin = keyframes({
+  '0%': { transform: 'rotate(0deg)' },
+  '100%': { transform: 'rotate(360deg)' }
+})
 
 export const overlay = style({
   backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -233,8 +238,9 @@ export const dialogContent = style({
   left: '50%',
   top: '50%',
   transform: 'translate(-50%, -50%)',
-  width: '50vw',
-  maxWidth: '42rem',
+  width: '30vw',
+  minWidth: '300px',
+  maxWidth: '500px',
   maxHeight: '90vh',
   overflowY: 'auto',
   backgroundColor: themeVars.colors.background,
@@ -266,7 +272,7 @@ export const dialogBody = style({
 export const dialogBodyTwoColumn = style({
   padding: themeVars.spacing.md,
   display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+  gridTemplateColumns: '1fr',
   gap: themeVars.spacing.lg,
   '@media': {
     '(max-width: 768px)': {
@@ -430,4 +436,8 @@ export const storageDetailsBox = style({
   padding: themeVars.spacing.xs,
   backgroundColor: themeVars.colors.muted,
   borderRadius: themeVars.radius.md
+})
+
+export const spinner = style({
+  animation: `${spin} 1s linear infinite`
 })

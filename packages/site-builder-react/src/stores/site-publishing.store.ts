@@ -6,6 +6,7 @@ import type {
 } from '@cmdoss/site-builder'
 import { atom, computed } from 'nanostores'
 import { failed, ok, type TResult } from '~/lib/result'
+import { isDomainDialogOpen } from './site-domain.store'
 import { siteMetadataStore } from './site-metadata.store'
 
 export enum DeploySteps {
@@ -114,7 +115,7 @@ class SitePublishingStore {
       case DeploymentStatus.Deploying:
         return 'Updating site metadata...'
       case DeploymentStatus.Deployed:
-        return 'Walrus Site Deployed'
+        return 'Customize Domain'
       default:
         return 'Unknown status'
     }
@@ -219,6 +220,7 @@ class SitePublishingStore {
         // Deployment completed, close dialog
         this.reset()
         this.closePublishDialog()
+        this.openCustomDomainDialog()
         return ok(this.siteId)
 
       default:
@@ -233,6 +235,7 @@ class SitePublishingStore {
   }
 
   closePublishDialog = () => this.isPublishDialogOpen.set(false)
+  openCustomDomainDialog = () => isDomainDialogOpen.set(true)
 }
 
 export const sitePublishingStore = new SitePublishingStore()
