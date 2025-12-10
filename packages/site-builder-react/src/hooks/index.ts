@@ -1,3 +1,4 @@
+export * from './useEpochDuration'
 export * from './useSitePublishing'
 export * from './useSuiNsClient'
 export * from './useWalrusClient'
