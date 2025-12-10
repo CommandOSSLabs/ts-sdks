@@ -1,6 +1,8 @@
+'use client'
+
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 
-export function AnimatedBackground() {
+export default function AnimatedBackground() {
   return (
     <div className="absolute inset-0 -z-10 overflow-hidden rounded-xl bg-[#0d0f1d]">
       {/* Left half */}

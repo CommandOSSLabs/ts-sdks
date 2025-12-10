@@ -43,8 +43,6 @@ export default function PublishSection({
   signAndExecuteTransaction,
   clients
 }: PublishSectionProps) {
-  const { suiClient, queryClient } = clients
-
   if (!currentAccount) {
     return (
       <Tooltip>
@@ -74,7 +72,7 @@ export default function PublishSection({
       onUpdateSiteMetadata={onUpdateSiteMetadata}
       onError={onError}
       currentAccount={currentAccount}
-      clients={{ suiClient, queryClient }}
+      clients={clients}
       signAndExecuteTransaction={signAndExecuteTransaction}
     >
       <Button className="w-full bg-[#97f0e5] text-[#0C0F1D] hover:bg-[#97f0e5]/90 border border-[#97F0E599]">

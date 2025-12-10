@@ -10,7 +10,7 @@ import {
   useZenFsWorkspace,
   useZenfsFilesQuery
 } from '@cmdoss/site-builder-react'
-import { AnimatedBackground } from '@/components/AnimatedBackground'
+import AnimatedBackground from '@/components/AnimatedBackground'
 import { Introduction } from '@/components/Introduction'
 import { CardContent } from '@/components/ui/card'
 import { useNetworkConfig } from '@/configs/networkConfig'
@@ -23,18 +23,20 @@ import {
 } from '@mysten/dapp-kit'
 import { useStore } from '@nanostores/react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import AssetsSection from '@/components/AssetsSection'
 import PublishedSiteInfo from '@/components/PublishedSiteInfo'
 import PublishSection from '@/components/PublishSection'
-import { testFiles } from './files'
+import { testFilesSet1, testFilesSet2 } from './files'
 
 export default function Home() {
   const queryClient = useQueryClient()
   const suiClient = useSuiClient()
   const siteId = useStore($siteId)
   const networkConfig = useNetworkConfig()
+  const [isAddingFiles, setIsAddingFiles] = useState(false)
+  const [isClearingWorkspace, setIsClearingWorkspace] = useState(false)
 
   const { loading, fileManager: fm } = useZenFsWorkspace(
     '/sites/site-01',
@@ -64,7 +66,7 @@ export default function Home() {
       if (!fm) throw new Error('FileManager not initialized')
 
       try {
-        for (const [path, content] of Object.entries(testFiles)) {
+        for (const [path, content] of Object.entries(testFilesSet1)) {
           console.log('Adding test file:', path)
           await fm.writeFile(path, new TextEncoder().encode(content))
         }
@@ -100,28 +102,45 @@ export default function Home() {
     toast.error(msg)
   }, [])
 
-  const addTestFiles = useCallback(async () => {
-    if (!fm) {
-      toast.error('FileManager not initialized')
-      return
-    }
-    try {
-      for (const [path, content] of Object.entries(testFiles)) {
-        console.log('Adding test file:', path)
-        await fm.writeFile(path, new TextEncoder().encode(content))
+  const addTestFiles = useCallback(
+    async (fileSet: Record<string, string>, setName: string) => {
+      if (!fm) {
+        toast.error('FileManager not initialized')
+        return
       }
-      await refetchAssets()
-      toast.success('Test files added')
-    } catch (error) {
-      console.error('Failed to create test files:', error)
-    }
-  }, [fm, refetchAssets])
+      setIsAddingFiles(true)
+      try {
+        for (const [path, content] of Object.entries(fileSet)) {
+          console.log('Adding test file:', path)
+          await fm.writeFile(path, new TextEncoder().encode(content))
+        }
+        await refetchAssets()
+        toast.success(`${setName} added`)
+      } catch (error) {
+        console.error('Failed to create test files:', error)
+      } finally {
+        setIsAddingFiles(false)
+      }
+    },
+    [fm, refetchAssets]
+  )
+
+  const addTestFilesSet1 = useCallback(
+    () => addTestFiles(testFilesSet1, 'Sample Files Set #1'),
+    [addTestFiles]
+  )
+
+  const addTestFilesSet2 = useCallback(
+    () => addTestFiles(testFilesSet2, 'Sample Files Set #2'),
+    [addTestFiles]
+  )
 
   const clearWorkspace = useCallback(async () => {
     if (!fm) {
       toast.error('FileManager not initialized')
       return
     }
+    setIsClearingWorkspace(true)
     try {
       const files = await fm.listFiles()
       for (const file of files) {
@@ -132,6 +151,8 @@ export default function Home() {
     } catch (error) {
       console.error('Failed to clear workspace:', error)
       toast.error('Failed to clear workspace')
+    } finally {
+      setIsClearingWorkspace(false)
     }
   }, [fm, refetchAssets])
 
@@ -151,8 +172,11 @@ export default function Home() {
           <AssetsSection
             loading={loading}
             assets={assets}
-            onAddTestFiles={addTestFiles}
+            onAddTestFilesSet1={addTestFilesSet1}
+            onAddTestFilesSet2={addTestFilesSet2}
             onClearWorkspace={clearWorkspace}
+            isAddingFiles={isAddingFiles}
+            isClearingWorkspace={isClearingWorkspace}
           />
 
           <hr className="my-4 border-t border-neutral-400 dark:border-neutral-700" />
