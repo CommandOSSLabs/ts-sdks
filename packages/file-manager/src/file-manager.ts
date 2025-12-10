@@ -61,15 +61,17 @@ export class ZenFsFileManager implements IFileManager {
     })
     log('📂 Copying files from ZIP archive to workspace...')
     await fs.promises.cp(tmpDir, this.workspaceDir, { recursive: true })
+    log('📦 Unmounting temporary ZIP directory...')
+    fs.umount(tmpDir)
     log('✅ Files copied to workspace from ZIP archive')
   }
 
   async readFile(filePath: string): Promise<Uint8Array> {
-    log('📂 Reading file from', filePath)
+    log(`📂 Reading file ${filePath}...`)
     filePath = ensureLeadingSlash(filePath)
     const workspaceFilePath = path.join(this.workspaceDir, filePath)
     const content = await fs.promises.readFile(workspaceFilePath)
-    log('✅ File read from', filePath, '(', content.byteLength, 'bytes )')
+    log(`✅ File ${filePath} read (${content.byteLength} bytes)`)
     return content
   }
 
@@ -83,7 +85,7 @@ export class ZenFsFileManager implements IFileManager {
       .filter(f => f.isFile())
       .map(f => path.join(f.parentPath, f.name))
       .map(ensureLeadingSlash)
-    log('✅ Files currently in workspace', result)
+    log('✅ Files currently in workspace:', result)
     return result
   }
 

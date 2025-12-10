@@ -27,14 +27,20 @@ import {
   useSignAndExecuteTransaction,
   useSuiClient
 } from '@mysten/dapp-kit'
+import { persistentAtom } from '@nanostores/persistent'
+import { useStore } from '@nanostores/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import { testFiles } from './files'
 
+// Persistent store for published site ID (for demo purposes)
+const $siteId = persistentAtom('PUBLISHED_SITE_ID')
+
 export default function Home() {
   const queryClient = useQueryClient()
   const suiClient = useSuiClient()
+  const siteId = useStore($siteId)
 
   const { loading, fileManager: fm } = useZenFsWorkspace(
     '/sites/site-01',
@@ -84,6 +90,9 @@ export default function Home() {
           : typeof site.imageUrl === 'object'
             ? URL.createObjectURL(site.imageUrl)
             : ''
+
+      if (site.id) $siteId.set(site.id) // Store published site ID persistently
+
       return { ...site, imageUrl }
     },
     []
@@ -201,6 +210,7 @@ export default function Home() {
               </Tooltip>
             ) : (
               <PublishButton
+                siteId={siteId}
                 onPrepareAssets={handlePrepareAssetsForBuilder}
                 onUpdateSiteMetadata={handleUpdateSiteMetadataForBuilder}
                 onError={handleBuilderError}
