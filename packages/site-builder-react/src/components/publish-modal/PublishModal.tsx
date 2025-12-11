@@ -665,7 +665,7 @@ function MetadataEditDialog({ isOpen, onClose }: MetadataEditDialogProps) {
                 color: 'var(--foreground)'
               }}
             >
-              Edit Site Metadata
+              Edit Site Image
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
