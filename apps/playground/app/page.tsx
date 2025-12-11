@@ -80,19 +80,27 @@ export default function Home() {
     async (site: SiteMetadataUpdate): Promise<SiteMetadata> => {
       // Playground has no backend; return the provided site to satisfy types
       // but convert imageUrl to string if it's a File object
-      const imageUrl =
-        typeof site.imageUrl === 'string'
-          ? site.imageUrl
-          : typeof site.imageUrl === 'object'
-            ? URL.createObjectURL(site.imageUrl)
-            : ''
+      let imageUrl = ''
+      if (typeof site.imageUrl === 'string') {
+        imageUrl = site.imageUrl
+      } else if (site.imageUrl instanceof File) {
+        imageUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(site.imageUrl as File)
+        })
+      }
 
       if (site.id) {
         console.log('💾 Storing published site ID:', site.id)
         $siteId.set(site.id) // Store published site ID persistently
       }
 
-      return { ...site, imageUrl }
+      const result: SiteMetadata = { ...site, imageUrl }
+      console.log('💾 Updated site metadata:', result)
+
+      return result
     },
     []
   )
