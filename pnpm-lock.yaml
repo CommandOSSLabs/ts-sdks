@@ -101,6 +101,12 @@ importers:
       '@mysten/walrus':
         specifier: 'catalog:'
         version: 0.8.6(typescript@5.9.3)
+      '@nanostores/persistent':
+        specifier: ^1.2.0
+        version: 1.2.0(nanostores@1.1.0)
+      '@nanostores/react':
+        specifier: ^1.0.0
+        version: 1.0.0(nanostores@1.1.0)(react@19.2.0)
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -203,6 +209,9 @@ importers:
       lucide-react:
         specifier: ^0.553.0
         version: 0.553.0(react@19.2.0)
+      nanostores:
+        specifier: ^1.1.0
+        version: 1.1.0
       next:
         specifier: 15.5.4
         version: 15.5.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -1556,6 +1565,12 @@ packages:
 
   '@mysten/window-wallet-core@0.1.1':
     resolution: {integrity: sha512-TboJvuqXvJbKy0sqK72kR3RXp7SLkgNfEaNsKWsSUwD+wV9+h/S3wtO+E+yFmPgHgOr8c7HJIQLAdunMssKZtg==}
+
+  '@nanostores/persistent@1.2.0':
+    resolution: {integrity: sha512-kf5WOLpVI9Pk+AwXHIax4in3pesNe8299BEGQ2H8kgI05SZw7KKWCDv7bt2FOlND8E5y7rO5PRW34q0UCAl/DA==}
+    engines: {node: ^20.0.0 || >=22.0.0}
+    peerDependencies:
+      nanostores: ^0.9.0 || ^0.10.0 || ^0.11.0 || ^1.0.0
 
   '@nanostores/react@1.0.0':
     resolution: {integrity: sha512-eDduyNy+lbQJMg6XxZ/YssQqF6b4OXMFEZMYKPJCCmBevp1lg0g+4ZRi94qGHirMtsNfAWKNwsjOhC+q1gvC+A==}
@@ -4422,6 +4437,7 @@ packages:
   next@15.5.4:
     resolution: {integrity: sha512-xH4Yjhb82sFYQfY3vbkJfgSDgXvBB6a8xPs9i35k6oZJRoQRihZH+4s9Yo2qsWpzBmZ3lPXaJ2KPXLfkvW4LnA==}
     engines: {node: ^18.18.0 || ^19.8.0 || >= 20.0.0}
+    deprecated: This version has a security vulnerability. Please upgrade to a patched version. See https://nextjs.org/blog/CVE-2025-66478 for more details.
     hasBin: true
     peerDependencies:
       '@opentelemetry/api': ^1.1.0
@@ -6713,6 +6729,15 @@ snapshots:
       valibot: 1.2.0(typescript@5.9.3)
     transitivePeerDependencies:
       - typescript
+
+  '@nanostores/persistent@1.2.0(nanostores@1.1.0)':
+    dependencies:
+      nanostores: 1.1.0
+
+  '@nanostores/react@1.0.0(nanostores@1.1.0)(react@19.2.0)':
+    dependencies:
+      nanostores: 1.1.0
+      react: 19.2.0
 
   '@nanostores/react@1.0.0(nanostores@1.1.0)(react@19.2.1)':
     dependencies:

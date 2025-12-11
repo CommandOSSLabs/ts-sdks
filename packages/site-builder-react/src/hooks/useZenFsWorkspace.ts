@@ -19,16 +19,16 @@ export function useZenFsWorkspace(
     setFileManager(fm)
 
     fm.initialize()
-      .then(() => setLoading(false))
-      .catch(error => {
-        console.error('Error initializing ZenFS FileManager:', error)
-        setLoading(false)
+      .catch(() => {
+        // Ignore errors during initialization
       })
       .then(async () => {
+        // Invalidate queries to refresh file listings
         await queryClient.invalidateQueries({
           queryKey: ['zenfs', workspaceDir]
         })
       })
+      .finally(() => setLoading(false))
     // Cleanup on unmount
   }, [workspaceDir, mountDir, queryClient])
 

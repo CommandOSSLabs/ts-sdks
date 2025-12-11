@@ -1,6 +1,11 @@
-import { DotLottieReact } from '@lottiefiles/dotlottie-react'
+'use client'
 
-export function AnimatedBackground() {
+import { DotLottieReact, type Layout } from '@lottiefiles/dotlottie-react'
+
+const layoutLeft: Layout = { fit: 'cover', align: [0, 0] }
+const layoutRight: Layout = { fit: 'cover', align: [0.01, 0] }
+
+export default function AnimatedBackground() {
   return (
     <div className="absolute inset-0 -z-10 overflow-hidden rounded-xl bg-[#0d0f1d]">
       {/* Left half */}
@@ -8,10 +13,9 @@ export function AnimatedBackground() {
         <div className="z-2 absolute inset-0 bg-linear-to-l from-[#0c0f1d] from-30% to-[#0c0f1d00] to-80%" />
         <DotLottieReact
           src="/animations/grid_loop.lottie"
-          layout={{ fit: 'cover', align: [0, 0] }}
-          renderConfig={{ autoResize: true }}
-          autoplay={true}
-          loop={true}
+          layout={layoutLeft}
+          autoplay
+          loop
         />
       </div>
 
@@ -21,10 +25,9 @@ export function AnimatedBackground() {
         <DotLottieReact
           src="/animations/grid_loop.lottie"
           style={{ transform: 'rotate(180deg)' }}
-          layout={{ fit: 'cover', align: [0.01, 0] }}
-          renderConfig={{ autoResize: true }}
-          autoplay={true}
-          loop={true}
+          layout={layoutRight}
+          autoplay
+          loop
         />
       </div>
     </div>
