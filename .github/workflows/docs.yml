@@ -1,9 +1,13 @@
 name: Update Docs
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+    paths:
+      - 'apps/docs/**'
+      - 'apps/playground/**'
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
