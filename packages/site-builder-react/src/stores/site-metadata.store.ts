@@ -6,7 +6,7 @@ const DEFAULT_DESCRIPTION = 'WAL-0 Generated Project'
 class SiteMetadata {
   title = atom(DEFAULT_TITLE)
   description = atom(DEFAULT_DESCRIPTION)
-  imageUrl = atom<string | File | null>(null)
+  imageUrl = atom<string | File | null>('https://www.walrus.xyz/walrus-site')
   link = atom<string>('')
   projectUrl = atom<string>('')
   epochs = atom(5)
@@ -16,7 +16,9 @@ class SiteMetadata {
   // Site data
   originalTitle = atom(DEFAULT_TITLE)
   originalDescription = atom(DEFAULT_DESCRIPTION)
-  originalImageUrl = atom<string | File | null>(null)
+  originalImageUrl = atom<string | File | null>(
+    'https://www.walrus.xyz/walrus-site'
+  )
   originalLink = atom<string>('')
   originalProjectUrl = atom<string>('')
   originalEpochs = atom(5)

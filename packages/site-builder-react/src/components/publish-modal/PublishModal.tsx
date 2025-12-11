@@ -2,9 +2,18 @@ import type { SuiClient } from '@mysten/sui/client'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import type { QueryClient } from '@tanstack/react-query'
-import { ChevronDown, Info, Pencil, Upload, X } from 'lucide-react'
+import {
+  Calendar,
+  ChevronDown,
+  Info,
+  Loader2,
+  Pencil,
+  Upload,
+  X
+} from 'lucide-react'
 import type { FC } from 'react'
 import { useRef, useState } from 'react'
+import { useEpochDuration, useWalrusClient } from '~/hooks'
 import { useStorageCostQuery } from '~/queries/storage-cost.query'
 import { siteMetadataStore } from '~/stores/site-metadata.store'
 import { sitePublishingStore } from '~/stores/site-publishing.store'
@@ -32,7 +41,7 @@ const PublishModal: FC<PublishModalProps> = ({
   clients: { suiClient, queryClient }
 }) => {
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false)
-  const [isMoreInfoExpanded, setIsMoreInfoExpanded] = useState(true)
+  const [isMoreInfoExpanded, setIsMoreInfoExpanded] = useState(false)
   const [isStorageDetailsExpanded, setIsStorageDetailsExpanded] =
     useState(false)
 
@@ -47,6 +56,12 @@ const PublishModal: FC<PublishModalProps> = ({
   const epochs = useStore(siteMetadataStore.epochs)
   const isDirty = useStore(siteMetadataStore.isDirty)
   const isLoading = useStore(siteMetadataStore.loading)
+  const title = useStore(siteMetadataStore.title)
+  const description = useStore(siteMetadataStore.description)
+
+  const walrusClient = useWalrusClient(suiClient)
+  const { epochDurationMs, getExpirationDate, formatDate } =
+    useEpochDuration(walrusClient)
 
   const {
     data: storageCost = {
@@ -67,6 +82,9 @@ const PublishModal: FC<PublishModalProps> = ({
     { title: 'Certify', description: 'Certify the uploaded assets' },
     { title: 'Deploy', description: 'Deploy and update the site' }
   ]
+
+  // Calculate expiration date using the hook
+  const expirationDate = getExpirationDate(epochs)
 
   return (
     <Dialog.Root
@@ -102,6 +120,64 @@ const PublishModal: FC<PublishModalProps> = ({
                         alt="Site preview"
                         className={styles.previewImage}
                       />
+                      {/* Gradient Overlay */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background:
+                            'linear-gradient(to bottom, transparent 0%, transparent 50%, rgba(0, 0, 0, 0.7) 100%)',
+                          pointerEvents: 'none'
+                        }}
+                      />
+                      {/* Title and Description Overlay */}
+                      {(title || description) && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            padding: '1rem',
+                            color: 'white',
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          {title && (
+                            <h3
+                              style={{
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                marginBottom: '0.25rem',
+                                lineHeight: 1.3,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical'
+                              }}
+                            >
+                              {title}
+                            </h3>
+                          )}
+                          {description && (
+                            <p
+                              style={{
+                                fontSize: '0.75rem',
+                                opacity: 0.9,
+                                lineHeight: 1.4,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical'
+                              }}
+                            >
+                              {description}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <>
@@ -162,145 +238,277 @@ const PublishModal: FC<PublishModalProps> = ({
                   <Pencil size={20} />
                 </button>
               </div>
+              {/* Storage Cost Section */}
+              <div
+                className={styles.storageCostSection}
+                style={{ marginTop: '0.5rem' }}
+              >
+                <div className={styles.storageCostSummary}>
+                  <div className={styles.storageCostLabel}>
+                    <span style={{ fontWeight: 500 }}>Storage Cost</span>
+                    {assetsSize !== null && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setIsStorageDetailsExpanded(!isStorageDetailsExpanded)
+                        }
+                        style={{
+                          padding: '0.25rem',
+                          cursor: 'pointer',
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'var(--muted-foreground)',
+                          borderRadius: '0.25rem',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.backgroundColor = 'var(--muted)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.backgroundColor = 'transparent'
+                        }}
+                        aria-label="View storage cost details"
+                      >
+                        <Info size={16} />
+                      </button>
+                    )}
+                  </div>
+                  <div className={styles.storageCostValue}>
+                    {assetsSize === null ? (
+                      <span
+                        style={{
+                          color: 'var(--warning, #f59e0b)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.375rem'
+                        }}
+                      >
+                        <Info size={14} />
+                        Assets not prepared yet
+                      </span>
+                    ) : storageCostLoading ? (
+                      <span style={{ color: 'var(--muted-foreground)' }}>
+                        Calculating...
+                      </span>
+                    ) : storageCostError ? (
+                      <span style={{ color: 'var(--destructive)' }}>
+                        Cost unavailable
+                      </span>
+                    ) : (
+                      <>
+                        <span
+                          style={{
+                            fontSize: '0.875rem',
+                            color: 'var(--muted-foreground)'
+                          }}
+                        >
+                          {(assetsSize / 1024).toFixed(2)} KB •{' '}
+                        </span>
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            color: 'var(--foreground)'
+                          }}
+                        >
+                          {(
+                            (Number(storageCost.storageCost) +
+                              Number(storageCost.writeCost)) /
+                            1_000_000_000
+                          ).toFixed(9)}{' '}
+                          WAL
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Storage Details Collapsible */}
+                {isStorageDetailsExpanded && (
+                  <div className={styles.storageDetailsBox}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.2rem'
+                      }}
+                    >
+                      <div style={{ fontSize: '0.875rem' }}>
+                        <span style={{ fontWeight: 500 }}>Storage Cost:</span>{' '}
+                        <span style={{ color: '#10b981' }}>
+                          {(
+                            Number(storageCost.storageCost) / 1_000_000_000
+                          ).toFixed(9)}{' '}
+                          WAL
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.875rem' }}>
+                        <span style={{ fontWeight: 500 }}>Write Cost:</span>{' '}
+                        <span style={{ color: '#f97316' }}>
+                          {(
+                            Number(storageCost.writeCost) / 1_000_000_000
+                          ).toFixed(9)}{' '}
+                          WAL
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '0.875rem',
+                          borderTop: '1px solid var(--border)',
+                          paddingTop: '0.1rem',
+                          marginTop: '0.1rem'
+                        }}
+                      >
+                        <span style={{ fontWeight: 500 }}>Total Cost:</span>{' '}
+                        <span style={{ color: '#3b82f6', fontWeight: 600 }}>
+                          {(
+                            (Number(storageCost.storageCost) +
+                              Number(storageCost.writeCost)) /
+                            1_000_000_000
+                          ).toFixed(9)}{' '}
+                          WAL
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Right Column: Metadata Information */}
             <div className={styles.rightColumn}>
               <div className={styles.metadataFields}>
-                {/* Storage Cost Section */}
-                <div className={styles.storageCostSection}>
-                  <div className={styles.storageCostSummary}>
-                    <div className={styles.storageCostLabel}>
-                      <span style={{ fontWeight: 500 }}>Storage Cost</span>
-                      {assetsSize !== null && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setIsStorageDetailsExpanded(
-                              !isStorageDetailsExpanded
-                            )
-                          }
-                          style={{
-                            padding: '0.25rem',
-                            cursor: 'pointer',
-                            border: 'none',
-                            background: 'transparent',
-                            color: 'var(--muted-foreground)',
-                            borderRadius: '0.25rem',
-                            transition: 'background-color 0.2s'
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.backgroundColor =
-                              'var(--muted)'
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.backgroundColor =
-                              'transparent'
-                          }}
-                          aria-label="View storage cost details"
-                        >
-                          <Info size={16} />
-                        </button>
-                      )}
+                {/* Right Column: Text Fields */}
+                <div className={styles.dialogRightColumn}>
+                  {/* Title Section */}
+                  <fieldset>
+                    <div className={styles.fieldLabel}>
+                      <Label>Title</Label>
+                      <span className={styles.charCount}>
+                        {siteMetadataStore.title.get().length}/120
+                      </span>
                     </div>
-                    <div className={styles.storageCostValue}>
-                      {assetsSize === null ? (
-                        <span
+                    <Input
+                      value={siteMetadataStore.title.get()}
+                      onChange={e =>
+                        siteMetadataStore.title.set(
+                          e.target.value.slice(0, 120)
+                        )
+                      }
+                      placeholder="Add a title..."
+                    />
+                  </fieldset>
+
+                  {/* Description Section */}
+                  <fieldset>
+                    <div className={styles.fieldLabel}>
+                      <Label>Description</Label>
+                      <span className={styles.charCount}>
+                        {siteMetadataStore.description.get().length}/150
+                      </span>
+                    </div>
+                    <Textarea
+                      value={siteMetadataStore.description.get()}
+                      onChange={e =>
+                        siteMetadataStore.description.set(
+                          e.target.value.slice(0, 150)
+                        )
+                      }
+                      placeholder="Add a description..."
+                      rows={4}
+                    />
+                  </fieldset>
+
+                  {/* Epochs Section */}
+                  <fieldset>
+                    <div className={styles.fieldLabel}>
+                      <Label>Storage Duration (Epochs)</Label>
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--muted-foreground)'
+                        }}
+                      >
+                        1 epoch ≈{' '}
+                        {epochDurationMs
+                          ? `${epochDurationMs / (1000 * 60 * 60 * 24)} days`
+                          : 'days'}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '0.75rem',
+                        alignItems: 'flex-start'
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <Input
+                          type="number"
+                          min={5}
+                          max={30}
+                          value={epochs}
+                          onChange={e => {
+                            const value = Number.parseInt(e.target.value, 10)
+                            if (
+                              !Number.isNaN(value) &&
+                              value >= 5 &&
+                              value <= 30
+                            ) {
+                              siteMetadataStore.epochs.set(value)
+                            }
+                          }}
+                          placeholder="5-30 epochs"
+                          disabled={!!siteId}
+                        />
+                        <p
                           style={{
-                            color: 'var(--warning, #f59e0b)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem'
+                            fontSize: '0.75rem',
+                            color: 'var(--muted-foreground)',
+                            marginTop: '0.25rem'
                           }}
                         >
-                          <Info size={14} />
-                          Assets not prepared yet
-                        </span>
-                      ) : storageCostLoading ? (
-                        <span style={{ color: 'var(--muted-foreground)' }}>
-                          Calculating...
-                        </span>
-                      ) : storageCostError ? (
-                        <span style={{ color: 'var(--destructive)' }}>
-                          Cost unavailable
-                        </span>
-                      ) : (
-                        <>
-                          <span
+                          Epochs can be extended after deployment.
+                        </p>
+                      </div>
+                      {expirationDate && (
+                        <div
+                          style={{
+                            flex: 1,
+                            padding: '0.75rem',
+                            borderRadius: '0.5rem',
+                            border: '1px solid var(--border)',
+                            backgroundColor: 'var(--muted)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.25rem'
+                          }}
+                        >
+                          <div
                             style={{
-                              fontSize: '0.875rem',
-                              color: 'var(--muted-foreground)'
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.375rem',
+                              color: 'var(--muted-foreground)',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
                             }}
                           >
-                            {(assetsSize / 1024).toFixed(2)} KB •{' '}
-                          </span>
-                          <span
+                            <Calendar size={12} />
+                            <span>Expires On</span>
+                          </div>
+                          <div
                             style={{
+                              fontSize: '0.8125rem',
                               fontWeight: 600,
                               color: 'var(--foreground)'
                             }}
                           >
-                            {(
-                              (Number(storageCost.storageCost) +
-                                Number(storageCost.writeCost)) /
-                              1_000_000_000
-                            ).toFixed(9)}{' '}
-                            WAL
-                          </span>
-                        </>
+                            {formatDate(expirationDate)}
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
-
-                  {/* Storage Details Collapsible */}
-                  {isStorageDetailsExpanded && (
-                    <div className={styles.storageDetailsBox}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '0.2rem'
-                        }}
-                      >
-                        <div style={{ fontSize: '0.875rem' }}>
-                          <span style={{ fontWeight: 500 }}>Storage Cost:</span>{' '}
-                          <span style={{ color: '#10b981' }}>
-                            {(
-                              Number(storageCost.storageCost) / 1_000_000_000
-                            ).toFixed(9)}{' '}
-                            WAL
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.875rem' }}>
-                          <span style={{ fontWeight: 500 }}>Write Cost:</span>{' '}
-                          <span style={{ color: '#f97316' }}>
-                            {(
-                              Number(storageCost.writeCost) / 1_000_000_000
-                            ).toFixed(9)}{' '}
-                            WAL
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '0.875rem',
-                            borderTop: '1px solid var(--border)',
-                            paddingTop: '0.1rem',
-                            marginTop: '0.1rem'
-                          }}
-                        >
-                          <span style={{ fontWeight: 500 }}>Total Cost:</span>{' '}
-                          <span style={{ color: '#3b82f6', fontWeight: 600 }}>
-                            {(
-                              (Number(storageCost.storageCost) +
-                                Number(storageCost.writeCost)) /
-                              1_000_000_000
-                            ).toFixed(9)}{' '}
-                            WAL
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  </fieldset>
                 </div>
 
                 {/* More Information Collapsible */}
@@ -349,40 +557,6 @@ const PublishModal: FC<PublishModalProps> = ({
                         placeholder="https://github.com/username/project"
                       />
                     </fieldset>
-
-                    {/* Epochs */}
-                    <fieldset>
-                      <Label>Epochs (5-30)</Label>
-                      <Input
-                        type="number"
-                        min={5}
-                        max={30}
-                        value={epochs}
-                        onChange={e => {
-                          const value = Number.parseInt(e.target.value, 10)
-                          if (
-                            !Number.isNaN(value) &&
-                            value >= 5 &&
-                            value <= 30
-                          ) {
-                            siteMetadataStore.epochs.set(value)
-                          }
-                        }}
-                        placeholder="5"
-                        disabled={!!siteId}
-                      />
-                      {siteId && (
-                        <p
-                          style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--muted-foreground)',
-                            marginTop: '0.25rem'
-                          }}
-                        >
-                          Epochs cannot be changed after deployment
-                        </p>
-                      )}
-                    </fieldset>
                   </div>
                 </div>
               </div>
@@ -414,10 +588,19 @@ const PublishModal: FC<PublishModalProps> = ({
               <div className={styles.buttonGroup}>
                 <Button
                   variant="gradient"
-                  style={{ width: '100%' }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
                   onClick={onDeploy}
                   disabled={isWorking}
                 >
+                  {isWorking && (
+                    <Loader2 size={16} className={styles.spinner} />
+                  )}
                   {deployStatusText}
                 </Button>
               </div>
@@ -449,8 +632,6 @@ interface MetadataEditDialogProps {
 }
 
 function MetadataEditDialog({ isOpen, onClose }: MetadataEditDialogProps) {
-  const title = useStore(siteMetadataStore.title)
-  const description = useStore(siteMetadataStore.description)
   const imageDisplayUrl = useStore(siteMetadataStore.imageDisplayUrl)
   const isDirty = useStore(siteMetadataStore.isDirty)
   const isLoading = useStore(siteMetadataStore.loading)
@@ -468,9 +649,6 @@ function MetadataEditDialog({ isOpen, onClose }: MetadataEditDialogProps) {
   const handleCancel = () => {
     siteMetadataStore.cancelEdit()
     onClose()
-  }
-  const handleReset = () => {
-    siteMetadataStore.reset()
   }
 
   return (
@@ -638,51 +816,18 @@ function MetadataEditDialog({ isOpen, onClose }: MetadataEditDialogProps) {
                 style={{ display: 'none' }}
               />
             </div>
-
-            {/* Right Column: Text Fields */}
-            <div className={styles.dialogRightColumn}>
-              {/* Title Section */}
-              <fieldset>
-                <div className={styles.fieldLabel}>
-                  <Label>Title</Label>
-                  <span className={styles.charCount}>{title.length}/120</span>
-                </div>
-                <Input
-                  value={title}
-                  onChange={e =>
-                    siteMetadataStore.title.set(e.target.value.slice(0, 120))
-                  }
-                  placeholder="Add a title..."
-                />
-              </fieldset>
-
-              {/* Description Section */}
-              <fieldset>
-                <div className={styles.fieldLabel}>
-                  <Label>Description</Label>
-                  <span className={styles.charCount}>
-                    {description.length}/150
-                  </span>
-                </div>
-                <Textarea
-                  value={description}
-                  onChange={e =>
-                    siteMetadataStore.description.set(
-                      e.target.value.slice(0, 150)
-                    )
-                  }
-                  placeholder="Add a description..."
-                  rows={4}
-                />
-              </fieldset>
-            </div>
           </div>
 
           {/* Footer */}
           <div className={styles.dialogFooter}>
             <button
               type="button"
-              onClick={handleReset}
+              onClick={() => {
+                siteMetadataStore.imageUrl.set(
+                  'https://www.walrus.xyz/walrus-site'
+                )
+                onClose()
+              }}
               style={{
                 fontSize: '0.875rem',
                 fontWeight: 500,
