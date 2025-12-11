@@ -74,6 +74,7 @@ export default function PublishSection({
       currentAccount={currentAccount}
       clients={clients}
       signAndExecuteTransaction={signAndExecuteTransaction}
+      portalDomain="localhost:3003"
     >
       <Button className="w-full bg-[#97f0e5] text-[#0C0F1D] hover:bg-[#97f0e5]/90 border border-[#97F0E599]">
         {siteId ? 'Update Site' : 'Publish'}

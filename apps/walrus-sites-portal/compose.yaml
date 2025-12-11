@@ -1,0 +1,29 @@
+services:
+  walrus-sites-portal:
+    image: mysten/walrus-sites-server-portal:mainnet-v2.1.1
+    container_name: walrus-sites-portal
+    ports: [3003:3000]
+    environment:
+      # Required configuration
+      - ENABLE_ALLOWLIST=false
+      - ENABLE_BLOCKLIST=false
+      - LANDING_PAGE_OID_B36=1p3repujoigwcqrk0w4itsxm7hs7xjl4hwgt3t0szn6evad83q
+      - PORTAL_DOMAIN_NAME_LENGTH=21
+      # RPC URLs for Sui testnet
+      - RPC_URL_LIST=https://fullnode.testnet.sui.io
+      - PREMIUM_RPC_URL_LIST=https://fullnode.testnet.sui.io
+      # Network configuration
+      - SUINS_CLIENT_NETWORK=testnet
+      # Walrus aggregator URL for testnet
+      - AGGREGATOR_URL=https://aggregator.walrus-testnet.walrus.space
+      # Site package ID for testnet
+      - SITE_PACKAGE=0xf99aee9f21493e1590e7e5a9aea6f343a1f381031a04a732724871fc294be799
+      # Enable base36 domain resolution
+      - B36_DOMAIN_RESOLUTION_SUPPORT=true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/__wal__/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

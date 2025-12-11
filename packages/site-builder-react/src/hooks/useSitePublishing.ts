@@ -5,13 +5,12 @@ import {
   objectIdToWalrusSiteUrl,
   WalrusSiteBuilderSdk
 } from '@cmdoss/site-builder'
-import { useSignAndExecuteTransaction } from '@mysten/dapp-kit'
 import type { SuiClient } from '@mysten/sui/client'
 import { Transaction } from '@mysten/sui/transactions'
 import { ALLOWED_METADATA, SuinsTransaction } from '@mysten/suins'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import { useStore } from '@nanostores/react'
-import type { QueryClient, UseMutateAsyncFunction } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { useWalrusSiteQuery } from '~/queries'
 import { queryKeys } from '~/queries/keys'
@@ -62,6 +61,11 @@ export interface UseSitePublishingParams {
 
   /** Callback for signing and executing transactions. */
   signAndExecuteTransaction: ISignAndExecuteTransaction
+
+  /** Optional domain for the portal to view published site. */
+  portalDomain?: string
+  /** Whether to use HTTPS for the portal URL. */
+  portalHttps?: boolean
 }
 
 export function useSitePublishing({
@@ -72,6 +76,8 @@ export function useSitePublishing({
   onError,
   currentAccount,
   signAndExecuteTransaction,
+  portalDomain,
+  portalHttps,
   clients: { suiClient, queryClient }
 }: UseSitePublishingParams) {
   const suinsClient = useSuiNsClient(suiClient)
@@ -132,10 +138,8 @@ export function useSitePublishing({
   const isDeployed = !!siteId
   const walrusSiteUrl = useMemo(() => {
     if (!siteId) return null
-    return network === 'mainnet'
-      ? objectIdToWalrusSiteUrl(siteId, 'wal.app', true)
-      : objectIdToWalrusSiteUrl(siteId)
-  }, [siteId, network])
+    return objectIdToWalrusSiteUrl(siteId, portalDomain, portalHttps)
+  }, [siteId, portalDomain, portalHttps])
 
   const associatedDomains = nsDomains.filter(d => d.walrusSiteId === siteId)
 

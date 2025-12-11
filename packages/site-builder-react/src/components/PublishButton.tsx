@@ -22,6 +22,8 @@ const PublishButton: FC<Props> = ({
   onError,
   currentAccount,
   signAndExecuteTransaction,
+  portalDomain,
+  portalHttps,
   clients
 }) => {
   const {
@@ -51,6 +53,8 @@ const PublishButton: FC<Props> = ({
         onPublishClick={handleOpenPublishingDialog}
         onDomainClick={handleOpenDomainDialog}
         network={network === 'mainnet' ? 'mainnet' : 'testnet'}
+        portalDomain={portalDomain}
+        portalHttps={portalHttps}
       >
         {children || <Button>Publish</Button>}
       </PublishMenu>
@@ -64,6 +68,8 @@ const PublishButton: FC<Props> = ({
         siteId={siteId}
         onAssociateDomain={handleAssociateDomain}
         currentAccount={currentAccount}
+        portalDomain={portalDomain}
+        portalHttps={portalHttps}
         clients={clients}
       />
     </ThemeProvider>
