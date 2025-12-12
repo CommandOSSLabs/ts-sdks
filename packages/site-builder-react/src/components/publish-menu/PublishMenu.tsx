@@ -1,7 +1,7 @@
+import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { ExternalLink, Globe2 } from 'lucide-react'
 import type { FC, ReactNode } from 'react'
-import { useDefaultWalrusSiteUrl } from '~/hooks/useDefaultWalrusSiteUrl'
 import { Banner } from '../ui'
 import { Button } from '../ui/Button'
 import * as styles from './PublishMenu.css'
@@ -12,6 +12,10 @@ interface PublishMenuProps {
   onPublishClick?: () => void
   onDomainClick?: () => void
   network?: 'mainnet' | 'testnet'
+  /** Optional domain for the portal to view published site. */
+  portalDomain?: string
+  /** Whether to use HTTPS for the portal URL. */
+  portalHttps?: boolean
 }
 
 const PublishMenu: FC<PublishMenuProps> = ({
@@ -19,10 +23,14 @@ const PublishMenu: FC<PublishMenuProps> = ({
   siteId,
   onPublishClick,
   onDomainClick,
+  portalDomain,
+  portalHttps,
   network = 'testnet'
 }) => {
   const isDeployed = !!siteId
-  const walrusSiteUrl = useDefaultWalrusSiteUrl(siteId)
+  const walrusSiteUrl = siteId
+    ? objectIdToWalrusSiteUrl(siteId, portalDomain, portalHttps)
+    : undefined
 
   const truncateUrl = (url: string) => {
     try {

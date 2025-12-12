@@ -1,12 +1,11 @@
-import { useSuiClient } from '@mysten/dapp-kit'
+import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { type QueryClient, useQueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import { Loader2, X } from 'lucide-react'
 import type { FC } from 'react'
-import { useDefaultWalrusSiteUrl } from '~/hooks/useDefaultWalrusSiteUrl'
 import { useSuiNsDomainsQuery } from '~/queries'
 import {
   isAssigningDomain,
@@ -29,6 +28,10 @@ interface SuiNsModalProps {
   siteId: string | undefined
   onAssociateDomain?: (nftId: string, siteId: string) => void
   currentAccount: WalletAccount | null
+  /** Optional domain for the portal to view published site. */
+  portalDomain?: string
+  /** Whether to use HTTPS for the portal URL. */
+  portalHttps?: boolean
   /**
    * Sui and Query clients needed for on-chain operations.
    */
@@ -42,11 +45,15 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
   siteId,
   onAssociateDomain,
   currentAccount,
+  portalDomain,
+  portalHttps,
   clients: { suiClient, queryClient }
 }) => {
   const isOpen = useStore(isDomainDialogOpen)
   const isAssigning = useStore(isAssigningDomain)
-  const walrusSiteUrl = useDefaultWalrusSiteUrl(siteId)
+  const walrusSiteUrl = siteId
+    ? objectIdToWalrusSiteUrl(siteId, portalDomain, portalHttps)
+    : undefined
   const { network } = suiClient
   const {
     data: nsDomains,
