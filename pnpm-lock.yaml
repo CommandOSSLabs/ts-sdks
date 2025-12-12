@@ -280,6 +280,8 @@ importers:
         specifier: 'catalog:'
         version: 4.53.0
 
+  apps/walrus-sites-portal: {}
+
   packages/file-manager:
     dependencies:
       '@cmdoss/site-builder':
