@@ -64,15 +64,6 @@ export default function Home() {
   const handlePrepareAssetsForBuilder =
     useCallback(async (): Promise<IReadOnlyFileManager> => {
       if (!fm) throw new Error('FileManager not initialized')
-
-      try {
-        for (const [path, content] of Object.entries(testFilesSet1)) {
-          console.log('Adding test file:', path)
-          await fm.writeFile(path, new TextEncoder().encode(content))
-        }
-      } catch (error) {
-        console.error('Failed to create test files:', error)
-      }
       return fm
     }, [fm])
 
