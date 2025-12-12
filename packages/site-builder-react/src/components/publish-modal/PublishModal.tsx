@@ -2,17 +2,9 @@ import type { SuiClient } from '@mysten/sui/client'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import type { QueryClient } from '@tanstack/react-query'
-import {
-  Calendar,
-  ChevronDown,
-  Info,
-  Loader2,
-  Pencil,
-  Upload,
-  X
-} from 'lucide-react'
+import { CalendarClock, Info, Loader2, Pencil, Upload, X } from 'lucide-react'
 import type { FC } from 'react'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useEpochDuration, useWalrusClient } from '~/hooks'
 import { useStorageCostQuery } from '~/queries/storage-cost.query'
 import { siteMetadataStore } from '~/stores/site-metadata.store'
@@ -41,7 +33,6 @@ const PublishModal: FC<PublishModalProps> = ({
   clients: { suiClient, queryClient }
 }) => {
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false)
-  const [isMoreInfoExpanded, setIsMoreInfoExpanded] = useState(false)
   const [isStorageDetailsExpanded, setIsStorageDetailsExpanded] =
     useState(false)
 
@@ -51,7 +42,6 @@ const PublishModal: FC<PublishModalProps> = ({
   const deployStepIndex = useStore(sitePublishingStore.deploymentStepIndex)
   const assetsSize = useStore(sitePublishingStore.assetsSize)
   const imageDisplayUrl = useStore(siteMetadataStore.imageDisplayUrl)
-  const link = useStore(siteMetadataStore.link)
   const projectUrl = useStore(siteMetadataStore.projectUrl)
   const epochs = useStore(siteMetadataStore.epochs)
   const isDirty = useStore(siteMetadataStore.isDirty)
@@ -60,8 +50,59 @@ const PublishModal: FC<PublishModalProps> = ({
   const description = useStore(siteMetadataStore.description)
 
   const walrusClient = useWalrusClient(suiClient)
-  const { epochDurationMs, getExpirationDate, formatDate } =
-    useEpochDuration(walrusClient)
+  const { epochDurationMs, getExpirationDate } = useEpochDuration(walrusClient)
+
+  // Calculate min and max dates for date picker
+  const minDate = useMemo(() => {
+    if (!epochDurationMs) return ''
+    const now = Date.now()
+    const minEpochs = 5
+    const minDateTime = now + minEpochs * epochDurationMs
+    return new Date(minDateTime).toISOString().slice(0, 10)
+  }, [epochDurationMs])
+
+  const maxDate = useMemo(() => {
+    if (!epochDurationMs) return ''
+    const now = Date.now()
+    const maxEpochs = 30
+    const maxDateTime = now + maxEpochs * epochDurationMs
+    return new Date(maxDateTime).toISOString().slice(0, 10)
+  }, [epochDurationMs])
+
+  // Calculate epochs from selected date
+  const calculateEpochsFromDate = (selectedDate: string) => {
+    if (!epochDurationMs || !selectedDate) return 5
+
+    const now = Date.now()
+    const targetTime = new Date(selectedDate).getTime()
+    const diffMs = targetTime - now
+
+    if (diffMs <= 0) return 5
+
+    // Calculate epochs and round up
+    const exactEpochs = diffMs / epochDurationMs
+    const roundedEpochs = Math.ceil(exactEpochs)
+
+    // Clamp between 5 and 30
+    return Math.max(5, Math.min(30, roundedEpochs))
+  }
+
+  // Handle date change
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedDate = e.target.value
+    if (!selectedDate) return
+
+    const calculatedEpochs = calculateEpochsFromDate(selectedDate)
+    siteMetadataStore.epochs.set(calculatedEpochs)
+  }
+
+  // Get current selected date from epochs
+  const selectedDate = useMemo(() => {
+    if (!epochDurationMs || !epochs) return ''
+    const now = Date.now()
+    const targetTime = now + epochs * epochDurationMs
+    return new Date(targetTime).toISOString().slice(0, 10)
+  }, [epochs, epochDurationMs])
 
   const {
     data: storageCost = {
@@ -418,146 +459,105 @@ const PublishModal: FC<PublishModalProps> = ({
                     />
                   </fieldset>
 
-                  {/* Epochs Section */}
+                  {/* Project URL */}
                   <fieldset>
-                    <div className={styles.fieldLabel}>
-                      <Label>Storage Duration (Epochs)</Label>
+                    <Label>
+                      Project URL
                       <span
                         style={{
                           fontSize: '0.75rem',
                           color: 'var(--muted-foreground)'
                         }}
                       >
-                        1 epoch ≈{' '}
-                        {epochDurationMs
-                          ? `${epochDurationMs / (1000 * 60 * 60 * 24)} days`
-                          : 'days'}
+                        (Optional)
                       </span>
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: '0.75rem',
-                        alignItems: 'flex-start'
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <Input
-                          type="number"
-                          min={5}
-                          max={30}
-                          value={epochs}
-                          onChange={e => {
-                            const value = Number.parseInt(e.target.value, 10)
-                            if (
-                              !Number.isNaN(value) &&
-                              value >= 5 &&
-                              value <= 30
-                            ) {
-                              siteMetadataStore.epochs.set(value)
-                            }
-                          }}
-                          placeholder="5-30 epochs"
-                          disabled={!!siteId}
-                        />
-                        <p
+                    </Label>
+                    <Input
+                      value={projectUrl}
+                      onChange={e =>
+                        siteMetadataStore.projectUrl.set(e.target.value)
+                      }
+                      placeholder="https://github.com/username/project"
+                    />
+                  </fieldset>
+
+                  {/* Storage Duration Section */}
+                  <fieldset>
+                    <div className={styles.fieldLabel}>
+                      <Label>Storage Duration</Label>
+                      {epochs > 0 && (
+                        <span
                           style={{
                             fontSize: '0.75rem',
                             color: 'var(--muted-foreground)',
-                            marginTop: '0.25rem'
-                          }}
-                        >
-                          Epochs can be extended after deployment.
-                        </p>
-                      </div>
-                      {expirationDate && (
-                        <div
-                          style={{
-                            flex: 1,
-                            padding: '0.75rem',
-                            borderRadius: '0.5rem',
-                            border: '1px solid var(--border)',
-                            backgroundColor: 'var(--muted)',
                             display: 'flex',
-                            flexDirection: 'column',
+                            alignItems: 'center',
                             gap: '0.25rem'
                           }}
                         >
-                          <div
+                          <span
                             style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.375rem',
-                              color: 'var(--muted-foreground)',
-                              fontSize: '0.75rem',
-                              fontWeight: 500
-                            }}
-                          >
-                            <Calendar size={12} />
-                            <span>Expires On</span>
-                          </div>
-                          <div
-                            style={{
-                              fontSize: '0.8125rem',
                               fontWeight: 600,
                               color: 'var(--foreground)'
                             }}
                           >
-                            {formatDate(expirationDate)}
-                          </div>
-                        </div>
+                            {epochs}
+                          </span>
+                          epochs
+                        </span>
                       )}
                     </div>
+
+                    {/* Date Picker */}
+                    <div style={{ position: 'relative' }}>
+                      <Input
+                        type="date"
+                        value={selectedDate}
+                        min={minDate}
+                        max={maxDate}
+                        onChange={handleDateChange}
+                        disabled={!!siteId}
+                        style={{
+                          paddingLeft: '2.5rem',
+                          cursor: siteId ? 'not-allowed' : 'pointer'
+                        }}
+                      />
+                      <CalendarClock
+                        size={18}
+                        style={{
+                          position: 'absolute',
+                          left: '0.75rem',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          color: 'var(--muted-foreground)',
+                          pointerEvents: 'none'
+                        }}
+                      />
+                    </div>
+
+                    {/* Compact Info */}
+                    {expirationDate && epochDurationMs && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          fontSize: '0.75rem',
+                          color: 'var(--muted-foreground)',
+                          marginTop: '0.5rem'
+                        }}
+                      >
+                        <Info size={14} style={{ flexShrink: 0 }} />
+                        <span>
+                          1 epoch ≈{' '}
+                          {(epochDurationMs / (1000 * 60 * 60 * 24)).toFixed(1)}{' '}
+                          days
+                          {' • '}
+                          Duration rounded up. Can be extended later.
+                        </span>
+                      </div>
+                    )}
                   </fieldset>
-                </div>
-
-                {/* More Information Collapsible */}
-                <div>
-                  <button
-                    type="button"
-                    className={styles.collapsibleTrigger}
-                    onClick={() => setIsMoreInfoExpanded(!isMoreInfoExpanded)}
-                  >
-                    <span>More Information</span>
-                    <ChevronDown
-                      size={20}
-                      className={`${styles.collapsibleIcon} ${
-                        isMoreInfoExpanded ? styles.collapsibleIconExpanded : ''
-                      }`}
-                    />
-                  </button>
-
-                  <div
-                    className={`${styles.collapsibleContent} ${
-                      isMoreInfoExpanded
-                        ? styles.collapsibleContentVisible
-                        : styles.collapsibleContentHidden
-                    }`}
-                  >
-                    {/* Link */}
-                    <fieldset>
-                      <Label>Link</Label>
-                      <Input
-                        value={link}
-                        onChange={e =>
-                          siteMetadataStore.link.set(e.target.value)
-                        }
-                        placeholder="https://example.com"
-                      />
-                    </fieldset>
-
-                    {/* Project URL */}
-                    <fieldset>
-                      <Label>Project URL</Label>
-                      <Input
-                        value={projectUrl}
-                        onChange={e =>
-                          siteMetadataStore.projectUrl.set(e.target.value)
-                        }
-                        placeholder="https://github.com/username/project"
-                      />
-                    </fieldset>
-                  </div>
                 </div>
               </div>
             </div>
