@@ -9,6 +9,9 @@
     "access": "public",
     "tag": "latest"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsdown --platform browser --watch --ignore-watch .turbo --no-clean",
     "test": "node --test",

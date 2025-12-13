@@ -12,6 +12,9 @@
     "access": "public",
     "tag": "latest"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsdown --watch --no-clean",
     "test": "node --test",
