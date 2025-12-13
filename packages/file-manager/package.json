@@ -15,6 +15,7 @@
   "scripts": {
     "dev": "tsdown --platform browser --watch --ignore-watch .turbo --no-clean",
     "test": "node --test",
+    "test:watch": "node --test --watch",
     "check:types": "tsc --noEmit",
     "build": "tsdown --platform browser --minify"
   },

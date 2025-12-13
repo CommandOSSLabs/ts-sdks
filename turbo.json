@@ -4,13 +4,14 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["build/**", "dist/**", "out/**"]
     },
     "check-types": { "dependsOn": ["^check-types"] },
     "dev": { "cache": false, "persistent": true },
-    "test": { "cache": false, "persistent": true },
+    "test": { "cache": false },
+    "test:watch": { "cache": false, "persistent": true },
     "//#check": {},
-    "//#check:fix": { "cache": false }
+    "//#check:fix": {},
+    "//#check:types": {}
   }
 }

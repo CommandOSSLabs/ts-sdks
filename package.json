@@ -6,6 +6,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
     "check": "biome check",
     "check:fix": "biome check --fix",
     "check:types": "turbo run check-types",
