@@ -18,6 +18,7 @@
   "scripts": {
     "dev": "tsdown --watch --no-clean",
     "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude='src/**/*.test.ts'",
     "test:watch": "node --test --watch",
     "check:types": "tsc --noEmit",
     "build": "tsdown"

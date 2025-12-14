@@ -30,6 +30,8 @@ jobs:
         run: pnpm install
       - name: 🏗 Build (Docs & Playground)
         run: pnpm build --filter docs --filter playground
+      - name: 🧪 Run Tests
+        run: pnpm test:coverage
       - name: 🚀 Publish 🌐 DOCS to Cloudflare
         uses: cloudflare/wrangler-action@v3
         with:
