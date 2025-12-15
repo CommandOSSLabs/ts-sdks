@@ -30,6 +30,7 @@ import type {
 const log = debug('site-builder:deploy-flow')
 
 interface IState {
+  files?: Record<string, WalrusFile>
   siteUpdates?: SiteDataDiff
   writeFilesFlow?: WriteFilesFlow
   transactions: ITransaction[]
@@ -125,32 +126,35 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
       const contents = await this.target.readFile(path)
       files[path] = WalrusFile.from({ contents, identifier: path })
     }
+    this.state.files = files
 
     const diff = await this.siteSvc.calculateSiteDiff(
       Object.values(files),
       this.wsResource
     )
     this.state.siteUpdates = diff
+    return diff
+  }
 
-    if (!hasUpdate(diff)) {
-      log('⏭️ No changes detected, skipping...')
-      return diff
-    }
+  async encodeResources(): Promise<void> {
+    const diff = this.state.siteUpdates
+    const files = this.state.files
+    if (!diff) throw new Error('Must prepare resources first')
+    if (!files) throw new Error('No files to encode')
+
     const changedFiles =
       diff.resources
         .filter(r => r.op === 'created')
         .map(r => files[r.data.path]) || []
-    log('⚡️ Detected', changedFiles.length, 'changed files:', changedFiles)
 
     // Step 1: Prepare the files for upload (only changed files)
     this.state.writeFilesFlow = this.walrus.writeFilesFlow({
       files: changedFiles
     })
 
-    log('📦 Getting', changedFiles.length, 'files ready for upload...')
+    log('🎼 Encoding', changedFiles.length, 'files...', changedFiles)
     await this.state.writeFilesFlow.encode()
-    log('✅ Files prepared successfully')
-    return diff
+    log('✅ Files encoded successfully')
   }
 
   async writeResources(
@@ -159,7 +163,7 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
   ): Promise<void> {
     log('🚀 Starting asset upload...')
     const { writeFilesFlow } = this.state
-    if (!writeFilesFlow) throw new Error('Must prepare resources first')
+    if (!writeFilesFlow) throw new Error('Must encode resources first')
 
     // Step 2: Register the blob (triggered by user clicking a register button after the encode step)
     log('📝 Registering blob on chain...', { epochs, permanent })

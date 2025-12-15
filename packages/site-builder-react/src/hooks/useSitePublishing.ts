@@ -1,7 +1,6 @@
 import {
   type IReadOnlyFileManager,
   type ISignAndExecuteTransaction,
-  type ISignTransaction,
   type ISponsorConfig,
   type IWalrusSiteBuilderSdk,
   objectIdToWalrusSiteUrl,
@@ -86,18 +85,6 @@ export function useSitePublishing({
   const suinsClient = useSuiNsClient(suiClient)
   const walrusClient = useWalrusClient(suiClient)
   const { network } = suiClient
-  // const { mutateAsync: signAndExecuteTransaction } =
-  //   useSignAndExecuteTransaction({
-  //     execute: async ({ bytes, signature }) =>
-  //       await suiClient.executeTransactionBlock({
-  //         transactionBlock: bytes,
-  //         signature,
-  //         options: {
-  //           showRawEffects: true,
-  //           showEffects: true
-  //         }
-  //       })
-  //   })
 
   const sdk: IWalrusSiteBuilderSdk | undefined = useMemo(() => {
     if (!suiClient || !walrusClient || !currentAccount) return

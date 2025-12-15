@@ -94,6 +94,7 @@ const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResource);
 
 // Execute deployment steps
 await deployFlow.prepareResources();
+await deployFlow.encodeResources();
 await deployFlow.writeResources(57, false);
 const { certifiedBlobs } = await deployFlow.certifyResources();
 const { siteId } = await deployFlow.writeSite();
@@ -214,14 +215,17 @@ const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
 // Step 1: Prepare resources
 await deployFlow.prepareResources();
 
-// Step 2: Write resources to Walrus (epochs, permanent)
+// Step 2: Encode resources into blobs
+await deployFlow.encodeResources();
+
+// Step 3: Write resources to Walrus (epochs, permanent)
 await deployFlow.writeResources(57, false);
 
-// Step 3: Certify resources on-chain
+// Step 4: Certify resources on-chain
 const { certifiedBlobs } = await deployFlow.certifyResources();
 console.log('Certified blobs:', certifiedBlobs.length);
 
-// Step 4: Write site to blockchain
+// Step 5: Write site to blockchain
 const { siteId } = await deployFlow.writeSite();
 console.log('Site deployed with ID:', siteId);
 

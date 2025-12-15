@@ -193,7 +193,7 @@ const assets = [{
   hashU256: sha256ToU256(hash)
 }]
 
-// Deploy in 4 simple steps
+// Deploy in 5 simple steps
 const deployFlow = sdk.deployFlow(assets)
 await deployFlow.prepareAssets()     // 1. Register blobs
 await deployFlow.uploadAssets(5)     // 2. Upload to Walrus (5 epochs)

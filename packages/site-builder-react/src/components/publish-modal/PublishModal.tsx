@@ -117,10 +117,11 @@ const PublishModal: FC<PublishModalProps> = ({
   const deploymentSteps = [
     {
       title: 'Prepare',
-      description: 'Build and register blobs for deployment'
+      description: 'Prepare assets for deployment'
     },
-    { title: 'Upload', description: 'Upload assets to Walrus network' },
-    { title: 'Certify', description: 'Certify the uploaded assets' },
+    { title: 'Encode', description: 'Encode assets into blobs' },
+    { title: 'Upload', description: 'Upload blobs to Walrus network' },
+    { title: 'Certify', description: 'Certify the uploaded blobs' },
     { title: 'Deploy', description: 'Deploy and update the site' }
   ]
 

@@ -60,8 +60,9 @@ The SDK follows a modular architecture:
 ```mermaid
 graph TD
     A["🚀 WalrusSiteBuilderSdk<br/>Entry Point"] --> B["📋 UpdateWalrusSiteFlow<br/>Deployment Orchestrator"]
-    B --> C["📊 prepareResources<br/>Compute Diff & Hashes"]
-    C --> D["📤 writeResources<br/>Upload to Walrus"]
+    B --> C["📊 prepareResources<br/>Compute Diff & Validate"]
+    C --> C2["🔧 encodeResources<br/>Encode into Blobs"]
+    C2 --> D["📤 writeResources<br/>Upload to Walrus"]
     D --> E["✅ certifyResources<br/>Associate Certificates"]
     E --> F["⛓️ writeSite<br/>Create Site on Sui"]
     A --> G["📁 IFileManager<br/>File Operations"]
@@ -70,6 +71,7 @@ graph TD
     style A fill:#4F46E5,stroke:#312E81,color:#fff,stroke-width:3px
     style B fill:#7C3AED,stroke:#5B21B6,color:#fff,stroke-width:3px
     style C fill:#EC4899,stroke:#BE185D,color:#fff,stroke-width:2px
+    style C2 fill:#D946EF,stroke:#A21CAF,color:#fff,stroke-width:2px
     style D fill:#F97316,stroke:#C2410C,color:#fff,stroke-width:2px
     style E fill:#06B6D4,stroke:#0E7490,color:#fff,stroke-width:2px
     style F fill:#10B981,stroke:#065F46,color:#fff,stroke-width:2px
@@ -81,7 +83,8 @@ graph TD
 
 - **WalrusSiteBuilderSdk**: Main entry point for site deployment
 - **UpdateWalrusSiteFlow**: Orchestrates the deployment lifecycle
-  - `prepareResources()`: Computes file diff and generates hashes
+  - `prepareResources()`: Computes file diff and validates files
+  - `encodeResources()`: Encodes files into blobs and computes blob IDs
   - `writeResources()`: Uploads blobs to Walrus storage
   - `certifyResources()`: Associates certificates with on-chain data
   - `writeSite()`: Creates/updates Site object on Sui blockchain

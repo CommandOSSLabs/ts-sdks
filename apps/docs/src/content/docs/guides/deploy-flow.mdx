@@ -11,14 +11,15 @@ The Site Builder SDK provides a comprehensive deployment flow that handles the e
 
 ## Overview
 
-The deployment flow consists of 4 sequential steps:
+The deployment flow consists of 5 sequential steps:
 
 <Steps>
 
-1. **Prepare Resources** - Encode and validate your files for deployment
-2. **Write Resources** - Register and upload files to the Walrus decentralized storage network
-3. **Certify Resources** - Create on-chain certificates for uploaded files on Sui
-4. **Write Site** - Create or update your site with the certified resources
+1. **Prepare Resources** - Validate and prepare your files for deployment
+2. **Encode Resources** - Encode files into blobs and compute blob IDs
+3. **Write Resources** - Register and upload blobs to the Walrus decentralized storage network
+4. **Certify Resources** - Create on-chain certificates for uploaded blobs on Sui
+5. **Write Site** - Create or update your site with the certified resources
 
 </Steps>
 
@@ -108,7 +109,7 @@ const deployFlow = sdk.executeSiteUpdateFlow(fileManager, wsResources);
 
 ### Step 1: Prepare Resources
 
-The first step encodes and validates your files for deployment:
+The first step validates and prepares your files for deployment:
 
 ```typescript
 const handlePrepareResources = async () => {
@@ -129,10 +130,32 @@ const handlePrepareResources = async () => {
 
 **What happens during preparation:**
 - Files are read from the file manager
-- Files are encoded and validated for deployment compatibility
-- Initial blob data is prepared for upload
+- Files are validated for deployment compatibility
+- Site diff is computed to determine what needs to be uploaded
 
-### Step 2: Write Resources
+### Step 2: Encode Resources
+
+Encode your prepared files into blobs and compute their blob IDs:
+
+```typescript
+const handleEncodeResources = async () => {
+  try {
+    console.log('🔧 Encoding resources into blobs...');
+    
+    await deployFlow.encodeResources();
+    console.log('✅ Resources encoded successfully');
+  } catch (error) {
+    console.error('❌ Resource encoding failed:', error);
+  }
+};
+```
+
+**What happens during encoding:**
+- Files are encoded into Walrus blob format
+- Blob IDs are computed using content hashing
+- Blobs are prepared for upload to the network
+
+### Step 3: Write Resources
 
 Register and upload your prepared resources to the Walrus network with configurable storage options:
 
@@ -209,7 +232,7 @@ const totalCost = costPerEpoch * epochs;
 console.log(`Estimated cost: ${totalCost} MIST for ${epochs} epochs`);
 ```
 
-### Step 3: Certify Resources
+### Step 4: Certify Resources
 
 Certify your uploaded resources on the Sui blockchain for immutable proof:
 
@@ -245,7 +268,7 @@ const handleCertifyResources = async () => {
 - 🌐 **Sui integration** for decentralized verification
 - 📝 **Audit trail** of all deployment transactions
 
-### Step 4: Write Site
+### Step 5: Write Site
 
 Create or update your site with the certified resources:
 
@@ -294,6 +317,7 @@ import { WalrusClient } from '@mysten/walrus';
 enum DeploySteps {
   Idle,
   Prepared,
+  Encoded,
   Written, 
   Certified,
   Deployed
@@ -356,6 +380,18 @@ function DeploymentComponent() {
       setLoading(false);
     }
   };
+
+  const handleEncodeResources = async () => {
+    setLoading(true);
+    try {
+      await deployFlow?.encodeResources();
+      setCurrentStep(DeploySteps.Encoded);
+    } catch (error) {
+      console.error('Encoding failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const handleWriteResources = async (epochs: number) => {
     setLoading(true);
@@ -411,13 +447,21 @@ function DeploymentComponent() {
         >
           {currentStep > DeploySteps.Idle ? '✅ Prepared' : '1. Prepare Resources'}
         </button>
-        
+
         <button 
-          onClick={() => handleWriteResources(5)}
+          onClick={handleEncodeResources}
           disabled={currentStep !== DeploySteps.Prepared || loading}
           className={currentStep > DeploySteps.Prepared ? 'completed' : ''}
         >
-          {currentStep > DeploySteps.Prepared ? '✅ Written' : '2. Write Resources'}
+          {currentStep > DeploySteps.Prepared ? '✅ Encoded' : '2. Encode Resources'}
+        </button>
+        
+        <button 
+          onClick={() => handleWriteResources(5)}
+          disabled={currentStep !== DeploySteps.Encoded || loading}
+          className={currentStep > DeploySteps.Encoded ? 'completed' : ''}
+        >
+          {currentStep > DeploySteps.Encoded ? '✅ Written' : '3. Write Resources'}
         </button>
         
         <button 
@@ -425,7 +469,7 @@ function DeploymentComponent() {
           disabled={currentStep !== DeploySteps.Written || loading}
           className={currentStep > DeploySteps.Written ? 'completed' : ''}
         >
-          {currentStep > DeploySteps.Written ? '✅ Certified' : '3. Certify Resources'}
+          {currentStep > DeploySteps.Written ? '✅ Certified' : '4. Certify Resources'}
         </button>
         
         <button 
@@ -433,7 +477,7 @@ function DeploymentComponent() {
           disabled={currentStep !== DeploySteps.Certified || loading}
           className={currentStep > DeploySteps.Certified ? 'completed' : ''}
         >
-          {currentStep > DeploySteps.Certified ? '✅ Deployed' : '4. Write Site'}
+          {currentStep > DeploySteps.Certified ? '✅ Deployed' : '5. Write Site'}
         </button>
       </div>
       

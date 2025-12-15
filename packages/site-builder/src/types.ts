@@ -321,24 +321,29 @@ export interface IAsset {
  */
 export interface IUpdateWalrusSiteFlow {
   /**
-   * Prepares the site's resources for deployment.
+   * Step 01: Prepares the site's resources for deployment.
    */
   prepareResources(): Promise<SiteDataDiff>
 
   /**
-   * Writes the site's resources to Walrus.
+   * Step 02: Encodes the site's resources into blobs to determine their blob IDs.
+   */
+  encodeResources(): Promise<void>
+
+  /**
+   * Step 03: Writes the site's resources to Walrus.
    * @param epochs The number of epochs to store the blobs for.
    * @param permanent Make the stored resources permanent.
    */
   writeResources(epochs: number | 'max', permanent?: boolean): Promise<void>
 
   /**
-   * Certifies the written resources.
+   * Step 04: Certifies the written resources.
    */
   certifyResources(): Promise<void>
 
   /**
-   * Update the Walrus Site on-chain with the certified resources and metadata.
+   * Step 05: Update the Walrus Site on-chain with the certified resources and metadata.
    * @return The site ID after the update.
    */
   writeSite(): Promise<{ siteId: string }>

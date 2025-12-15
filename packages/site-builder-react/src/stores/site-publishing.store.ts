@@ -12,6 +12,7 @@ import { siteMetadataStore } from './site-metadata.store'
 export enum DeploySteps {
   Idle,
   Prepared,
+  Encoded,
   Uploaded,
   Certified,
   Deployed
@@ -23,6 +24,10 @@ export enum DeploymentStatus {
   Preparing,
   /** Assets have been prepared */
   Prepared,
+  /** Encoding assets for upload */
+  Encoding,
+  /** Assets have been encoded */
+  Encoded,
   /** Uploading assets to the network */
   Uploading,
   /** Assets have been uploaded */
@@ -71,16 +76,19 @@ class SitePublishingStore {
       case DeploymentStatus.Preparing:
         return 0
       case DeploymentStatus.Prepared:
-      case DeploymentStatus.Uploading:
+      case DeploymentStatus.Encoding:
         return 1
+      case DeploymentStatus.Encoded:
+      case DeploymentStatus.Uploading:
+        return 2
       case DeploymentStatus.Uploaded:
       case DeploymentStatus.Certifying:
-        return 2
+        return 3
       case DeploymentStatus.Certified:
       case DeploymentStatus.Deploying:
-        return 3
-      case DeploymentStatus.Deployed:
         return 4
+      case DeploymentStatus.Deployed:
+        return 5
       default:
         return 0
     }
@@ -103,6 +111,10 @@ class SitePublishingStore {
       case DeploymentStatus.Preparing:
         return 'Preparing assets...'
       case DeploymentStatus.Prepared:
+        return 'Encode assets'
+      case DeploymentStatus.Encoding:
+        return 'Encoding assets...'
+      case DeploymentStatus.Encoded:
         return 'Upload assets'
       case DeploymentStatus.Uploading:
         return 'Uploading assets...'
@@ -175,6 +187,22 @@ class SitePublishingStore {
       case DeploymentStatus.Prepared: {
         if (!this.currentFlow) return failed('Invalid deployment flow')
 
+        this.deployStatus.set(DeploymentStatus.Encoding)
+        try {
+          await this.currentFlow.encodeResources()
+        } catch (e) {
+          console.error('Failed to encode assets:', e)
+          this.deployStatus.set(DeploymentStatus.Prepared)
+          return failed('Failed to encode assets')
+        }
+
+        this.deployStatus.set(DeploymentStatus.Encoded)
+        return this.runDeploymentStep(sdk, site, onPrepareAssets)
+      }
+
+      case DeploymentStatus.Encoded: {
+        if (!this.currentFlow) return failed('Invalid deployment flow')
+
         this.deployStatus.set(DeploymentStatus.Uploading)
         const epochs = siteMetadataStore.epochs.get()
         const deletable = siteMetadataStore.deletable.get()
@@ -183,7 +211,7 @@ class SitePublishingStore {
           await this.currentFlow.writeResources(epochs, deletable)
         } catch (e) {
           console.error('Failed to upload assets:', e)
-          this.deployStatus.set(DeploymentStatus.Prepared)
+          this.deployStatus.set(DeploymentStatus.Encoded)
           return failed('Failed to upload assets')
         }
 
