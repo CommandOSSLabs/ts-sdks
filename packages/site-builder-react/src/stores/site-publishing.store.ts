@@ -152,8 +152,16 @@ class SitePublishingStore {
               creator: site.creator ?? 'CommandOSS Site Builder'
             }
           })
-          await this.currentFlow.prepareResources()
-          this.deployStatus.set(DeploymentStatus.Prepared)
+          const diff = await this.currentFlow.prepareResources()
+          if (diff.resources.every(r => r.op === 'unchanged')) {
+            if (diff.site_name.op === 'noop' && diff.metadata.op === 'noop') {
+              this.deployStatus.set(DeploymentStatus.Idle)
+              return failed('No changes detected')
+            } else {
+              // Only metadata/site name changed, skip to certification
+              this.deployStatus.set(DeploymentStatus.Certified)
+            }
+          } else this.deployStatus.set(DeploymentStatus.Prepared)
           return this.runDeploymentStep(sdk, site, onPrepareAssets)
         } catch (e) {
           console.error('Failed to prepare assets:', e)

@@ -6,17 +6,14 @@ import {
   type WriteFilesFlow
 } from '@mysten/walrus'
 import debug from 'debug'
-import { contentTypeFromFilePath } from './content'
-import { getSHA256Hash, sha256ToU256 } from './lib'
 import { mainPackage } from './lib/constants'
 import { QUILT_PATCH_ID_INTERNAL_HEADER } from './lib/internal-constants'
 import { getSiteIdFromResponse } from './lib/onchain-data-helpers'
 import { extractPatchHex } from './lib/path-id'
-import { computeSiteDataDiff, hasUpdate } from './lib/site-data.utils'
+import { hasUpdate } from './lib/site-data.utils'
 import { buildSiteCreationTx } from './lib/tx-builder'
 import { blobIdBase64ToU256, isSupportedNetwork } from './lib/utils'
 import { fetchBlobsPatches } from './queries/blobs-patches.query'
-import { getSiteDataFromChain } from './queries/site-data.query'
 import { SiteService } from './services/site.service'
 import type {
   ICertifiedBlob,
@@ -25,9 +22,7 @@ import type {
   ISponsorConfig,
   ITransaction,
   IUpdateWalrusSiteFlow,
-  SiteData,
   SiteDataDiff,
-  SuiResource,
   WSResources
 } from './types'
 
@@ -118,7 +113,7 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     }
   }
 
-  async prepareResources(): Promise<void> {
+  async prepareResources(): Promise<SiteDataDiff> {
     log('📦 Preparing files for upload...')
     const filesPaths = await this.target.listFiles()
     if (filesPaths.length === 0) throw new Error('Empty site')
@@ -134,24 +129,19 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
       Object.values(files),
       this.wsResource
     )
-    log('✅ Site diff calculated', diff)
+    this.state.siteUpdates = diff
 
     if (!hasUpdate(diff)) {
       log('⏭️ No changes detected, skipping...')
-      return
+      return diff
     }
     const changedFiles =
       diff.resources
         .filter(r => r.op === 'created')
         .map(r => files[r.data.path]) || []
-    if (!changedFiles.length) {
-      log('⏭️ No changed files detected, skipping...')
-      // TODO: figure out how to skip to update site metadata
-      return
-    }
     log('⚡️ Detected', changedFiles.length, 'changed files:', changedFiles)
 
-    // Step 1: Prepare the files for upload
+    // Step 1: Prepare the files for upload (only changed files)
     this.state.writeFilesFlow = this.walrus.writeFilesFlow({
       files: changedFiles
     })
@@ -159,6 +149,7 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     log('📦 Getting', changedFiles.length, 'files ready for upload...')
     await this.state.writeFilesFlow.encode()
     log('✅ Files prepared successfully')
+    return diff
   }
 
   async writeResources(
@@ -197,7 +188,7 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     log('✅ Data uploaded successfully')
   }
 
-  async certifyResources(): Promise<{ certifiedBlobs: ICertifiedBlob[] }> {
+  async certifyResources(): Promise<void> {
     log('🔐 Starting asset certification...')
     const { writeFilesFlow } = this.state
     if (!writeFilesFlow) throw new Error('Write files flow not initialized')
@@ -214,13 +205,70 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
       log('✅ Assets certified successfully', res)
     }
 
-    const certifiedFiles = await writeFilesFlow.listFiles()
+    await this.#fetchAndUpdateBlobPatches()
+  }
+
+  /** Fetches patches for certified blobs and updates the site data accordingly */
+  async #fetchAndUpdateBlobPatches() {
+    const certifiedFiles = await this.state.writeFilesFlow?.listFiles()
+    if (!certifiedFiles?.length) throw new Error('No certified files found')
     log('📁 Certified files:', certifiedFiles)
 
-    const { siteUpdates, certifiedBlobs } =
-      await this.#calculateSiteUpdates(certifiedFiles)
-    this.state.siteUpdates = siteUpdates
-    return { certifiedBlobs }
+    const uniqueBlobIds = Array.from(new Set(certifiedFiles.map(f => f.blobId)))
+    log('🔄 Fetching patches for blob IDs:', uniqueBlobIds)
+    const patches = await fetchBlobsPatches(
+      uniqueBlobIds,
+      this.suiClient.network
+    )
+    log('🧩 Fetched patches:', patches)
+
+    const fileIdentifierByPatchId = new Map(
+      patches.map(p => [p.patch_id, p.identifier])
+    )
+    const hashByBlobId = new Map(
+      this.state.siteUpdates?.resources
+        .filter(a => a.op === 'created')
+        .map(a => [a.data.path, a.data.blob_hash]) || []
+    )
+
+    const blobs: Array<ICertifiedBlob> = certifiedFiles.map(
+      (file): ICertifiedBlob => ({
+        patchId: file.id,
+        blobId: file.blobId,
+        suiObjectId: file.blobObject.id.id,
+        endEpoch: file.blobObject.storage.end_epoch,
+        identifier: fileIdentifierByPatchId.get(file.id) || 'unknown',
+        blobHash:
+          hashByBlobId.get(fileIdentifierByPatchId.get(file.id) || '') ?? ''
+      })
+    )
+    log('✅ Certified blobs:', blobs)
+
+    log('🔄 Updating site data with certified files...')
+    const patchIdByPath = new Map(blobs.map(b => [b.identifier, b.patchId]))
+    const blobIdByPath = new Map(blobs.map(b => [b.identifier, b.blobId]))
+    this.state.siteUpdates?.resources.forEach(r => {
+      if (r.op !== 'created') return
+      const patchId = patchIdByPath.get(r.data.path)
+      const blobId = blobIdByPath.get(r.data.path)
+      if (!patchId) {
+        log(`Blob ID for ${r.data.path} not found`)
+        return
+      }
+      if (!blobId) {
+        log(`Blob ID for ${r.data.path} not found`)
+        return
+      }
+      r.data.blob_id = blobIdBase64ToU256(blobId).toString()
+      r.data.headers.push({
+        key: QUILT_PATCH_ID_INTERNAL_HEADER,
+        value: extractPatchHex(patchId)
+      })
+    })
+    log(
+      '✅ Updated state SiteData with certified files',
+      this.state.siteUpdates
+    )
   }
 
   async writeSite(): Promise<{ siteId: string }> {
@@ -346,52 +394,6 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     this.state.transactions.push(transaction)
   }
 
-  async #getSiteUpdates(
-    siteId: string | undefined,
-    siteData: SiteData
-  ): Promise<SiteDataDiff> {
-    log('⚡️ Getting site updates')
-    const existingSiteData = !siteId
-      ? { resources: [] } // Empty site data for new site
-      : await getSiteDataFromChain(this.suiClient, siteId)
-
-    return computeSiteDataDiff(siteData, existingSiteData)
-  }
-
-  /**
-   * Calculate the site data from the provided assets.
-   * @param target The file manager containing the site assets.
-   * @param wsResource The Walrus Site resources.
-   * @returns The site data.
-   */
-  async #getNextSiteData(
-    target: IReadOnlyFileManager,
-    wsResource: WSResources
-  ): Promise<SiteData> {
-    log('⚡️ Calculating site data from assets')
-    const resources: SuiResource[] = []
-    for (const path of await target.listFiles()) {
-      const content = await target.readFile(path)
-      const resource: SuiResource = {
-        path: path,
-        blob_id: '<unknown>', // Blob ID will be filled in after upload
-        blob_hash: sha256ToU256(await getSHA256Hash(content)).toString(),
-        headers: wsResource.headers ?? [
-          { key: 'content-encoding', value: 'identity' },
-          { key: 'content-type', value: contentTypeFromFilePath(path) }
-        ]
-      }
-      log(`» Resource:`, resource)
-      resources.push(resource)
-    }
-    return {
-      resources,
-      routes: wsResource.routes,
-      site_name: wsResource.site_name,
-      metadata: wsResource.metadata
-    }
-  }
-
   /**
    * Create transaction to update a Walrus Site
    */
@@ -412,64 +414,5 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     const packageId = mainPackage[network].packageId
 
     return buildSiteCreationTx(siteId, siteUpdates, packageId, ownerAddr)
-  }
-
-  async #calculateSiteUpdates(
-    files: Awaited<ReturnType<WriteFilesFlow['listFiles']>>
-  ) {
-    log('🔄 Calculating site updates with certified files...')
-    const uniqueBlobIds = Array.from(new Set(files.map(f => f.blobId)))
-    log('🔄 Fetching patches for blob IDs:', uniqueBlobIds)
-    const patches = await fetchBlobsPatches(
-      uniqueBlobIds,
-      this.suiClient.network
-    )
-    log('🧩 Fetched patches:', patches)
-    const fileIdentifierByPatchId = new Map(
-      patches.map(p => [p.patch_id, p.identifier])
-    )
-    const siteId = this.wsResource.object_id
-    const siteData = await this.#getNextSiteData(this.target, this.wsResource)
-    const hashByBlobId = new Map(
-      siteData.resources.map(a => [a.path, a.blob_hash]) || []
-    )
-    const blobs: Array<ICertifiedBlob> = files.map(
-      (file): ICertifiedBlob => ({
-        patchId: file.id,
-        blobId: file.blobId,
-        suiObjectId: file.blobObject.id.id,
-        endEpoch: file.blobObject.storage.end_epoch,
-        identifier: fileIdentifierByPatchId.get(file.id) || 'unknown',
-        blobHash:
-          hashByBlobId.get(fileIdentifierByPatchId.get(file.id) || '') ?? ''
-      })
-    )
-    log('✅ Certified blobs:', blobs)
-
-    log('🔄 Updating site data with certified files...')
-    const patchIdByPath = new Map(blobs.map(b => [b.identifier, b.patchId]))
-    const blobIdByPath = new Map(blobs.map(b => [b.identifier, b.blobId]))
-    siteData.resources.forEach(r => {
-      const patchId = patchIdByPath.get(r.path)
-      const blobId = blobIdByPath.get(r.path)
-      if (!patchId) {
-        log(`Blob ID for ${r.path} not found`)
-        return
-      }
-      if (!blobId) {
-        log(`Blob ID for ${r.path} not found`)
-        return
-      }
-      r.blob_id = blobIdBase64ToU256(blobId).toString()
-      r.headers.push({
-        key: QUILT_PATCH_ID_INTERNAL_HEADER,
-        value: extractPatchHex(patchId)
-      })
-    })
-    log('✅ Updated state SiteData with certified files', siteData)
-
-    const siteUpdates = await this.#getSiteUpdates(siteId, siteData)
-    log('✅ Calculated site updates:', siteUpdates)
-    return { certifiedBlobs: blobs, siteUpdates }
   }
 }
