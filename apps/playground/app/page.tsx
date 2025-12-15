@@ -85,20 +85,10 @@ export default function Home() {
     }
 
     return {
-      apiClient: new PlaygroundSponsorApiClient(
-        sponsorUrl,
-        suiClient,
-        currentAccount.address
-      ),
+      apiClient: new PlaygroundSponsorApiClient(sponsorUrl),
       signTransaction
     }
-  }, [
-    sponsorEnabled,
-    sponsorUrl,
-    suiClient,
-    currentAccount?.address,
-    signTransaction
-  ])
+  }, [sponsorEnabled, sponsorUrl, currentAccount?.address, signTransaction])
 
   // Site Builder handlers
   const handlePrepareAssetsForBuilder =
