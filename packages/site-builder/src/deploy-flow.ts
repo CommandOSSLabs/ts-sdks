@@ -1,4 +1,4 @@
-import type { SuiClient } from '@mysten/sui/client'
+import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client'
 import type { Transaction } from '@mysten/sui/transactions'
 import {
   type WalrusClient,
@@ -19,6 +19,7 @@ import type {
   ICertifiedBlob,
   IReadOnlyFileManager,
   ISignAndExecuteTransaction,
+  ISponsorConfig,
   ITransaction,
   IUpdateWalrusSiteFlow,
   SiteDataDiff,
@@ -89,6 +90,10 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
      * ```
      */
     private signAndExecuteTransaction: ISignAndExecuteTransaction,
+    /**
+     * The sponsor configuration for handling sponsored transactions.
+     */
+    private sponsorConfig: ISponsorConfig | undefined,
     /**
      * The active wallet address.
      */
@@ -162,9 +167,19 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
       epochs: epochs === 'max' ? 57 : epochs,
       owner: this.walletAddr
     })
-    const { digest } = await this.signAndExecuteTransaction({ transaction: tx })
-    this.#recordTransaction(digest, 'Register blob on Walrus network')
-    log('✅ Blob registered successfully with digest:', digest)
+
+    let digest: string
+    if (this.sponsorConfig?.apiClient) {
+      digest = await this.#executeSponsoredTransaction(
+        tx,
+        'Register blob on Walrus network'
+      )
+    } else {
+      digest = await this.#executeRegularTransaction(
+        tx,
+        'Register blob on Walrus network'
+      )
+    }
 
     // Step 3: Upload the data to storage nodes
     // This can be done immediately after the register step, or as a separate step the user initiates
@@ -179,9 +194,16 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     if (!writeFilesFlow) throw new Error('Write files flow not initialized')
 
     const certifyTx = writeFilesFlow.certify()
-    const res = await this.signAndExecuteTransaction({ transaction: certifyTx })
-    this.#recordTransaction(res.digest, 'Certify blob storage')
-    log('✅ Assets certified successfully', res)
+
+    if (this.sponsorConfig?.apiClient) {
+      await this.#executeSponsoredTransaction(certifyTx, 'Certify blob storage')
+    } else {
+      const res = await this.signAndExecuteTransaction({
+        transaction: certifyTx
+      })
+      this.#recordTransaction(res.digest, 'Certify blob storage')
+      log('✅ Assets certified successfully', res)
+    }
 
     await this.#fetchAndUpdateBlobPatches()
   }
@@ -263,8 +285,26 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
       siteUpdates,
       ownerAddr: this.walletAddr
     })
-    const res = await this.signAndExecuteTransaction({ transaction: tx })
-    // this.#recordTransaction(res.digest, 'Update Walrus site metadata')
+
+    let res: SuiTransactionBlockResponse
+    if (this.sponsorConfig?.apiClient) {
+      const digest = await this.#executeSponsoredTransaction(
+        tx,
+        'Update Walrus site metadata'
+      )
+      res = await this.suiClient.waitForTransaction({
+        digest,
+        options: {
+          showEffects: true
+        }
+      })
+      console.log('🔍 Sponsored transaction response:', res)
+    } else {
+      res = await this.signAndExecuteTransaction({ transaction: tx })
+      console.log('🔍 Regular transaction response:', res)
+      this.#recordTransaction(res.digest, 'Update Walrus site metadata')
+    }
+
     if (this.wsResource.object_id) {
       log('✅ Site updated successfully', res)
       return { siteId: this.wsResource.object_id }
@@ -279,6 +319,64 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
 
   getTransactions(): ITransaction[] {
     return this.state.transactions
+  }
+
+  /**
+   * Handle sponsored transaction execution.
+   */
+  async #executeSponsoredTransaction(
+    transaction: Transaction,
+    description: string
+  ): Promise<string> {
+    if (!this.sponsorConfig?.apiClient) {
+      throw new Error('Sponsor config not available')
+    }
+
+    log(`🎫 Executing sponsored transaction: ${description}`)
+
+    // Step 1: Set sender
+    transaction.setSenderIfNotSet(this.walletAddr)
+
+    // Step 2: Request sponsorship
+    const { bytes, digest: sponsorDigest } =
+      await this.sponsorConfig.apiClient.sponsorTransaction({
+        transaction
+      })
+    log(`✅ Transaction sponsored with digest: ${sponsorDigest}`)
+
+    // Step 3: Sign the sponsored transaction
+    const { signature } = await this.sponsorConfig.signTransaction({
+      transaction: bytes
+    })
+    if (!signature) {
+      throw new Error(
+        'Failed to sign sponsored transaction: No signature returned'
+      )
+    }
+
+    // Step 4: Execute the sponsored transaction
+    const { digest: executeDigest } =
+      await this.sponsorConfig.apiClient.executeTransaction({
+        digest: sponsorDigest,
+        signature: signature
+      })
+    log(`✅ Sponsored transaction executed: ${executeDigest}`)
+
+    this.#recordTransaction(executeDigest, description)
+    return executeDigest
+  }
+
+  /**
+   * Handle regular (non-sponsored) transaction execution.
+   */
+  async #executeRegularTransaction(
+    transaction: Transaction,
+    description: string
+  ): Promise<string> {
+    const { digest } = await this.signAndExecuteTransaction({ transaction })
+    this.#recordTransaction(digest, description)
+    log(`✅ Regular transaction executed: ${digest}`)
+    return digest
   }
 
   /**

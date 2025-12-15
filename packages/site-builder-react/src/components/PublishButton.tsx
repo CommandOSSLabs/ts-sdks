@@ -22,6 +22,7 @@ const PublishButton: FC<Props> = ({
   onError,
   currentAccount,
   signAndExecuteTransaction,
+  sponsorConfig,
   portalDomain,
   portalHttps,
   clients
@@ -42,6 +43,7 @@ const PublishButton: FC<Props> = ({
     onError,
     currentAccount,
     signAndExecuteTransaction,
+    sponsorConfig,
     clients
   })
   const network = clients.suiClient.network

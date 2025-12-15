@@ -1,6 +1,10 @@
 import type { SuiTransactionBlockResponse } from '@mysten/sui/client'
 import type { Transaction } from '@mysten/sui/transactions'
-import type { SuiSignAndExecuteTransactionInput } from '@mysten/wallet-standard'
+import type {
+  SignedTransaction,
+  SuiSignAndExecuteTransactionInput,
+  SuiSignTransactionInput
+} from '@mysten/wallet-standard'
 
 // ##########################################################################
 // #region Helper Types
@@ -14,6 +18,20 @@ type UseSignAndExecuteTransactionArgs = PartialBy<
   transaction: Transaction | string
 }
 
+// export declare function useSignTransaction({ mutationKey, ...mutationOptions }?: UseSignTransactionMutationOptions): UseMutationResult<UseSignTransactionResult, UseSignTransactionError, UseSignTransactionArgs>;
+// export {};
+
+/**
+ * The function used to sign transactions.
+ *
+ * Get by calling `useSignTransaction` hook in `'@mysten/dapp-kit'`.
+ */
+type UseSignTransactionArgs = PartialBy<
+  Omit<SuiSignTransactionInput, 'transaction'>,
+  'account' | 'chain'
+> & {
+  transaction: Transaction | string
+}
 /**
  * The function used to sign and execute transactions.
  *
@@ -22,6 +40,45 @@ type UseSignAndExecuteTransactionArgs = PartialBy<
 export type ISignAndExecuteTransaction = (
   variables: UseSignAndExecuteTransactionArgs
 ) => Promise<SuiTransactionBlockResponse>
+
+/**
+ * The function used to sign transactions.
+ */
+export type ISignTransaction = (
+  variables: UseSignTransactionArgs
+) => Promise<SignedTransaction>
+
+/**
+ * The function used to sponsor transactions.
+ */
+export interface ISponsorConfig {
+  /**
+   * The API client used to sponsor transactions.
+   */
+  apiClient: ISponsorApiClient | null
+  /**
+   * The function used to sign transactions.
+   */
+  signTransaction: ISignTransaction
+}
+
+/**
+ * The API client used to sponsor transactions.
+ */
+export interface ISponsorApiClient {
+  sponsorTransaction: ({
+    transaction
+  }: {
+    transaction: Transaction
+  }) => Promise<{ bytes: string; digest: string }>
+  executeTransaction: ({
+    digest,
+    signature
+  }: {
+    digest: string
+    signature: string
+  }) => Promise<{ digest: string }>
+}
 
 // ##########################################################################
 // #region Core Entity Types

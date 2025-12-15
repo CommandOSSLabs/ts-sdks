@@ -1,6 +1,8 @@
 import {
   type IReadOnlyFileManager,
   type ISignAndExecuteTransaction,
+  type ISignTransaction,
+  type ISponsorConfig,
   type IWalrusSiteBuilderSdk,
   objectIdToWalrusSiteUrl,
   WalrusSiteBuilderSdk
@@ -61,7 +63,7 @@ export interface UseSitePublishingParams {
 
   /** Callback for signing and executing transactions. */
   signAndExecuteTransaction: ISignAndExecuteTransaction
-
+  sponsorConfig?: ISponsorConfig
   /** Optional domain for the portal to view published site. */
   portalDomain?: string
   /** Whether to use HTTPS for the portal URL. */
@@ -76,6 +78,7 @@ export function useSitePublishing({
   onError,
   currentAccount,
   signAndExecuteTransaction,
+  sponsorConfig,
   portalDomain,
   portalHttps,
   clients: { suiClient, queryClient }
@@ -102,9 +105,16 @@ export function useSitePublishing({
       walrusClient,
       suiClient,
       currentAccount.address,
-      signAndExecuteTransaction
+      signAndExecuteTransaction,
+      sponsorConfig
     )
-  }, [suiClient, walrusClient, currentAccount, signAndExecuteTransaction])
+  }, [
+    suiClient,
+    walrusClient,
+    currentAccount,
+    signAndExecuteTransaction,
+    sponsorConfig
+  ])
 
   const {
     data: nsDomains,

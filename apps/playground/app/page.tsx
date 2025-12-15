@@ -2,6 +2,7 @@
 
 import {
   type IReadOnlyFileManager,
+  type ISponsorConfig,
   objectIdToWalrusSiteUrl
 } from '@cmdoss/site-builder'
 import {
@@ -19,15 +20,17 @@ import '@cmdoss/site-builder-react/styles.css'
 import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
+  useSignTransaction,
   useSuiClient
 } from '@mysten/dapp-kit'
 import { useStore } from '@nanostores/react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import AssetsSection from '@/components/AssetsSection'
 import PublishedSiteInfo from '@/components/PublishedSiteInfo'
 import PublishSection from '@/components/PublishSection'
+import { PlaygroundSponsorApiClient } from '@/lib/sponsor-client'
 import { testFilesSet1, testFilesSet2 } from './files'
 
 export default function Home() {
@@ -37,6 +40,19 @@ export default function Home() {
   const networkConfig = useNetworkConfig()
   const [isAddingFiles, setIsAddingFiles] = useState(false)
   const [isClearingWorkspace, setIsClearingWorkspace] = useState(false)
+
+  // Sponsor config state
+  const [sponsorEnabled, setSponsorEnabled] = useState(false)
+  const [sponsorUrl, setSponsorUrl] = useState('http://localhost:8787')
+
+  // Handle sponsor config changes
+  const handleSponsorConfigChange = useCallback(
+    (enabled: boolean, url: string) => {
+      setSponsorEnabled(enabled)
+      setSponsorUrl(url)
+    },
+    []
+  )
 
   const { loading, fileManager: fm } = useZenFsWorkspace(
     '/sites/site-01',
@@ -59,6 +75,30 @@ export default function Home() {
           }
         })
     })
+
+  const { mutateAsync: signTransaction } = useSignTransaction()
+
+  // Create sponsor config when enabled
+  const sponsorConfig: ISponsorConfig | undefined = useMemo(() => {
+    if (!sponsorEnabled || !currentAccount?.address) {
+      return undefined
+    }
+
+    return {
+      apiClient: new PlaygroundSponsorApiClient(
+        sponsorUrl,
+        suiClient,
+        currentAccount.address
+      ),
+      signTransaction
+    }
+  }, [
+    sponsorEnabled,
+    sponsorUrl,
+    suiClient,
+    currentAccount?.address,
+    signTransaction
+  ])
 
   // Site Builder handlers
   const handlePrepareAssetsForBuilder =
@@ -189,6 +229,10 @@ export default function Home() {
               onUpdateSiteMetadata={handleUpdateSiteMetadataForBuilder}
               onError={handleBuilderError}
               signAndExecuteTransaction={signAndExecuteTransaction}
+              sponsorConfig={sponsorConfig}
+              onSponsorConfigChange={handleSponsorConfigChange}
+              sponsorEnabled={sponsorEnabled}
+              sponsorUrl={sponsorUrl}
               clients={{ suiClient, queryClient }}
             />
 

@@ -6,6 +6,10 @@ interface AdvancedSettingsProps {
   onEpochsChange: (epochs: number) => void
   deletable: boolean
   onDeletableChange: (deletable: boolean) => void
+  sponsorEnabled: boolean
+  onSponsorEnabledChange: (enabled: boolean) => void
+  sponsorUrl: string
+  onSponsorUrlChange: (url: string) => void
   isOpen: boolean
   onToggle: () => void
 }
@@ -15,6 +19,10 @@ export function AdvancedSettings({
   onEpochsChange,
   deletable,
   onDeletableChange,
+  sponsorEnabled,
+  onSponsorEnabledChange,
+  sponsorUrl,
+  onSponsorUrlChange,
   isOpen,
   onToggle
 }: AdvancedSettingsProps) {
@@ -76,6 +84,50 @@ export function AdvancedSettings({
               Whether the blob can be deleted before its storage period expires.
             </p>
           </div>
+
+          <div>
+            <label
+              htmlFor="sponsorEnabled"
+              className="block text-sm font-medium mb-1"
+            >
+              Transaction Sponsorship
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={sponsorEnabled}
+                onChange={e => onSponsorEnabledChange(e.target.checked)}
+                className="w-4 h-4 bg-[#0C0F1D] border-2 border-[#97F0E599] rounded focus:outline-none focus:ring-0 focus:border-[#97F0E5] checked:bg-[#97F0E5] checked:border-[#97F0E5]"
+              />
+              <span className="text-sm text-[#F7F7F7]">
+                Enable sponsored transactions
+              </span>
+            </div>
+            <p className="text-sm opacity-50 text-[#F7F7F7] mt-1">
+              Use Enoki backend to sponsor transaction fees.
+            </p>
+          </div>
+
+          {sponsorEnabled && (
+            <div>
+              <label
+                htmlFor="sponsorUrl"
+                className="block text-sm font-medium mb-1"
+              >
+                Sponsor Backend URL
+              </label>
+              <input
+                type="url"
+                className="w-full p-2 bg-[#0C0F1D] border-2 border-[#97F0E599] rounded-md focus:outline-none focus:ring-0 focus:border-[#97F0E5]"
+                value={sponsorUrl}
+                onChange={e => onSponsorUrlChange(e.target.value)}
+                placeholder="http://localhost:8787"
+              />
+              <p className="text-sm opacity-50 text-[#F7F7F7] mt-1">
+                URL of the Enoki backend server for transaction sponsorship.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
