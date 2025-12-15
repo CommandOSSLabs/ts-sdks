@@ -1,5 +1,16 @@
 # @cmdoss/file-manager
 
+## 2.0.0
+
+### Minor Changes
+
+- 57af66d: shorten type of sponsor config
+
+### Patch Changes
+
+- Updated dependencies [57af66d]
+  - @cmdoss/site-builder@2.0.0
+
 ## 1.0.0
 
 ### Minor Changes
