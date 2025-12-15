@@ -1,5 +1,6 @@
 import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client'
 import type { Transaction } from '@mysten/sui/transactions'
+import { toBase64 } from '@mysten/sui/utils'
 import {
   type WalrusClient,
   WalrusFile,
@@ -337,10 +338,16 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     // Step 1: Set sender
     transaction.setSenderIfNotSet(this.walletAddr)
 
+    const txBytes = await transaction.build({
+      client: this.suiClient,
+      onlyTransactionKind: true
+    })
+
     // Step 2: Request sponsorship
     const { bytes, digest: sponsorDigest } =
       await this.sponsorConfig.apiClient.sponsorTransaction({
-        transaction
+        txBytes: toBase64(txBytes),
+        sender: this.walletAddr
       })
     log(`✅ Transaction sponsored with digest: ${sponsorDigest}`)
 

@@ -1,35 +1,24 @@
 import type { ISponsorApiClient } from '@cmdoss/site-builder'
-import type { SuiClient } from '@mysten/sui/client'
-import type { Transaction } from '@mysten/sui/transactions'
-import { toBase64 } from '@mysten/sui/utils'
 
 /**
  * Sponsor API client for the playground application.
  * This connects to a local Enoki backend for transaction sponsorship.
  */
 export class PlaygroundSponsorApiClient implements ISponsorApiClient {
-  constructor(
-    private baseUrl: string = 'http://localhost:8787',
-    private suiClient: SuiClient,
-    private walletAddr: string
-  ) {}
+  constructor(private baseUrl: string = 'http://localhost:8787') {}
 
   async sponsorTransaction({
-    transaction
+    txBytes,
+    sender
   }: {
-    transaction: Transaction
+    txBytes: string
+    sender: string
   }): Promise<{ bytes: string; digest: string }> {
     try {
-      // Build transaction bytes
-      const txBytes = await transaction.build({
-        client: this.suiClient,
-        onlyTransactionKind: true
-      })
-
       const sponsorTxBody = {
-        txBytes: toBase64(txBytes),
-        sender: this.walletAddr,
-        allowedAddresses: [this.walletAddr]
+        txBytes: txBytes,
+        sender: sender,
+        allowedAddresses: [sender]
       }
 
       console.log('🎫 Requesting sponsorship from Enoki backend...')

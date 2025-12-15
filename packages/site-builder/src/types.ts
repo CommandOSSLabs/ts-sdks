@@ -67,9 +67,11 @@ export interface ISponsorConfig {
  */
 export interface ISponsorApiClient {
   sponsorTransaction: ({
-    transaction
+    txBytes,
+    sender
   }: {
-    transaction: Transaction
+    txBytes: string
+    sender: string
   }) => Promise<{ bytes: string; digest: string }>
   executeTransaction: ({
     digest,
