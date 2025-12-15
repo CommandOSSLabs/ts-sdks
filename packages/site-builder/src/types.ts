@@ -264,7 +264,7 @@ export interface IUpdateWalrusSiteFlow {
   /**
    * Prepares the site's resources for deployment.
    */
-  prepareResources(): Promise<void>
+  prepareResources(): Promise<SiteDataDiff>
 
   /**
    * Writes the site's resources to Walrus.
@@ -276,7 +276,7 @@ export interface IUpdateWalrusSiteFlow {
   /**
    * Certifies the written resources.
    */
-  certifyResources(): Promise<{ certifiedBlobs: ICertifiedBlob[] }>
+  certifyResources(): Promise<void>
 
   /**
    * Update the Walrus Site on-chain with the certified resources and metadata.
