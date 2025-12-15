@@ -24,6 +24,10 @@ jobs:
         with: { node-version-file: .node-version, cache: pnpm }
       - name: 📦 Install dependencies
         run: pnpm install
+      - name: 🧪 Run tests
+        run: pnpm test
+      - name: 🏗 Build
+        run: pnpm build
       - name: 🦋 Publish to npm
         id: changesets
         uses: changesets/action@v1
