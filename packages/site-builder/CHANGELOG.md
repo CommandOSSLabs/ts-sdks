@@ -1,6 +1,6 @@
 # @cmdoss/site-builder
 
-## 2.0.0
+## 1.0.1
 
 ### Minor Changes
 
