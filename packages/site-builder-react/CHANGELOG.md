@@ -1,5 +1,17 @@
 # @cmdoss/site-builder-react
 
+## 1.0.1
+
+### Minor Changes
+
+- 57af66d: shorten type of sponsor config
+
+### Patch Changes
+
+- Updated dependencies [57af66d]
+  - @cmdoss/file-manager@1.0.1
+  - @cmdoss/site-builder@1.0.1
+
 ## 1.0.0
 
 ### Minor Changes
