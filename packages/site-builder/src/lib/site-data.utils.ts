@@ -90,29 +90,40 @@ function computeResourceDiff(
   const currentResMap = new Map(current.resources.map(res => [res.path, res]))
   const nextResMap = new Map(next.resources.map(res => [res.path, res]))
 
-  // Find created, updated, and unchanged resources
-  for (const [path, nextResource] of nextResMap) {
-    const currentResource = currentResMap.get(path)
-
-    if (!currentResource) {
-      // Resource is new - create operation
-      resource_ops.push({ op: 'created', data: nextResource })
-    } else {
-      // Resource exists - check if it has changed by comparing hash
-      if (nextResource.blob_hash !== currentResource.blob_hash) {
-        resource_ops.push({ op: 'created', data: nextResource })
-      } else {
-        // Resource is unchanged - include with existing blob_id from chain
-        resource_ops.push({ op: 'unchanged', data: currentResource })
-      }
+  // Collect delete operations first (matching Rust's ordering: delete -> create -> unchanged)
+  // This ensures resources are removed before new ones are added at the same path
+  for (const [path, currentResource] of currentResMap) {
+    const nextResource = nextResMap.get(path)
+    // Delete if: resource no longer exists OR resource has changed (different hash)
+    if (!nextResource || nextResource.blob_hash !== currentResource.blob_hash) {
+      resource_ops.push({ op: 'deleted', data: currentResource })
     }
   }
 
-  // Find deleted resources
-  for (const [path, currentResource] of currentResMap) {
-    if (!nextResMap.has(path))
-      resource_ops.push({ op: 'deleted', data: currentResource })
+  // Then collect create operations
+  for (const [path, nextResource] of nextResMap) {
+    const currentResource = currentResMap.get(path)
+    // Create if: resource is new OR resource has changed (different hash)
+    if (
+      !currentResource ||
+      nextResource.blob_hash !== currentResource.blob_hash
+    ) {
+      resource_ops.push({ op: 'created', data: nextResource })
+    }
   }
+
+  // Finally collect unchanged operations
+  for (const [path, nextResource] of nextResMap) {
+    const currentResource = currentResMap.get(path)
+    // Unchanged if: resource exists and hash matches
+    if (
+      currentResource &&
+      nextResource.blob_hash === currentResource.blob_hash
+    ) {
+      resource_ops.push({ op: 'unchanged', data: currentResource })
+    }
+  }
+
   return resource_ops
 }
 

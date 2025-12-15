@@ -340,8 +340,21 @@ describe('SiteService', () => {
         )
 
         const deletedOps = diff.resources.filter(r => r.op === 'deleted')
-        assert.equal(deletedOps.length, 1, 'Should have one deleted resource')
-        assert.equal(deletedOps[0].data.path, '/old-file.html')
+        // 2 deleted: old-file.html removed + index.html modified (different hash)
+        assert.equal(deletedOps.length, 2, 'Should have two deleted resources')
+        assert.ok(
+          deletedOps.some(d => d.data.path === '/old-file.html'),
+          'old-file.html should be deleted'
+        )
+        assert.ok(
+          deletedOps.some(d => d.data.path === '/index.html'),
+          'index.html should be deleted (because hash changed)'
+        )
+
+        // Also verify we have a created operation for the new index.html
+        const createdOps = diff.resources.filter(r => r.op === 'created')
+        assert.equal(createdOps.length, 1, 'Should have one created resource')
+        assert.equal(createdOps[0].data.path, '/index.html')
       })
 
       test('should return noop for site_name when unchanged', async () => {

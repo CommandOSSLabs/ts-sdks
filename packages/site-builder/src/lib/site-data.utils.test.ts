@@ -280,8 +280,14 @@ describe('computeSiteDataDiff', () => {
 
       const diff = computeSiteDataDiff(next, current)
 
-      // Should have 3 new resources (css, svg, js) plus index.html changed
-      assert.equal(diff.resources.filter(r => r.op === 'created').length, 4)
+      // Should have 4 created resources (all from next)
+      // index.html is different (hash-minimal vs hash-index), so it's both deleted and created
+      const created = diff.resources.filter(r => r.op === 'created')
+      const deleted = diff.resources.filter(r => r.op === 'deleted')
+      assert.equal(created.length, 4)
+      // 1 deleted: the old index.html (different hash)
+      assert.equal(deleted.length, 1)
+      assert.equal(deleted[0].data.path, '/index.html')
       assert.equal(hasUpdate(diff), true)
     })
 
@@ -291,9 +297,12 @@ describe('computeSiteDataDiff', () => {
 
       const diff = computeSiteDataDiff(next, current)
 
-      // Should have 3 deleted resources (css, svg, js) plus index.html changed
+      // Should have 4 deleted resources (css, svg, js + index.html which has different hash)
       const deletedCount = diff.resources.filter(r => r.op === 'deleted').length
-      assert.equal(deletedCount, 3)
+      assert.equal(deletedCount, 4)
+      // 1 created: the new index.html (different hash)
+      const createdCount = diff.resources.filter(r => r.op === 'created').length
+      assert.equal(createdCount, 1)
       assert.equal(hasUpdate(diff), true)
     })
 
@@ -304,10 +313,22 @@ describe('computeSiteDataDiff', () => {
 
       const diff = computeSiteDataDiff(next, current)
 
+      // Modified resources should generate BOTH a delete and create operation
+      // (matching Rust behavior - delete old resource first, then create new one)
+      const deletedOps = diff.resources.filter(r => r.op === 'deleted')
       const createdOps = diff.resources.filter(r => r.op === 'created')
+      const unchangedOps = diff.resources.filter(r => r.op === 'unchanged')
+
+      assert.equal(deletedOps.length, 1)
+      assert.equal(deletedOps[0].data.path, '/index.html')
+      assert.equal(deletedOps[0].data.blob_hash, 'hash-index') // old hash
+
       assert.equal(createdOps.length, 1)
       assert.equal(createdOps[0].data.path, '/index.html')
       assert.equal(createdOps[0].data.blob_hash, 'updated-hash')
+
+      // 3 other resources should be unchanged
+      assert.equal(unchangedOps.length, 3)
     })
 
     test('should handle multiple resource changes simultaneously', () => {
@@ -332,12 +353,16 @@ describe('computeSiteDataDiff', () => {
 
       const created = diff.resources.filter(r => r.op === 'created')
       const deleted = diff.resources.filter(r => r.op === 'deleted')
+      const unchanged = diff.resources.filter(r => r.op === 'unchanged')
 
       // 2 created: updated index.html + new file
       assert.equal(created.length, 2)
-      // 1 deleted: styles.css
-      assert.equal(deleted.length, 1)
-      assert.equal(deleted[0].data.path, '/styles.css')
+      // 2 deleted: styles.css removed + index.html modified (needs delete before create)
+      assert.equal(deleted.length, 2)
+      assert.ok(deleted.some(d => d.data.path === '/styles.css'))
+      assert.ok(deleted.some(d => d.data.path === '/index.html'))
+      // 2 unchanged: image.svg and script.js
+      assert.equal(unchanged.length, 2)
     })
 
     test('should handle empty to populated resources', () => {
