@@ -1,4 +1,6 @@
+import { bcs } from '@mysten/sui/bcs'
 import type { SuiClient } from '@mysten/sui/client'
+import { deriveDynamicFieldID, fromBase64 } from '@mysten/sui/utils'
 import type { WalrusFile } from '@mysten/walrus'
 import debug from 'debug'
 import { contentTypeFromFilePath } from '../content.ts'
@@ -12,6 +14,7 @@ import {
 import { computeSiteDataDiff } from '../lib/site-data.utils.ts'
 import type {
   ResourceChainValue,
+  Routes,
   SiteData,
   SiteDataDiff,
   SuiResource,
@@ -21,6 +24,20 @@ import type {
 import { ChainService } from './chain.service.ts'
 
 const log = debug('site-builder:site-service')
+
+// BCS struct for parsing Routes dynamic field from chain
+const Address = bcs.bytes(32)
+const RoutesStruct = bcs.struct('Routes', {
+  routes_list: bcs.map(bcs.string(), bcs.string())
+})
+const DynamicFieldStruct = bcs.struct('DynamicField', {
+  parentId: Address,
+  name: bcs.vector(bcs.u8()),
+  value: RoutesStruct
+})
+
+/** The name of the dynamic field containing the routes (matches ROUTES_FIELD in site.move) */
+const ROUTES_FIELD = new TextEncoder().encode('routes')
 
 export class SiteService {
   #suiClient: SuiClient
@@ -89,13 +106,18 @@ export class SiteService {
     const data = objRes.data?.display?.data
     if (!data) throw new Error('No data returned for Walrus site')
     const siteData = data as unknown as WalrusSiteDisplayData
-    const resources = await this.#fetchSiteResources(siteId)
+
+    // Fetch resources and routes in parallel
+    const [resources, routes] = await Promise.all([
+      this.#fetchSiteResources(siteId),
+      this.#fetchSiteRoutes(siteId)
+    ])
 
     return {
       site_name: siteData.name,
       metadata: siteData,
-      resources
-      // routes: [] // TODO: Fetch routes from chain
+      resources,
+      routes
     }
   }
 
@@ -129,6 +151,49 @@ export class SiteService {
       site_name: wsResources.site_name,
       metadata: wsResources.metadata
     }
+  }
+
+  /**
+   * Fetch routes from the site's Routes dynamic field.
+   * Routes are stored as a dynamic field with name `b"routes"` (vector<u8>).
+   */
+  async #fetchSiteRoutes(siteId: string): Promise<Routes | undefined> {
+    log('🛤️ Fetching routes for site:', siteId)
+
+    // Derive the dynamic field ID for the routes field
+    const routesMoveType = 'vector<u8>'
+    const dynamicFieldId = deriveDynamicFieldID(
+      siteId,
+      routesMoveType,
+      bcs.vector(bcs.u8()).serialize(ROUTES_FIELD).toBytes()
+    )
+
+    log('🔍 Routes dynamic field ID:', dynamicFieldId)
+
+    const routesObj = await this.#suiClient.getObject({
+      id: dynamicFieldId,
+      options: { showBcs: true }
+    })
+
+    const objectData = routesObj.data
+    if (
+      !objectData ||
+      !objectData.bcs ||
+      objectData.bcs.dataType !== 'moveObject'
+    ) {
+      log('ℹ️ No routes dynamic field found for site')
+      return undefined
+    }
+
+    // Parse the BCS data to extract routes
+    const parsed = DynamicFieldStruct.parse(fromBase64(objectData.bcs.bcsBytes))
+    const routesList = parsed.value.routes_list
+
+    // Convert Map to array of tuples (our Routes type)
+    const routes: Routes = Array.from(routesList.entries())
+    log('✅ Fetched', routes.length, 'routes from chain')
+
+    return routes.length > 0 ? routes : undefined
   }
 
   async #fetchSiteResources(siteId: string): Promise<SuiResource[]> {
