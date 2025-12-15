@@ -4,6 +4,7 @@ import { UpdateWalrusSiteFlow } from './deploy-flow'
 import type {
   IReadOnlyFileManager,
   ISignAndExecuteTransaction,
+  ISponsorConfig,
   IUpdateWalrusSiteFlow,
   IWalrusSiteBuilderSdk,
   WSResources
@@ -48,7 +49,11 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
      *   })
      * ```
      */
-    public signAndExecuteTransaction: ISignAndExecuteTransaction
+    public signAndExecuteTransaction: ISignAndExecuteTransaction,
+    /**
+     * The function used to sign transactions.
+     */
+    public sponsorConfig?: ISponsorConfig
   ) {}
 
   /**
@@ -64,6 +69,7 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
       target,
       wsResource,
       this.signAndExecuteTransaction,
+      this.sponsorConfig,
       this.walletAddr
     )
   }
