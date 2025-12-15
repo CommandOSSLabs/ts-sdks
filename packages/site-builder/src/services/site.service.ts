@@ -122,7 +122,12 @@ export class SiteService {
   }
 
   /**
-   * Build SiteData from WalrusFile array
+   * Build SiteData from WalrusFile array.
+   *
+   * This method:
+   * 1. Builds resources from files
+   * 2. Validates that provided routes point to existing resource paths
+   * 3. Generates default routes if none are provided
    */
   async #buildSiteDataFromFiles(
     files: WalrusFile[],
@@ -145,11 +150,60 @@ export class SiteService {
       resources.push(resource)
     }
 
+    // Build a set of all resource paths for validation
+    const resourcePaths = new Set(resources.map(r => r.path))
+
+    // Validate and process routes
+    const routes = this.#processRoutes(wsResources.routes, resourcePaths)
+
     return {
       resources,
-      routes: wsResources.routes,
+      routes,
       site_name: wsResources.site_name,
       metadata: wsResources.metadata
+    }
+  }
+
+  /**
+   * Process routes: validate provided routes
+   *
+   * Routes map a route path (e.g., "/path1") to a resource path (e.g., "/index.html").
+   * The Move contract validates that the resource path exists when inserting a route.
+   *
+   * @param providedRoutes - Routes provided via wsResources
+   * @param resourcePaths - Set of all resource paths in the site
+   * @returns Validated routes
+   * @throws Error if any route points to a non-existent resource path
+   */
+  #processRoutes(
+    providedRoutes: Routes | undefined,
+    resourcePaths: Set<string>
+  ): Routes | undefined {
+    // If routes are provided, validate them
+    if (providedRoutes && providedRoutes.length > 0) {
+      const invalidRoutes: Array<{ route: string; target: string }> = []
+
+      for (const [routePath, resourcePath] of providedRoutes) {
+        // Check if the target resource path exists
+        if (!resourcePaths.has(resourcePath)) {
+          invalidRoutes.push({ route: routePath, target: resourcePath })
+        }
+      }
+
+      if (invalidRoutes.length > 0) {
+        const invalidList = invalidRoutes
+          .map(
+            r => `  - Route "${r.route}" -> "${r.target}" (resource not found)`
+          )
+          .join('\n')
+        throw new Error(
+          `Invalid routes: the following routes point to non-existent resources:\n${invalidList}\n` +
+            `Available resource paths: ${Array.from(resourcePaths).join(', ')}`
+        )
+      }
+
+      log('✅ Validated', providedRoutes.length, 'routes')
+      return providedRoutes
     }
   }
 

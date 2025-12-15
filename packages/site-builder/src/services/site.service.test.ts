@@ -454,3 +454,177 @@ describe('SiteService', () => {
     })
   })
 })
+
+// ##########################################################################
+// #region Route Validation Tests
+// ##########################################################################
+
+describe('Route Validation', () => {
+  /**
+   * Helper to validate routes against resource paths
+   */
+  function validateRoutes(
+    routes: Array<[string, string]> | undefined,
+    resourcePaths: Set<string>
+  ): {
+    valid: boolean
+    invalidRoutes: Array<{ route: string; target: string }>
+  } {
+    if (!routes || routes.length === 0) {
+      return { valid: true, invalidRoutes: [] }
+    }
+
+    const invalidRoutes: Array<{ route: string; target: string }> = []
+    for (const [routePath, resourcePath] of routes) {
+      if (!resourcePaths.has(resourcePath)) {
+        invalidRoutes.push({ route: routePath, target: resourcePath })
+      }
+    }
+
+    return { valid: invalidRoutes.length === 0, invalidRoutes }
+  }
+
+  /**
+   * Helper to generate default routes
+   */
+  function generateDefaultRoutes(
+    resourcePaths: Set<string>
+  ): Array<[string, string]> | undefined {
+    const defaultRoutes: Array<[string, string]> = []
+
+    const indexPath = Array.from(resourcePaths).find(
+      p => p === '/index.html' || p === 'index.html'
+    )
+    if (indexPath) {
+      defaultRoutes.push(['/*', indexPath])
+    }
+
+    const notFoundPath = Array.from(resourcePaths).find(
+      p => p === '/404.html' || p === '404.html'
+    )
+    if (notFoundPath) {
+      defaultRoutes.push(['/404', notFoundPath])
+    }
+
+    return defaultRoutes.length > 0 ? defaultRoutes : undefined
+  }
+
+  describe('validateRoutes', () => {
+    test('should return valid for routes pointing to existing resources', () => {
+      const resourcePaths = new Set([
+        '/index.html',
+        '/about.html',
+        '/styles.css'
+      ])
+      const routes: Array<[string, string]> = [
+        ['/', '/index.html'],
+        ['/about', '/about.html']
+      ]
+
+      const result = validateRoutes(routes, resourcePaths)
+      assert.equal(result.valid, true)
+      assert.equal(result.invalidRoutes.length, 0)
+    })
+
+    test('should detect routes pointing to non-existent resources', () => {
+      const resourcePaths = new Set(['/index.html', '/about.html'])
+      const routes: Array<[string, string]> = [
+        ['/', '/index.html'],
+        ['/missing', '/nonexistent.html'],
+        ['/also-missing', '/another-missing.html']
+      ]
+
+      const result = validateRoutes(routes, resourcePaths)
+      assert.equal(result.valid, false)
+      assert.equal(result.invalidRoutes.length, 2)
+      assert.deepEqual(result.invalidRoutes, [
+        { route: '/missing', target: '/nonexistent.html' },
+        { route: '/also-missing', target: '/another-missing.html' }
+      ])
+    })
+
+    test('should return valid for empty routes', () => {
+      const resourcePaths = new Set(['/index.html'])
+
+      assert.deepEqual(validateRoutes(undefined, resourcePaths), {
+        valid: true,
+        invalidRoutes: []
+      })
+      assert.deepEqual(validateRoutes([], resourcePaths), {
+        valid: true,
+        invalidRoutes: []
+      })
+    })
+
+    test('should handle empty resource paths', () => {
+      const resourcePaths = new Set<string>()
+      const routes: Array<[string, string]> = [['/', '/index.html']]
+
+      const result = validateRoutes(routes, resourcePaths)
+      assert.equal(result.valid, false)
+      assert.equal(result.invalidRoutes.length, 1)
+    })
+  })
+
+  describe('generateDefaultRoutes', () => {
+    test('should generate wildcard route for index.html', () => {
+      const resourcePaths = new Set(['/index.html', '/about.html'])
+
+      const routes = generateDefaultRoutes(resourcePaths)
+      assert.ok(routes)
+      assert.ok(
+        routes.some(
+          ([route, target]) => route === '/*' && target === '/index.html'
+        )
+      )
+    })
+
+    test('should generate 404 route when 404.html exists', () => {
+      const resourcePaths = new Set(['/index.html', '/404.html'])
+
+      const routes = generateDefaultRoutes(resourcePaths)
+      assert.ok(routes)
+      assert.ok(
+        routes.some(
+          ([route, target]) => route === '/404' && target === '/404.html'
+        )
+      )
+    })
+
+    test('should generate both routes when index.html and 404.html exist', () => {
+      const resourcePaths = new Set(['/index.html', '/404.html', '/about.html'])
+
+      const routes = generateDefaultRoutes(resourcePaths)
+      assert.ok(routes)
+      assert.equal(routes.length, 2)
+      assert.ok(routes.some(([route]) => route === '/*'))
+      assert.ok(routes.some(([route]) => route === '/404'))
+    })
+
+    test('should handle index.html without leading slash', () => {
+      const resourcePaths = new Set(['index.html', 'about.html'])
+
+      const routes = generateDefaultRoutes(resourcePaths)
+      assert.ok(routes)
+      assert.ok(
+        routes.some(
+          ([route, target]) => route === '/*' && target === 'index.html'
+        )
+      )
+    })
+
+    test('should return undefined when no index.html or 404.html', () => {
+      const resourcePaths = new Set(['/about.html', '/contact.html'])
+
+      const routes = generateDefaultRoutes(resourcePaths)
+      assert.equal(routes, undefined)
+    })
+
+    test('should return undefined for empty resource paths', () => {
+      const resourcePaths = new Set<string>()
+
+      const routes = generateDefaultRoutes(resourcePaths)
+      assert.equal(routes, undefined)
+    })
+  })
+})
