@@ -109,6 +109,7 @@ async function fetchSiteResources(
   return resources
 }
 
+/** @deprecated Use SiteService.getSiteDataFromChain instead */
 export async function getSiteDataFromChain(
   suiClient: SuiClient,
   siteId: string

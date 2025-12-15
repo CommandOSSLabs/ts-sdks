@@ -12,6 +12,7 @@ export function buildSiteCreationTx(
   ownerAddr: string
 ): Transaction {
   const tx = new WalrusSiteTransaction(packageId)
+  let commandCount = 0
 
   // Create or reference Site Object
   let site: TransactionArgument
@@ -31,47 +32,66 @@ export function buildSiteCreationTx(
     site = tx.object(siteId)
     if (diff.metadata.op !== 'noop') {
       log('Updating site metadata', diff.metadata.data)
+      log(`[${++commandCount}] Creating new metadata object`)
       const metadata = tx.site_newMetadata(diff.metadata.data)
+      log(`[${++commandCount}] Updating site metadata`)
       tx.site_updateMetadata(site, metadata)
     }
     if (diff.site_name.op !== 'noop') {
-      log('Updating site name', diff.site_name.data)
+      log(`[${++commandCount}] Updating site name`, diff.site_name.data)
       tx.site_updateName(site, diff.site_name.data)
     }
   }
 
   // Update Resources
   for (const { op, data } of diff.resources) {
-    if (op === 'unchanged') continue
-    if (op === 'deleted') {
-      log('Removing resource', data.path)
-      tx.site_removeResourceIfExists(site, data.path)
-      continue
+    switch (op) {
+      case 'unchanged':
+        continue
+      case 'deleted':
+        log(`[${++commandCount}] Removing resource`, data.path)
+        tx.site_removeResourceIfExists(site, data.path)
+        continue
+      case 'created': {
+        log(`Creating new resource`, data.path)
+        log(`[${++commandCount}] Creating new range`, data.range)
+        const range = tx.site_newRangeOption(data.range)
+        log(`[${++commandCount}] Creating new resource object`)
+        const res = tx.site_newResource(data, range)
+        for (const { key, value } of data.headers) {
+          log(`» [${++commandCount}] Adding header`, [key, value])
+          tx.site_addHeader(res, key, value)
+        }
+        log(`[${++commandCount}] Adding resource to site`)
+        tx.site_addResource(site, res)
+        break
+      }
+      case 'removedRoutes':
+        log('Removing all routes as part of resource update...')
+        log(`[${++commandCount}] Removing existing routes...`)
+        tx.site_remoteRoutes(site)
+        break
+      case 'burnedSite':
+        log('Burning site as part of resource update...')
+        log(`[${++commandCount}] Burning site object...`)
+        tx.site_burn(site)
+        break
+      default:
+        throw new Error(`Unhandled resource operation: ${op}`)
     }
-
-    log('Creating new resource')
-    log('Creating new range', data.range)
-    const range = tx.site_newRangeOption(data.range)
-    const res = tx.site_newResource(data, range)
-    log('Adding headers to resource', data.headers)
-    for (const { key, value } of data.headers) {
-      log('» Adding header', [key, value])
-      tx.site_addHeader(res, key, value)
-    }
-    tx.site_addResource(site, res)
   }
 
   if (diff.routes.op !== 'noop') {
     log('Updating site routes...')
 
-    log('Removing existing routes...')
-    tx.site_removeAllRoutesIfExist(site)
+    log(`[${++commandCount}] Removing existing routes...`)
+    tx.site_remoteRoutes(site)
 
     if (diff.routes.data.length) {
-      log('Creating new Routes object...')
+      log(`[${++commandCount}] Creating new Routes object...`)
       tx.site_createRoutes(site)
       for (const [path, val] of diff.routes.data) {
-        log('Inserting route', path, '->', val)
+        log(`[${++commandCount}] Inserting route`, path, '->', val)
         tx.site_insertRoute(site, path, val)
       }
     }
@@ -79,7 +99,7 @@ export function buildSiteCreationTx(
 
   // Transfer site ownership if new site
   if (!siteId) {
-    log('Transferring site ownership to', ownerAddr)
+    log(`[${++commandCount}] Transferring site ownership to`, ownerAddr)
     tx.transferObjects([site], tx.pure.address(ownerAddr))
   }
 

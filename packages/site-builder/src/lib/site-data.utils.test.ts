@@ -192,7 +192,9 @@ describe('computeSiteDataDiff', () => {
       const next = createCompleteSiteData()
       const diff = computeSiteDataDiff(next, current)
 
-      assert.equal(diff.resources.length, 0)
+      // All 4 resources should be marked as unchanged
+      assert.equal(diff.resources.length, 4)
+      assert.ok(diff.resources.every(r => r.op === 'unchanged'))
       assert.equal(diff.routes.op, 'noop')
       assert.equal(diff.metadata.op, 'noop')
       assert.equal(diff.site_name.op, 'noop')
@@ -204,7 +206,9 @@ describe('computeSiteDataDiff', () => {
       const next = createMinimalSiteData()
       const diff = computeSiteDataDiff(next, current)
 
-      assert.equal(diff.resources.length, 0)
+      // 1 resource should be marked as unchanged
+      assert.equal(diff.resources.length, 1)
+      assert.equal(diff.resources[0].op, 'unchanged')
       assert.equal(hasUpdate(diff), false)
     })
 
@@ -427,8 +431,9 @@ describe('computeSiteDataDiff', () => {
 
       assert.equal(diff.routes.op, 'update')
       if (diff.routes.op === 'update') {
-        assert.equal(diff.routes.data.length, 1)
-        assert.deepEqual(diff.routes.data[0], ['/extra', '/extra.html'])
+        // Should include all routes (unchanged + new)
+        assert.equal(diff.routes.data.length, 4)
+        assert.ok(diff.routes.data.some(r => r[0] === '/extra'))
       }
     })
 
@@ -449,7 +454,11 @@ describe('computeSiteDataDiff', () => {
 
       const diff = computeSiteDataDiff(next, current)
 
-      assert.equal(diff.routes.op, 'noop')
+      // Removing all routes is an update (routes become empty)
+      assert.equal(diff.routes.op, 'update')
+      if (diff.routes.op === 'update') {
+        assert.equal(diff.routes.data.length, 0)
+      }
     })
 
     test('should handle no change when both routes are undefined', () => {
@@ -477,8 +486,12 @@ describe('computeSiteDataDiff', () => {
 
       const diff = computeSiteDataDiff(next, current)
 
-      // Removing routes counts as an update since only changed routes are tracked
-      assert.equal(diff.routes.op, 'noop')
+      // Removing routes is an update - data contains all remaining routes
+      assert.equal(diff.routes.op, 'update')
+      if (diff.routes.op === 'update') {
+        assert.equal(diff.routes.data.length, 1)
+        assert.deepEqual(diff.routes.data[0], ['/home', '/index.html'])
+      }
     })
 
     test('should detect route target change', () => {
@@ -493,8 +506,11 @@ describe('computeSiteDataDiff', () => {
 
       assert.equal(diff.routes.op, 'update')
       if (diff.routes.op === 'update') {
-        assert.equal(diff.routes.data.length, 1)
-        assert.deepEqual(diff.routes.data[0], ['/', '/home.html'])
+        // Should include all routes (unchanged + changed)
+        assert.equal(diff.routes.data.length, 3)
+        assert.ok(
+          diff.routes.data.some(r => r[0] === '/' && r[1] === '/home.html')
+        )
       }
     })
   })
@@ -722,7 +738,9 @@ describe('computeSiteDataDiff', () => {
       assert.equal(diff.routes.op, 'update')
       assert.equal(diff.metadata.op, 'update')
       assert.equal(diff.site_name.op, 'noop')
-      assert.equal(diff.resources.length, 0)
+      // 1 resource should be marked as unchanged
+      assert.equal(diff.resources.length, 1)
+      assert.equal(diff.resources[0].op, 'unchanged')
     })
 
     test('should correctly handle sites with resources having range property', () => {
