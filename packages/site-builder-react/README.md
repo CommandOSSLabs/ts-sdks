@@ -12,74 +12,45 @@ pnpm add @cmdoss/site-builder-react
 
 - 🎨 **Vanilla Extract Styling** - Type-safe, zero-runtime CSS with light/dark theme support
 - 🔧 **Nanostores State Management** - Lightweight and performant state management
-- 🚀 **Radix UI Components** - Accessible, composable UI primitives
-- 📦 **TypeScript First** - Full type safety out of the box
+- � **TypeScript First** - Full type safety out of the box
 - 🌐 **Walrus Sites** - Deploy to decentralized Walrus network
 - 🔗 **SuiNS Integration** - Associate your sites with .sui domains
 
 ## Quick Start
 
-### 1. Setup Theme
+### Use PublishButton Component
 
-Wrap your app with the theme class:
-
-```tsx
-import { lightTheme, darkTheme } from '@cmdoss/site-builder-react'
-
-function App() {
-  const isDark = // your dark mode state
-  
-  return (
-    <div className={isDark ? darkTheme : lightTheme}>
-      {/* Your app */}
-    </div>
-  )
-}
-```
-
-### 2. Configure Network
+The `PublishButton` component handles the entire publishing workflow including UI, state management, and wallet interactions:
 
 ```tsx
-import { networkConfigStore } from '@cmdoss/site-builder-react'
-
-// Set network (testnet or mainnet)
-networkConfigStore.setNetwork('mainnet')
-```
-
-### 3. Use PublishButton Component
-
-```tsx
-import { PublishButton, useSitePublishing } from '@cmdoss/site-builder-react'
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder'
+import { PublishButton } from '@cmdoss/site-builder-react'
+import type { IReadOnlyFileManager } from '@cmdoss/site-builder'
+import { SuiClient } from '@mysten/sui/client'
+import { QueryClient } from '@tanstack/react-query'
 
 function MyApp() {
-  const publishing = useSitePublishing({
-    site: mySite, // Your site data
-    nsDomains: myDomains, // SuiNS domains owned by user
-    walrusSitePortalDomain: 'walrus.site',
-    walrusSitePortalSsl: true,
-    sdk: walrusSdk, // WalrusSiteBuilderSdk instance
-    onBuildPackage: async () => {
-      // Build your site and return package URL
-      return { success: true, packageUrl: '...' }
-    },
-    onSaveSiteMetadata: async (params) => {
-      // Save site metadata to your backend
-    },
-    onAssociateDomain: async (nftId, siteId) => {
-      // Associate SuiNS domain with site
-    }
-  })
+  const suiClient = new SuiClient({ url: '...' })
+  const queryClient = new QueryClient()
 
   return (
     <PublishButton
-      site={publishing.state.site}
-      walrusSiteUrl={publishing.state.walrusSiteUrl}
-      nsDomains={publishing.state.nsDomains}
-      isLoadingDomains={publishing.state.isLoadingNsDomains}
-      onDeploy={publishing.actions.handleRunDeploymentStep}
-      onSaveMetadata={publishing.actions.handleSaveSiteMetadata}
-      onAssociateDomain={publishing.actions.handleAssociateDomain}
+      siteId={existingSiteId} // Optional: pass existing site ID to update
+      clients={{ suiClient, queryClient }}
+      currentAccount={walletAccount}
+      signAndExecuteTransaction={signAndExecuteTransaction}
+      portalDomain="walrus.site"
+      portalHttps={true}
+      onPrepareAssets={async () => {
+        // Return IReadOnlyFileManager with files to publish
+        return fileManager
+      }}
+      onUpdateSiteMetadata={async (site) => {
+        // Optional: Save site metadata to your backend
+      }}
+      onAssociatedDomain={async (nftId, siteId) => {
+        // Optional: Handle domain association callback
+      }}
+      onError={(msg) => console.error(msg)}
     />
   )
 }
@@ -89,16 +60,22 @@ function MyApp() {
 
 ### PublishButton
 
-Main component that includes PublishMenu, PublishModal, and SuiNsModal.
+Main component that includes PublishMenu, PublishModal, and SuiNsModal. It wraps everything with a ThemeProvider automatically.
 
 ```tsx
+import { PublishButton } from '@cmdoss/site-builder-react'
+
 <PublishButton
-  site={site}
-  walrusSiteUrl={walrusSiteUrl}
-  nsDomains={nsDomains}
-  onDeploy={handleDeploy}
-  onSaveMetadata={handleSave}
-  onAssociateDomain={handleAssociate}
+  siteId={siteId}
+  clients={{ suiClient, queryClient }}
+  currentAccount={currentAccount}
+  signAndExecuteTransaction={signAndExecuteTransaction}
+  portalDomain="walrus.site"
+  portalHttps={true}
+  onPrepareAssets={handlePrepareAssets}
+  onUpdateSiteMetadata={handleUpdateMetadata}
+  onAssociatedDomain={handleAssociate}
+  onError={handleError}
 >
   {/* Optional: custom trigger button */}
   <Button>My Custom Publish Button</Button>
@@ -113,15 +90,30 @@ You can also use components separately:
 import { PublishMenu, PublishModal, SuiNsModal } from '@cmdoss/site-builder-react'
 
 // Use individually
-<PublishMenu site={site} walrusSiteUrl={url}>
+<PublishMenu
+  siteId={siteId}
+  network="mainnet"
+  portalDomain="walrus.site"
+  portalHttps={true}
+  onPublishClick={handlePublishClick}
+  onDomainClick={handleDomainClick}
+>
   <button>Publish</button>
 </PublishMenu>
 
-<PublishModal onDeploy={handleDeploy} />
+<PublishModal
+  siteId={siteId}
+  clients={{ suiClient, queryClient }}
+  onDeploy={handleDeploy}
+  onSaveMetadata={handleSave}
+/>
 
-<SuiNsModal 
-  site={site}
-  nsDomains={domains}
+<SuiNsModal
+  siteId={siteId}
+  currentAccount={currentAccount}
+  portalDomain="walrus.site"
+  portalHttps={true}
+  clients={{ suiClient, queryClient }}
   onAssociateDomain={handleAssociate}
 />
 ```
@@ -133,31 +125,42 @@ import { PublishMenu, PublishModal, SuiNsModal } from '@cmdoss/site-builder-reac
 Main hook for site publishing logic:
 
 ```tsx
+import { useSitePublishing } from '@cmdoss/site-builder-react'
+
 const publishing = useSitePublishing({
-  site: Site | null,
-  nsDomains?: SuiNsDomain[],
-  isLoadingNsDomains?: boolean,
-  isErrorNsDomains?: boolean,
-  isSavingSiteMetadata?: boolean,
-  walrusSitePortalDomain: string,
-  walrusSitePortalSsl?: boolean,
-  onBuildPackage: () => Promise<BuildResult>,
-  onSaveSiteMetadata?: (params) => Promise<void>,
-  onAssociateDomain?: (nftId, siteId) => Promise<void>,
-  sdk?: IWalrusSiteBuilderSdk
+  siteId: string | undefined,
+  clients: { suiClient: SuiClient, queryClient: QueryClient },
+  currentAccount: WalletAccount | null,
+  signAndExecuteTransaction: ISignAndExecuteTransaction,
+  portalDomain?: string,
+  portalHttps?: boolean,
+  onPrepareAssets: () => Promise<IReadOnlyFileManager>,
+  onUpdateSiteMetadata?: (site: SiteMetadataUpdate) => Promise<SiteMetadata | undefined>,
+  onAssociatedDomain?: (nftId: string, siteId: string) => Promise<void>,
+  onError?: (msg: string) => void
 })
 
 // Access state
 publishing.state.isDeployed
 publishing.state.walrusSiteUrl
 publishing.state.isWorking
+publishing.state.deployStatus
+publishing.state.deployStatusText
+publishing.state.deployStepIndex
+publishing.state.nsDomains
+publishing.state.isLoadingNsDomains
+publishing.state.associatedDomains
+publishing.state.isEditingSiteMetadata
+publishing.state.isSavingSiteMetadata
 // ... more state
 
 // Access actions
 publishing.actions.handleRunDeploymentStep()
 publishing.actions.handleSaveSiteMetadata()
 publishing.actions.handleAssociateDomain(nftId, siteId)
-// ... more actions
+publishing.actions.handleOpenPublishingDialog()
+publishing.actions.handleOpenDomainDialog()
+publishing.actions.handleCancelEditingSiteMetadata()
 ```
 
 ## Stores
@@ -165,11 +168,11 @@ publishing.actions.handleAssociateDomain(nftId, siteId)
 Direct access to nanostores:
 
 ```tsx
-import { 
+import {
   sitePublishingStore,
   siteMetadataStore,
   isDomainDialogOpen,
-  networkConfigStore
+  isAssigningDomain
 } from '@cmdoss/site-builder-react'
 
 // Read state
@@ -188,7 +191,7 @@ const isOpen = useStore(sitePublishingStore.isPublishDialogOpen)
 Base UI components with vanilla-extract styling:
 
 ```tsx
-import { Button, Input, Label, Textarea } from '@cmdoss/site-builder-react'
+import { Button, Input, Label, Textarea, Banner, Stepper } from '@cmdoss/site-builder-react'
 
 <Button variant="default" size="lg">Click me</Button>
 <Button variant="outline">Outline</Button>
@@ -217,12 +220,17 @@ import { Button, Input, Label, Textarea } from '@cmdoss/site-builder-react'
 
 ## Theme Customization
 
-The package uses vanilla-extract with CSS variables. You can customize the theme by overriding CSS variables:
+The package uses vanilla-extract with a ThemeProvider. The `PublishButton` component automatically wraps children with the ThemeProvider. You can customize themes by overriding CSS variables:
 
 ```css
-.light {
+:root, .light {
   --colors-background: #ffffff;
   --colors-foreground: #09090b;
+  --colors-muted: #f4f4f5;
+  --colors-mutedForeground: #71717a;
+  --colors-border: #e4e4e7;
+  --colors-primary: #18181b;
+  --colors-primaryForeground: #fafafa;
   /* ... other variables */
 }
 
@@ -238,10 +246,10 @@ The package uses vanilla-extract with CSS variables. You can customize the theme
 All components and hooks are fully typed:
 
 ```tsx
-import type { 
-  Site,
-  SuiNsDomain,
-  UseSitePublishingParams 
+import type {
+  UseSitePublishingParams,
+  SiteMetadata,
+  SiteMetadataUpdate
 } from '@cmdoss/site-builder-react'
 ```
 

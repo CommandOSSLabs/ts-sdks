@@ -17,6 +17,7 @@ import { buildSiteCreationTx } from './lib/tx-builder'
 import { blobIdBase64ToU256, isSupportedNetwork } from './lib/utils'
 import { fetchBlobsPatches } from './queries/blobs-patches.query'
 import { getSiteDataFromChain } from './queries/site-data.query'
+import { SiteService } from './services/site.service'
 import type {
   ICertifiedBlob,
   IReadOnlyFileManager,
@@ -52,6 +53,7 @@ interface IState {
  */
 export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
   private state: IState = { transactions: [] }
+  private siteSvc: SiteService
 
   constructor(
     /**
@@ -102,6 +104,8 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
      */
     private walletAddr: string
   ) {
+    this.siteSvc = new SiteService(this.suiClient)
+
     // Bind methods
     for (const method of [
       'prepareResources',
@@ -119,17 +123,40 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     const filesPaths = await this.target.listFiles()
     if (filesPaths.length === 0) throw new Error('Empty site')
 
-    const files: WalrusFile[] = []
+    const files: Record<string, WalrusFile> = {}
     for (const path of filesPaths) {
       log('» Reading file', path)
       const contents = await this.target.readFile(path)
-      files.push(WalrusFile.from({ contents, identifier: path }))
+      files[path] = WalrusFile.from({ contents, identifier: path })
     }
 
-    // Step 1: Prepare the files for upload
-    this.state.writeFilesFlow = this.walrus.writeFilesFlow({ files })
+    const diff = await this.siteSvc.calculateSiteDiff(
+      Object.values(files),
+      this.wsResource
+    )
+    log('✅ Site diff calculated', diff)
 
-    log('📦 Getting', files.length, 'files ready for upload...')
+    if (!hasUpdate(diff)) {
+      log('⏭️ No changes detected, skipping...')
+      return
+    }
+    const changedFiles =
+      diff.resources
+        .filter(r => r.op === 'created')
+        .map(r => files[r.data.path]) || []
+    if (!changedFiles.length) {
+      log('⏭️ No changed files detected, skipping...')
+      // TODO: figure out how to skip to update site metadata
+      return
+    }
+    log('⚡️ Detected', changedFiles.length, 'changed files:', changedFiles)
+
+    // Step 1: Prepare the files for upload
+    this.state.writeFilesFlow = this.walrus.writeFilesFlow({
+      files: changedFiles
+    })
+
+    log('📦 Getting', changedFiles.length, 'files ready for upload...')
     await this.state.writeFilesFlow.encode()
     log('✅ Files prepared successfully')
   }

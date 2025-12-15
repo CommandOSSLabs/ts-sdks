@@ -236,10 +236,50 @@ export interface SiteData {
 }
 
 /**
+ * Walrus Site Display Data structure. Used in the on-chain display data for Walrus sites.
+ */
+export interface WalrusSiteDisplayData {
+  creator: string
+  description: string
+  image_url: string
+  link: string
+  project_url: string
+  name: string
+}
+
+/**
+ * Resource Chain Value structure. Used when fetching resource objects from chain.
+ */
+export interface ResourceChainValue {
+  type: string
+  fields: {
+    blob_hash: string
+    blob_id: string
+    headers: {
+      type: string
+      fields: {
+        contents: Array<{
+          type: string
+          fields: {
+            key: string
+            value: string
+          }
+        }>
+      }
+    }
+    path: string
+    range: null | unknown
+  }
+}
+
+/**
  * Calculated Walrus Site Data Diff. Used for building transactions and updates operations.
  */
 export interface SiteDataDiff {
-  resources: { op: 'created' | 'deleted' | 'unchanged'; data: SuiResource }[]
+  resources: {
+    op: 'created' | 'deleted' | 'unchanged' | 'removedRoutes' | 'burnedSite'
+    data: SuiResource
+  }[]
   routes: { op: 'noop' } | { op: 'update'; data: Routes }
   metadata: { op: 'noop' } | { op: 'update'; data: Metadata }
   site_name: { op: 'noop' } | { op: 'update'; data: string }

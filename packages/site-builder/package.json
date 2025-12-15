@@ -15,6 +15,8 @@
   "scripts": {
     "dev": "tsdown --platform browser --watch --ignore-watch .turbo",
     "test": "node --test",
+    "test:watch": "node --test --watch",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude='src/**/*.test.ts'",
     "check:types": "tsc --noEmit",
     "build": "tsdown --platform browser --minify"
   },
