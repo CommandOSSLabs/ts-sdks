@@ -7,12 +7,16 @@ import {
 } from '@mysten/walrus'
 import debug from 'debug'
 import { mainPackage } from './lib/constants'
+import { QUILT_PATCH_ID_INTERNAL_HEADER } from './lib/internal-constants'
 import { getSiteIdFromResponse } from './lib/onchain-data-helpers'
+import { extractPatchHex } from './lib/path-id'
 import { hasUpdate } from './lib/site-data.utils'
 import { buildSiteCreationTx } from './lib/tx-builder'
-import { isSupportedNetwork } from './lib/utils'
+import { blobIdBase64ToU256, isSupportedNetwork } from './lib/utils'
+import { fetchBlobsPatches } from './queries/blobs-patches.query'
 import { SiteService } from './services/site.service'
 import type {
+  ICertifiedBlob,
   IReadOnlyFileManager,
   ISignAndExecuteTransaction,
   ITransaction,
@@ -178,6 +182,71 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     const res = await this.signAndExecuteTransaction({ transaction: certifyTx })
     this.#recordTransaction(res.digest, 'Certify blob storage')
     log('✅ Assets certified successfully', res)
+
+    await this.#fetchAndUpdateBlobPatches()
+  }
+
+  /** Fetches patches for certified blobs and updates the site data accordingly */
+  async #fetchAndUpdateBlobPatches() {
+    const certifiedFiles = await this.state.writeFilesFlow?.listFiles()
+    if (!certifiedFiles?.length) throw new Error('No certified files found')
+    log('📁 Certified files:', certifiedFiles)
+
+    const uniqueBlobIds = Array.from(new Set(certifiedFiles.map(f => f.blobId)))
+    log('🔄 Fetching patches for blob IDs:', uniqueBlobIds)
+    const patches = await fetchBlobsPatches(
+      uniqueBlobIds,
+      this.suiClient.network
+    )
+    log('🧩 Fetched patches:', patches)
+
+    const fileIdentifierByPatchId = new Map(
+      patches.map(p => [p.patch_id, p.identifier])
+    )
+    const hashByBlobId = new Map(
+      this.state.siteUpdates?.resources
+        .filter(a => a.op === 'created')
+        .map(a => [a.data.path, a.data.blob_hash]) || []
+    )
+
+    const blobs: Array<ICertifiedBlob> = certifiedFiles.map(
+      (file): ICertifiedBlob => ({
+        patchId: file.id,
+        blobId: file.blobId,
+        suiObjectId: file.blobObject.id.id,
+        endEpoch: file.blobObject.storage.end_epoch,
+        identifier: fileIdentifierByPatchId.get(file.id) || 'unknown',
+        blobHash:
+          hashByBlobId.get(fileIdentifierByPatchId.get(file.id) || '') ?? ''
+      })
+    )
+    log('✅ Certified blobs:', blobs)
+
+    log('🔄 Updating site data with certified files...')
+    const patchIdByPath = new Map(blobs.map(b => [b.identifier, b.patchId]))
+    const blobIdByPath = new Map(blobs.map(b => [b.identifier, b.blobId]))
+    this.state.siteUpdates?.resources.forEach(r => {
+      if (r.op !== 'created') return
+      const patchId = patchIdByPath.get(r.data.path)
+      const blobId = blobIdByPath.get(r.data.path)
+      if (!patchId) {
+        log(`Blob ID for ${r.data.path} not found`)
+        return
+      }
+      if (!blobId) {
+        log(`Blob ID for ${r.data.path} not found`)
+        return
+      }
+      r.data.blob_id = blobIdBase64ToU256(blobId).toString()
+      r.data.headers.push({
+        key: QUILT_PATCH_ID_INTERNAL_HEADER,
+        value: extractPatchHex(patchId)
+      })
+    })
+    log(
+      '✅ Updated state SiteData with certified files',
+      this.state.siteUpdates
+    )
   }
 
   async writeSite(): Promise<{ siteId: string }> {
