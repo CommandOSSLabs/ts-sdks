@@ -115,6 +115,17 @@ export class WalrusSiteTransaction extends Transaction {
     })
   }
 
+  /**
+   * Adds the move calls to remove the routes object.
+   */
+  site_remoteRoutes(site: TransactionObjectArgument) {
+    return this.moveCall({
+      target: `${this.packageId}::site::remove_all_routes_if_exist`,
+      arguments: [site]
+    })
+  }
+
+  /** @deprecated Use site_remoteRoutes instead */
   site_removeAllRoutesIfExist(site: TransactionObjectArgument) {
     return this.moveCall({
       target: `${this.packageId}::site::remove_all_routes_if_exist`,
@@ -139,6 +150,14 @@ export class WalrusSiteTransaction extends Transaction {
     return this.moveCall({
       target: `${this.packageId}::site::remove_resource_if_exists`,
       arguments: [site, this.pure.string(resourcePath)]
+    })
+  }
+
+  /** Burn the site */
+  site_burn(site: TransactionObjectArgument) {
+    return this.moveCall({
+      target: `${this.packageId}::site::burn`,
+      arguments: [site]
     })
   }
 }

@@ -1,11 +1,13 @@
+import { bcs } from '@mysten/sui/bcs'
 import type {
   DynamicFieldInfo,
   ObjectResponseError,
   SuiClient
 } from '@mysten/sui/client'
+import { deriveDynamicFieldID, fromBase64 } from '@mysten/sui/utils'
 import { mainPackage } from '~/lib'
 import { isSupportedNetwork } from '~/lib/utils'
-import type { SiteData, SuiResource } from '~/types'
+import type { Routes, SiteData, SuiResource } from '~/types'
 
 interface WalrusSiteDisplayData {
   creator: string
@@ -37,6 +39,20 @@ interface ResourceChainValue {
     range: null | unknown
   }
 }
+
+// BCS struct for parsing Routes dynamic field from chain
+const Address = bcs.bytes(32)
+const RoutesStruct = bcs.struct('Routes', {
+  routes_list: bcs.map(bcs.string(), bcs.string())
+})
+const DynamicFieldStruct = bcs.struct('DynamicField', {
+  parentId: Address,
+  name: bcs.vector(bcs.u8()),
+  value: RoutesStruct
+})
+
+/** The name of the dynamic field containing the routes (matches ROUTES_FIELD in site.move) */
+const ROUTES_FIELD = new TextEncoder().encode('routes')
 
 function handleError(error: ObjectResponseError): never {
   switch (error.code) {
@@ -109,6 +125,47 @@ async function fetchSiteResources(
   return resources
 }
 
+/**
+ * Fetch routes from the site's Routes dynamic field.
+ * Routes are stored as a dynamic field with name `b"routes"` (vector<u8>).
+ */
+async function fetchSiteRoutes(
+  suiClient: SuiClient,
+  siteId: string
+): Promise<Routes | undefined> {
+  // Derive the dynamic field ID for the routes field
+  const routesMoveType = 'vector<u8>'
+  const dynamicFieldId = deriveDynamicFieldID(
+    siteId,
+    routesMoveType,
+    bcs.vector(bcs.u8()).serialize(ROUTES_FIELD).toBytes()
+  )
+
+  const routesObj = await suiClient.getObject({
+    id: dynamicFieldId,
+    options: { showBcs: true }
+  })
+
+  const objectData = routesObj.data
+  if (
+    !objectData ||
+    !objectData.bcs ||
+    objectData.bcs.dataType !== 'moveObject'
+  ) {
+    return undefined
+  }
+
+  // Parse the BCS data to extract routes
+  const parsed = DynamicFieldStruct.parse(fromBase64(objectData.bcs.bcsBytes))
+  const routesList = parsed.value.routes_list
+
+  // Convert Map to array of tuples (our Routes type)
+  const routes: Routes = Array.from(routesList.entries())
+
+  return routes.length > 0 ? routes : undefined
+}
+
+/** @deprecated Use SiteService.getSiteDataFromChain instead */
 export async function getSiteDataFromChain(
   suiClient: SuiClient,
   siteId: string
@@ -125,12 +182,17 @@ export async function getSiteDataFromChain(
   const data = objRes.data?.display?.data
   if (!data) throw new Error('No data returned for Walrus site')
   const siteData = data as unknown as WalrusSiteDisplayData
-  const resources = await fetchSiteResources(suiClient, siteId)
+
+  // Fetch resources and routes in parallel
+  const [resources, routes] = await Promise.all([
+    fetchSiteResources(suiClient, siteId),
+    fetchSiteRoutes(suiClient, siteId)
+  ])
 
   return {
     site_name: siteData.name,
     metadata: siteData,
-    resources
-    // routes: [] // TODO: Fetch routes from chain
+    resources,
+    routes
   }
 }

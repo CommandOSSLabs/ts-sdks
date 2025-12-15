@@ -1,10 +1,14 @@
+import debug from 'debug'
 import type { SiteData, SiteDataDiff } from '~/types'
+
+const log = debug('site-builder:site-data-utils')
 
 export function hasUpdate(
   diff: SiteDataDiff | undefined
 ): diff is SiteDataDiff {
   if (!diff) return false
-  if (diff.resources.length > 0) return true
+  // Check if there are any non-unchanged resource operations
+  if (diff.resources.some(r => r.op !== 'unchanged')) return true
   if (diff.site_name.op !== 'noop') return true
   if (diff.metadata.op !== 'noop') return true
   if (diff.routes?.op !== 'noop') return true
@@ -15,6 +19,10 @@ export function computeSiteDataDiff(
   next: SiteData,
   current: SiteData
 ): SiteDataDiff {
+  log('🧮 Compute site data diff...')
+  log('» Current site data:', current)
+  log('» Next site data:', next)
+
   const resource_ops = computeResourceDiff(current, next)
   const route_ops = computeRoutesDiff(current, next)
   const metadata_ops = computeMetadataDiff(current, next)
@@ -23,34 +31,53 @@ export function computeSiteDataDiff(
       ? { op: 'update', data: next.site_name ?? '' }
       : { op: 'noop' }
 
-  return {
+  const result: SiteDataDiff = {
     resources: resource_ops,
     routes: route_ops,
     metadata: metadata_ops,
     site_name: site_name_ops
   }
+  log('✅ Computed site data diff:', result)
+
+  return result
 }
 
 function computeRoutesDiff(
   current: SiteData,
   next: SiteData
 ): SiteDataDiff['routes'] {
-  let route_ops: SiteDataDiff['routes'] = { op: 'update', data: [] }
   const currentRoutePaths = new Map(current.routes || [])
   const nextRoutePaths = new Map(next.routes || [])
 
-  // Find created and updated routes
+  // Check if there are any changes (added, modified, or deleted routes)
+  let hasChanges = false
+
+  // Check for new or modified routes
   for (const [path, resource] of nextRoutePaths) {
     if (
       !currentRoutePaths.has(path) ||
       currentRoutePaths.get(path) !== resource
     ) {
-      // Route is new or has changed
-      route_ops.data.push([path, resource])
+      hasChanges = true
+      break
     }
   }
-  if (route_ops.data.length === 0) route_ops = { op: 'noop' }
-  return route_ops
+
+  // Check for deleted routes
+  if (!hasChanges) {
+    for (const path of currentRoutePaths.keys()) {
+      if (!nextRoutePaths.has(path)) {
+        hasChanges = true
+        break
+      }
+    }
+  }
+
+  // If no changes, return noop
+  if (!hasChanges) return { op: 'noop' }
+
+  // Return update with all routes (unchanged + changed)
+  return { op: 'update', data: next.routes ?? [] }
 }
 
 function computeResourceDiff(
@@ -63,26 +90,40 @@ function computeResourceDiff(
   const currentResMap = new Map(current.resources.map(res => [res.path, res]))
   const nextResMap = new Map(next.resources.map(res => [res.path, res]))
 
-  // Find created and updated resources
-  for (const [path, nextResource] of nextResMap) {
-    const currentResource = currentResMap.get(path)
-
-    if (!currentResource) {
-      // Resource is new - create operation
-      resource_ops.push({ op: 'created', data: nextResource })
-    } else {
-      // Resource exists - check if it has changed by comparing hash
-      if (nextResource.blob_hash !== currentResource.blob_hash) {
-        resource_ops.push({ op: 'created', data: nextResource })
-      }
+  // Collect delete operations first (matching Rust's ordering: delete -> create -> unchanged)
+  // This ensures resources are removed before new ones are added at the same path
+  for (const [path, currentResource] of currentResMap) {
+    const nextResource = nextResMap.get(path)
+    // Delete if: resource no longer exists OR resource has changed (different hash)
+    if (!nextResource || nextResource.blob_hash !== currentResource.blob_hash) {
+      resource_ops.push({ op: 'deleted', data: currentResource })
     }
   }
 
-  // Find deleted resources
-  for (const [path, currentResource] of currentResMap) {
-    if (!nextResMap.has(path))
-      resource_ops.push({ op: 'deleted', data: currentResource })
+  // Then collect create operations
+  for (const [path, nextResource] of nextResMap) {
+    const currentResource = currentResMap.get(path)
+    // Create if: resource is new OR resource has changed (different hash)
+    if (
+      !currentResource ||
+      nextResource.blob_hash !== currentResource.blob_hash
+    ) {
+      resource_ops.push({ op: 'created', data: nextResource })
+    }
   }
+
+  // Finally collect unchanged operations
+  for (const [path, nextResource] of nextResMap) {
+    const currentResource = currentResMap.get(path)
+    // Unchanged if: resource exists and hash matches
+    if (
+      currentResource &&
+      nextResource.blob_hash === currentResource.blob_hash
+    ) {
+      resource_ops.push({ op: 'unchanged', data: currentResource })
+    }
+  }
+
   return resource_ops
 }
 
