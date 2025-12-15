@@ -244,9 +244,7 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
         tx,
         'Update Walrus site metadata'
       )
-      // wait 1 second
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      res = await this.suiClient.getTransactionBlock({
+      res = await this.suiClient.waitForTransaction({
         digest,
         options: {
           showEffects: true
