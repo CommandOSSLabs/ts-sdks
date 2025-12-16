@@ -1,5 +1,6 @@
 export * from './useEpochDuration'
 export * from './useSitePublishing'
 export * from './useSuiNsClient'
+export * from './useTransactionExecutor'
 export * from './useWalrusClient'
 export * from './useZenFsWorkspace'

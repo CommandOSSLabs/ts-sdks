@@ -1,6 +1,5 @@
-import type { SuiClient, SuiTransactionBlockResponse } from '@mysten/sui/client'
+import type { SuiClient } from '@mysten/sui/client'
 import type { Transaction } from '@mysten/sui/transactions'
-import { toBase64 } from '@mysten/sui/utils'
 import {
   type WalrusClient,
   WalrusFile,
@@ -16,6 +15,7 @@ import { buildSiteCreationTx } from './lib/tx-builder'
 import { blobIdBase64ToU256, isSupportedNetwork } from './lib/utils'
 import { fetchBlobsPatches } from './queries/blobs-patches.query'
 import { SiteService } from './services/site.service'
+import { TransactionExecutorService } from './services/transaction-executor.service'
 import type {
   ICertifiedBlob,
   IReadOnlyFileManager,
@@ -50,6 +50,7 @@ interface IState {
 export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
   private state: IState = { transactions: [] }
   private siteSvc: SiteService
+  private txExecutor: TransactionExecutorService
 
   constructor(
     /**
@@ -101,6 +102,12 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
     private walletAddr: string
   ) {
     this.siteSvc = new SiteService(this.suiClient)
+    this.txExecutor = new TransactionExecutorService({
+      suiClient: this.suiClient,
+      walletAddress: this.walletAddr,
+      signAndExecuteTransaction: this.signAndExecuteTransaction,
+      sponsorConfig: this.sponsorConfig
+    })
 
     // Bind methods
     for (const method of [
@@ -169,18 +176,11 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
       owner: this.walletAddr
     })
 
-    let digest: string
-    if (this.sponsorConfig?.apiClient) {
-      digest = await this.#executeSponsoredTransaction(
-        tx,
-        'Register blob on Walrus network'
-      )
-    } else {
-      digest = await this.#executeRegularTransaction(
-        tx,
-        'Register blob on Walrus network'
-      )
-    }
+    const digest = await this.txExecutor.execute({
+      transaction: tx,
+      description: 'Register blob on Walrus network',
+      onTransactionRecorded: this.#recordTransaction.bind(this)
+    })
 
     // Step 3: Upload the data to storage nodes
     // This can be done immediately after the register step, or as a separate step the user initiates
@@ -196,16 +196,13 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
 
     const certifyTx = writeFilesFlow.certify()
 
-    if (this.sponsorConfig?.apiClient) {
-      await this.#executeSponsoredTransaction(certifyTx, 'Certify blob storage')
-    } else {
-      const res = await this.signAndExecuteTransaction({
-        transaction: certifyTx
-      })
-      this.#recordTransaction(res.digest, 'Certify blob storage')
-      log('✅ Assets certified successfully', res)
-    }
+    await this.txExecutor.execute({
+      transaction: certifyTx,
+      description: 'Certify blob storage',
+      onTransactionRecorded: this.#recordTransaction.bind(this)
+    })
 
+    log('✅ Assets certified successfully')
     await this.#fetchAndUpdateBlobPatches()
   }
 
@@ -287,24 +284,13 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
       ownerAddr: this.walletAddr
     })
 
-    let res: SuiTransactionBlockResponse
-    if (this.sponsorConfig?.apiClient) {
-      const digest = await this.#executeSponsoredTransaction(
-        tx,
-        'Update Walrus site metadata'
-      )
-      res = await this.suiClient.waitForTransaction({
-        digest,
-        options: {
-          showEffects: true
-        }
-      })
-      console.log('🔍 Sponsored transaction response:', res)
-    } else {
-      res = await this.signAndExecuteTransaction({ transaction: tx })
-      console.log('🔍 Regular transaction response:', res)
-      this.#recordTransaction(res.digest, 'Update Walrus site metadata')
-    }
+    const res = await this.txExecutor.executeWithResponse({
+      transaction: tx,
+      description: 'Update Walrus site metadata',
+      onTransactionRecorded: this.#recordTransaction.bind(this)
+    })
+
+    console.log('🔍 Transaction response:', res)
 
     if (this.wsResource.object_id) {
       log('✅ Site updated successfully', res)
@@ -323,80 +309,11 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
   }
 
   /**
-   * Handle sponsored transaction execution.
-   */
-  async #executeSponsoredTransaction(
-    transaction: Transaction,
-    description: string
-  ): Promise<string> {
-    if (!this.sponsorConfig?.apiClient) {
-      throw new Error('Sponsor config not available')
-    }
-
-    log(`🎫 Executing sponsored transaction: ${description}`)
-
-    // Step 1: Set sender
-    transaction.setSenderIfNotSet(this.walletAddr)
-
-    const txBytes = await transaction.build({
-      client: this.suiClient,
-      onlyTransactionKind: true
-    })
-
-    // Step 2: Request sponsorship
-    const { bytes, digest: sponsorDigest } =
-      await this.sponsorConfig.apiClient.sponsorTransaction({
-        txBytes: toBase64(txBytes),
-        sender: this.walletAddr
-      })
-    log(`✅ Transaction sponsored with digest: ${sponsorDigest}`)
-
-    // Step 3: Sign the sponsored transaction
-    const { signature } = await this.sponsorConfig.signTransaction({
-      transaction: bytes
-    })
-    if (!signature) {
-      throw new Error(
-        'Failed to sign sponsored transaction: No signature returned'
-      )
-    }
-
-    // Step 4: Execute the sponsored transaction
-    const { digest: executeDigest } =
-      await this.sponsorConfig.apiClient.executeTransaction({
-        digest: sponsorDigest,
-        signature: signature
-      })
-    log(`✅ Sponsored transaction executed: ${executeDigest}`)
-
-    this.#recordTransaction(executeDigest, description)
-    return executeDigest
-  }
-
-  /**
-   * Handle regular (non-sponsored) transaction execution.
-   */
-  async #executeRegularTransaction(
-    transaction: Transaction,
-    description: string
-  ): Promise<string> {
-    const { digest } = await this.signAndExecuteTransaction({ transaction })
-    this.#recordTransaction(digest, description)
-    log(`✅ Regular transaction executed: ${digest}`)
-    return digest
-  }
-
-  /**
    * Record a transaction with its description.
    */
-  #recordTransaction(digest: string, description: string): void {
+  #recordTransaction(transaction: ITransaction): void {
     if (!this.state.transactions) {
       this.state.transactions = []
-    }
-    const transaction = {
-      digest,
-      description,
-      timestamp: Date.now()
     }
     this.state.transactions.push(transaction)
   }

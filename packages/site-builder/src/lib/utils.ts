@@ -60,3 +60,23 @@ export function u256ToBlobIdBase64(value: bigint): string {
   // Base64url encode without padding
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
+
+export function fromBase64(base64String: string): Uint8Array<ArrayBuffer> {
+  return Uint8Array.from(atob(base64String), char => char.charCodeAt(0))
+}
+
+const CHUNK_SIZE = 8192
+export function toBase64(bytes: Uint8Array): string {
+  // Special-case the simple case for speed's sake.
+  if (bytes.length < CHUNK_SIZE) {
+    return btoa(String.fromCharCode(...bytes))
+  }
+
+  let output = ''
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const chunk = bytes.slice(i, i + CHUNK_SIZE)
+    output += String.fromCharCode(...chunk)
+  }
+
+  return btoa(output)
+}
