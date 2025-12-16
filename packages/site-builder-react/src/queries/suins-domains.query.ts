@@ -156,7 +156,7 @@ export function useSuiNsDomainsQuery(
               walrusSiteUrl:
                 network === 'mainnet'
                   ? `https://${r.name.slice(0, -4)}.wal.app`
-                  : `http://${r.name.slice(0, -4)}.localhost:3000`
+                  : `http://${r.name.slice(0, -4)}.localhost:3003`
             }
         ),
     [domains, network]

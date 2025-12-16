@@ -1,4 +1,7 @@
-import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder'
+import {
+  objectIdToWalrusSiteUrl,
+  suinsDomainToWalrusSiteUrl
+} from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import { useStore } from '@nanostores/react'
@@ -148,13 +151,21 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
                   <div key={domain.nftId} className={styles.domainItem}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <a
-                        href={domain.walrusSiteUrl}
+                        href={suinsDomainToWalrusSiteUrl(
+                          domain.name,
+                          portalDomain,
+                          portalHttps
+                        )}
                         target="_blank"
                         rel="noreferrer"
                         className={styles.link}
                         style={{ fontSize: '0.875rem', fontWeight: 500 }}
                       >
-                        {domain.walrusSiteUrl}
+                        {suinsDomainToWalrusSiteUrl(
+                          domain.name,
+                          portalDomain,
+                          portalHttps
+                        )}
                       </a>
                       <p
                         style={{
@@ -192,7 +203,7 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
                       </a>
                       <p
                         style={{
-                          marginTop: '0.5rem',
+                          marginTop: '0.1rem',
                           fontSize: '0.75rem',
                           color: 'var(--muted-foreground)'
                         }}

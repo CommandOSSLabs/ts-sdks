@@ -57,6 +57,8 @@ const PublishButton: FC<Props> = ({
         network={network === 'mainnet' ? 'mainnet' : 'testnet'}
         portalDomain={portalDomain}
         portalHttps={portalHttps}
+        clients={clients}
+        currentAccount={currentAccount}
       >
         {children || <Button>Publish</Button>}
       </PublishMenu>
