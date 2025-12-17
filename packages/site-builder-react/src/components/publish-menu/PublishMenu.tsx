@@ -1,7 +1,15 @@
-import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder'
+import {
+  objectIdToWalrusSiteUrl,
+  suinsDomainToWalrusSiteUrl
+} from '@cmdoss/site-builder'
+import type { SuiClient } from '@mysten/sui/client'
+import type { WalletAccount } from '@mysten/wallet-standard'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import type { QueryClient } from '@tanstack/react-query'
 import { ExternalLink, Globe2 } from 'lucide-react'
 import type { FC, ReactNode } from 'react'
+import { useSuiNsDomainsQuery } from '~/queries'
+import { isDomainDialogOpen } from '~/stores'
 import { Banner } from '../ui'
 import { Button } from '../ui/Button'
 import * as styles from './PublishMenu.css'
@@ -16,6 +24,11 @@ interface PublishMenuProps {
   portalDomain?: string
   /** Whether to use HTTPS for the portal URL. */
   portalHttps?: boolean
+  clients: {
+    suiClient: SuiClient
+    queryClient: QueryClient
+  }
+  currentAccount: WalletAccount | null
 }
 
 const PublishMenu: FC<PublishMenuProps> = ({
@@ -25,12 +38,25 @@ const PublishMenu: FC<PublishMenuProps> = ({
   onDomainClick,
   portalDomain,
   portalHttps,
-  network = 'testnet'
+  network = 'testnet',
+  clients,
+  currentAccount
 }) => {
   const isDeployed = !!siteId
   const walrusSiteUrl = siteId
     ? objectIdToWalrusSiteUrl(siteId, portalDomain, portalHttps)
     : undefined
+
+  const {
+    data: nsDomains,
+    isLoading: isLoadingDomains,
+    isError: isErrorDomains
+  } = useSuiNsDomainsQuery(currentAccount, {
+    suiClient: clients.suiClient,
+    queryClient: clients.queryClient
+  })
+
+  const associatedDomains = nsDomains.filter(d => d.walrusSiteId === siteId)
 
   const truncateUrl = (url: string) => {
     try {
@@ -121,20 +147,39 @@ const PublishMenu: FC<PublishMenuProps> = ({
           <div className={styles.footer}>
             {isDeployed && walrusSiteUrl ? (
               <div className={styles.buttonGroup}>
-                <a
-                  href={walrusSiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                {associatedDomains.length > 0 &&
+                !isLoadingDomains &&
+                !isErrorDomains ? (
+                  <a
+                    href={suinsDomainToWalrusSiteUrl(
+                      associatedDomains[0].name,
+                      portalDomain,
+                      portalHttps
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button
+                      variant="outline"
+                      size="default"
+                      style={{ width: '100%' }}
+                    >
+                      Visit Site
+                    </Button>
+                  </a>
+                ) : (
+                  // open suins
                   <Button
                     variant="outline"
                     size="default"
                     style={{ width: '100%' }}
+                    onClick={() => {
+                      isDomainDialogOpen.set(true)
+                    }}
                   >
-                    Visit Site
-                    <ExternalLink size="1rem" />
+                    Link SuiNS
                   </Button>
-                </a>
+                )}
                 <Button
                   variant="gradient"
                   size="default"

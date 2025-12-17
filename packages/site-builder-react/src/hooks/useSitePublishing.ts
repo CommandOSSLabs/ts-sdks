@@ -14,7 +14,6 @@ import { useStore } from '@nanostores/react'
 import type { QueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { useWalrusSiteQuery } from '~/queries'
-import { queryKeys } from '~/queries/keys'
 import { useSuiNsDomainsQuery } from '~/queries/suins-domains.query'
 import {
   isAssigningDomain,
@@ -27,6 +26,7 @@ import {
   sitePublishingStore
 } from '~/stores/site-publishing.store'
 import { useSuiNsClient } from './useSuiNsClient'
+import { useTransactionExecutor } from './useTransactionExecutor'
 import { useWalrusClient } from './useWalrusClient'
 
 export interface UseSitePublishingParams {
@@ -84,7 +84,14 @@ export function useSitePublishing({
 }: UseSitePublishingParams) {
   const suinsClient = useSuiNsClient(suiClient)
   const walrusClient = useWalrusClient(suiClient)
-  const { network } = suiClient
+
+  // Transaction executor with sponsor support
+  const txExecutor = useTransactionExecutor({
+    suiClient,
+    walletAddress: currentAccount?.address,
+    signAndExecuteTransaction,
+    sponsorConfig
+  })
 
   const sdk: IWalrusSiteBuilderSdk | undefined = useMemo(() => {
     if (!suiClient || !walrusClient || !currentAccount) return
@@ -209,6 +216,7 @@ export function useSitePublishing({
   const handleAssociateDomain = async (nftId: string, siteId: string) => {
     if (!suinsClient) return onError?.('SuiNS client not available')
     if (!nftId) return onError?.('No domain selected')
+    if (!txExecutor) return onError?.('Transaction executor not available')
 
     isAssigningDomain.set(true)
     try {
@@ -220,11 +228,22 @@ export function useSitePublishing({
           key: ALLOWED_METADATA.walrusSiteId,
           value: siteId
         })
-        const { digest } = await signAndExecuteTransaction({ transaction })
-        await suiClient.waitForTransaction({ digest })
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.suinsDomainDetail(nftId, network)
+
+        const digest = await txExecutor.execute({
+          transaction,
+          description: 'Associate domain with Walrus site'
         })
+
+        await suiClient.waitForTransaction({ digest })
+
+        // Invalidate all SuiNS queries to refetch updated domain data
+        await queryClient.invalidateQueries({
+          predicate: query => {
+            const key = query.queryKey[0]
+            return key === 'suins-domains' || key === 'suins-domain-detail'
+          }
+        })
+
         await onAssociatedDomain?.(nftId, siteId)
       } catch (e) {
         console.error('🚨 Failed to update SuiNS metadata:', e)

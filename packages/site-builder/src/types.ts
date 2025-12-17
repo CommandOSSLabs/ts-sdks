@@ -55,7 +55,7 @@ export interface ISponsorConfig {
   /**
    * The API client used to sponsor transactions.
    */
-  apiClient: ISponsorApiClient | null
+  apiClient: ISponsorApiClient
   /**
    * The function used to sign transactions.
    */

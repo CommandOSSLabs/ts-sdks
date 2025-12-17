@@ -1,5 +1,11 @@
 # @cmdoss/site-builder
 
+## 1.2.0
+
+### Minor Changes
+
+- a4e8041: handle ui change
+
 ## 1.0.1
 
 ### Minor Changes

@@ -637,18 +637,54 @@ function MetadataEditDialog({ isOpen, onClose }: MetadataEditDialogProps) {
   const isDirty = useStore(siteMetadataStore.isDirty)
   const isLoading = useStore(siteMetadataStore.loading)
 
-  const [showUrlDialog, setShowUrlDialog] = useState(false)
+  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file')
+  const [imageUrl, setImageUrl] = useState('')
+  const [urlError, setUrlError] = useState('')
+  const [fileSizeError, setFileSizeError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleUrlImageSubmit = (url: string) => {
-    siteMetadataStore.imageUrl.set(url)
-  }
+  const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB in bytes
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    siteMetadataStore.imageUrl.set(file ?? null)
+    if (!file) return
+
+    // Check file size
+    if (file.size > MAX_FILE_SIZE) {
+      setFileSizeError(
+        `File size exceeds 5MB limit (${(file.size / 1024 / 1024).toFixed(2)}MB)`
+      )
+      e.target.value = '' // Reset input
+      return
+    }
+
+    setFileSizeError('')
+    siteMetadataStore.imageUrl.set(file)
   }
+
+  const handleUrlSubmit = () => {
+    if (!imageUrl.trim()) {
+      setUrlError('Please enter a valid URL')
+      return
+    }
+
+    try {
+      new URL(imageUrl)
+      siteMetadataStore.imageUrl.set(imageUrl)
+      setImageUrl('')
+      setUrlError('')
+      setUploadMode('file')
+    } catch {
+      setUrlError('Please enter a valid URL')
+    }
+  }
+
   const handleCancel = () => {
     siteMetadataStore.cancelEdit()
+    setUploadMode('file')
+    setImageUrl('')
+    setUrlError('')
+    setFileSizeError('')
     onClose()
   }
 
@@ -698,124 +734,266 @@ function MetadataEditDialog({ isOpen, onClose }: MetadataEditDialogProps) {
             <div>
               <div className={styles.fieldLabel}>
                 <Label>Preview Image</Label>
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--muted-foreground)'
+                  }}
+                >
+                  Max 5MB
+                </span>
+              </div>
+
+              {/* Upload Mode Toggle */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  marginBottom: '1rem',
+                  padding: '0.25rem',
+                  backgroundColor: 'var(--muted)',
+                  borderRadius: '0.5rem'
+                }}
+              >
                 <button
                   type="button"
-                  onClick={() => setShowUrlDialog(true)}
+                  onClick={() => {
+                    setUploadMode('file')
+                    setUrlError('')
+                  }}
                   style={{
-                    padding: '0.25rem',
-                    cursor: 'pointer',
+                    flex: 1,
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
                     border: 'none',
-                    background: 'transparent',
-                    color: 'var(--muted-foreground)',
-                    borderRadius: '0.25rem',
-                    transition: 'background-color 0.2s'
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    backgroundColor:
+                      uploadMode === 'file'
+                        ? 'var(--background)'
+                        : 'transparent',
+                    color:
+                      uploadMode === 'file'
+                        ? 'var(--foreground)'
+                        : 'var(--muted-foreground)',
+                    boxShadow:
+                      uploadMode === 'file'
+                        ? '0 1px 3px rgba(0, 0, 0, 0.1)'
+                        : 'none'
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = 'var(--muted)'
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                  }}
-                  aria-label="Use image from URL"
                 >
-                  <svg
-                    width="20"
-                    height="20"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <title>Link icon</title>
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.658 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                    />
-                  </svg>
+                  Upload File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadMode('url')
+                    setFileSizeError('')
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    backgroundColor:
+                      uploadMode === 'url'
+                        ? 'var(--background)'
+                        : 'transparent',
+                    color:
+                      uploadMode === 'url'
+                        ? 'var(--foreground)'
+                        : 'var(--muted-foreground)',
+                    boxShadow:
+                      uploadMode === 'url'
+                        ? '0 1px 3px rgba(0, 0, 0, 0.1)'
+                        : 'none'
+                  }}
+                >
+                  From URL
                 </button>
               </div>
 
-              <div
-                className={styles.uploadAreaSquare}
-                onClick={() => !isLoading && fileInputRef.current?.click()}
-                style={{
-                  cursor: isLoading ? 'wait' : 'pointer',
-                  opacity: isLoading ? 0.6 : 1
-                }}
-              >
-                {isLoading ? (
-                  <div className={styles.uploadPlaceholder}>
+              {uploadMode === 'file' ? (
+                <>
+                  <div
+                    className={styles.uploadAreaSquare}
+                    onClick={() => !isLoading && fileInputRef.current?.click()}
+                    style={{
+                      cursor: isLoading ? 'wait' : 'pointer',
+                      opacity: isLoading ? 0.6 : 1
+                    }}
+                  >
+                    {isLoading ? (
+                      <div className={styles.uploadPlaceholder}>
+                        <div
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            border: '3px solid var(--muted)',
+                            borderTop: '3px solid var(--foreground)',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite',
+                            marginBottom: '0.75rem'
+                          }}
+                        />
+                        <p
+                          style={{
+                            fontWeight: 500,
+                            color: 'var(--foreground)',
+                            textAlign: 'center'
+                          }}
+                        >
+                          Uploading...
+                        </p>
+                      </div>
+                    ) : imageDisplayUrl ? (
+                      <img
+                        src={imageDisplayUrl}
+                        alt="Preview"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          borderRadius: '0.5rem'
+                        }}
+                      />
+                    ) : (
+                      <div className={styles.uploadPlaceholder}>
+                        <Upload
+                          size={32}
+                          style={{
+                            marginBottom: '0.75rem',
+                            color: 'var(--muted-foreground)'
+                          }}
+                        />
+                        <p
+                          style={{
+                            fontWeight: 500,
+                            color: 'var(--foreground)',
+                            textAlign: 'center'
+                          }}
+                        >
+                          Click to upload
+                        </p>
+                        <p
+                          style={{
+                            fontSize: '0.875rem',
+                            color: 'var(--muted-foreground)',
+                            textAlign: 'center',
+                            marginTop: '0.25rem'
+                          }}
+                        >
+                          Square image recommended
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    style={{ display: 'none' }}
+                  />
+                  {fileSizeError && (
+                    <p
+                      style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--destructive)',
+                        marginTop: '0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                    >
+                      <Info size={14} />
+                      {fileSizeError}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem'
+                  }}
+                >
+                  {imageDisplayUrl && (
                     <div
                       style={{
-                        width: '32px',
-                        height: '32px',
-                        border: '3px solid var(--muted)',
-                        borderTop: '3px solid var(--foreground)',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite',
-                        marginBottom: '0.75rem'
-                      }}
-                    />
-                    <p
-                      style={{
-                        fontWeight: 500,
-                        color: 'var(--foreground)',
-                        textAlign: 'center'
+                        width: '100%',
+                        aspectRatio: '1',
+                        borderRadius: '0.5rem',
+                        overflow: 'hidden',
+                        border: '1px solid var(--border)'
                       }}
                     >
-                      Uploading...
-                    </p>
+                      <img
+                        src={imageDisplayUrl}
+                        alt="Preview"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <Label>Image URL</Label>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '0.5rem',
+                        marginTop: '0.5rem'
+                      }}
+                    >
+                      <Input
+                        value={imageUrl}
+                        onChange={e => {
+                          setImageUrl(e.target.value)
+                          setUrlError('')
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            handleUrlSubmit()
+                          }
+                        }}
+                        placeholder="https://example.com/image.png"
+                        style={{ flex: 1 }}
+                      />
+                      <Button
+                        onClick={handleUrlSubmit}
+                        style={{ flexShrink: 0 }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                    {urlError && (
+                      <p
+                        style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--destructive)',
+                          marginTop: '0.5rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}
+                      >
+                        <Info size={14} />
+                        {urlError}
+                      </p>
+                    )}
                   </div>
-                ) : imageDisplayUrl ? (
-                  <img
-                    src={imageDisplayUrl}
-                    alt="Preview"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      borderRadius: '0.5rem'
-                    }}
-                  />
-                ) : (
-                  <div className={styles.uploadPlaceholder}>
-                    <Upload
-                      size={32}
-                      style={{
-                        marginBottom: '0.75rem',
-                        color: 'var(--muted-foreground)'
-                      }}
-                    />
-                    <p
-                      style={{
-                        fontWeight: 500,
-                        color: 'var(--foreground)',
-                        textAlign: 'center'
-                      }}
-                    >
-                      Click to upload
-                    </p>
-                    <p
-                      style={{
-                        fontSize: '0.875rem',
-                        color: 'var(--muted-foreground)',
-                        textAlign: 'center',
-                        marginTop: '0.25rem'
-                      }}
-                    >
-                      Square image recommended
-                    </p>
-                  </div>
-                )}
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                style={{ display: 'none' }}
-              />
+                </div>
+              )}
             </div>
           </div>
 
@@ -857,208 +1035,6 @@ function MetadataEditDialog({ isOpen, onClose }: MetadataEditDialogProps) {
                 </Button>
               </Dialog.Close>
             </div>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-
-      <ImageUrlDialog
-        isOpen={showUrlDialog}
-        onClose={() => setShowUrlDialog(false)}
-        onSubmit={handleUrlImageSubmit}
-      />
-    </Dialog.Root>
-  )
-}
-
-interface ImageUrlDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (url: string) => void
-}
-
-function ImageUrlDialog({ isOpen, onClose, onSubmit }: ImageUrlDialogProps) {
-  const [url, setUrl] = useState('')
-  const [error, setError] = useState('')
-
-  const handleSubmit = () => {
-    if (!url.trim()) {
-      setError('Please enter a valid URL')
-      return
-    }
-
-    try {
-      new URL(url)
-      onSubmit(url)
-      setUrl('')
-      setError('')
-      onClose()
-    } catch {
-      setError('Please enter a valid URL')
-    }
-  }
-
-  return (
-    <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Portal>
-        <Dialog.Overlay
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 80
-          }}
-        />
-        <Dialog.Content
-          style={{
-            position: 'fixed',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '90vw',
-            maxWidth: '28rem',
-            backgroundColor: 'var(--background)',
-            border: '1px solid var(--border)',
-            borderRadius: '0.5rem',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            zIndex: 90
-          }}
-        >
-          {/* Header */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '1.5rem',
-              borderBottom: '1px solid var(--border)'
-            }}
-          >
-            <div />
-            <Dialog.Close asChild>
-              <button
-                type="button"
-                style={{
-                  padding: '0.25rem',
-                  cursor: 'pointer',
-                  border: 'none',
-                  background: 'transparent',
-                  color: 'var(--foreground)',
-                  borderRadius: '0.5rem',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = 'var(--muted)'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-              >
-                <X size={20} />
-              </button>
-            </Dialog.Close>
-          </div>
-
-          {/* Content */}
-          <div
-            style={{
-              padding: '1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.5rem'
-            }}
-          >
-            {/* Icon */}
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <svg
-                  width="24"
-                  height="24"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  style={{ color: 'var(--muted-foreground)' }}
-                >
-                  <title>Puzzle icon</title>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20H7m6-4h.01M9 20h6"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            {/* Title and Description */}
-            <div style={{ textAlign: 'center' }}>
-              <h2
-                style={{
-                  fontSize: '1.125rem',
-                  fontWeight: 600,
-                  color: 'var(--foreground)',
-                  marginBottom: '0.5rem'
-                }}
-              >
-                Use image from URL
-              </h2>
-              <p
-                style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--muted-foreground)'
-                }}
-              >
-                Paste an image URL to use for your site preview.
-              </p>
-            </div>
-
-            {/* Input */}
-            <div>
-              <Label>Image URL</Label>
-              <Input
-                value={url}
-                onChange={e => {
-                  setUrl(e.target.value)
-                  setError('')
-                }}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    handleSubmit()
-                  }
-                }}
-                placeholder="https://example.com/og.png"
-                style={{ marginTop: '0.5rem' }}
-              />
-              {error && (
-                <p
-                  style={{
-                    fontSize: '0.75rem',
-                    color: 'red',
-                    marginTop: '0.5rem'
-                  }}
-                >
-                  {error}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div
-            style={{ padding: '1.5rem', borderTop: '1px solid var(--border)' }}
-          >
-            <Button onClick={handleSubmit} style={{ width: '100%' }}>
-              Submit
-            </Button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
