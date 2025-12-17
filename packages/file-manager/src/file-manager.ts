@@ -23,7 +23,7 @@ export class ZenFsFileManager implements IFileManager {
       const normalizedWorkspace = path.normalize(this.workspaceDir)
       const normalizedMount = path.normalize(this.mountDir)
       if (
-        !normalizedWorkspace.startsWith(normalizedMount + '/') &&
+        !normalizedWorkspace.startsWith(`${normalizedMount}/`) &&
         normalizedWorkspace !== normalizedMount
       ) {
         throw new Error(

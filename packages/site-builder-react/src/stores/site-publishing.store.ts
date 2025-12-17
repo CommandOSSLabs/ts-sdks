@@ -139,7 +139,7 @@ class SitePublishingStore {
   async runDeploymentStep(
     sdk: IWalrusSiteBuilderSdk,
     site: SiteMetadata,
-    onPrepareAssets: () => Promise<IReadOnlyFileManager>
+    target: IReadOnlyFileManager | null
   ): Promise<TResult<string>> {
     if (this.isWorking.get()) return failed('Another operation is in progress')
 
@@ -149,11 +149,11 @@ class SitePublishingStore {
       case DeploymentStatus.Idle: {
         this.deployStatus.set(DeploymentStatus.Preparing)
         try {
-          const fm = await onPrepareAssets()
-          const assetsSize = await fm.getSize()
+          if (!target) return failed('No assets to deploy')
+          const assetsSize = await target.getSize()
           if (!assetsSize) throw new Error('No assets to deploy')
           this.assetsSize.set(assetsSize)
-          this.currentFlow = sdk.executeSiteUpdateFlow(fm, {
+          this.currentFlow = sdk.executeSiteUpdateFlow(target, {
             object_id: site.id,
             site_name: site.title,
             metadata: {
@@ -174,7 +174,7 @@ class SitePublishingStore {
               this.deployStatus.set(DeploymentStatus.Certified)
             }
           } else this.deployStatus.set(DeploymentStatus.Prepared)
-          return this.runDeploymentStep(sdk, site, onPrepareAssets)
+          return this.runDeploymentStep(sdk, site, target)
         } catch (e) {
           console.error('Failed to prepare assets:', e)
           const msg =
@@ -197,7 +197,7 @@ class SitePublishingStore {
         }
 
         this.deployStatus.set(DeploymentStatus.Encoded)
-        return this.runDeploymentStep(sdk, site, onPrepareAssets)
+        return this.runDeploymentStep(sdk, site, target)
       }
 
       case DeploymentStatus.Encoded: {
@@ -216,7 +216,7 @@ class SitePublishingStore {
         }
 
         this.deployStatus.set(DeploymentStatus.Uploaded)
-        return this.runDeploymentStep(sdk, site, onPrepareAssets)
+        return this.runDeploymentStep(sdk, site, target)
       }
 
       case DeploymentStatus.Uploaded: {
@@ -225,7 +225,7 @@ class SitePublishingStore {
         try {
           await this.currentFlow.certifyResources()
           this.deployStatus.set(DeploymentStatus.Certified)
-          return this.runDeploymentStep(sdk, site, onPrepareAssets)
+          return this.runDeploymentStep(sdk, site, target)
         } catch (e) {
           console.error('Failed to certify assets:', e)
           this.deployStatus.set(DeploymentStatus.Uploaded)

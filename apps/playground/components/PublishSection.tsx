@@ -24,7 +24,7 @@ interface PublishSectionProps {
   siteId: string | undefined
   currentAccount: ReturnType<typeof useCurrentAccount>
   assets: { path: string; content: string | Uint8Array }[]
-  onPrepareAssets: () => Promise<IReadOnlyFileManager>
+  target: IReadOnlyFileManager | null
   onUpdateSiteMetadata: (site: SiteMetadataUpdate) => Promise<SiteMetadata>
   onError: (msg: string) => void
   signAndExecuteTransaction: ISignAndExecuteTransaction
@@ -42,14 +42,12 @@ export default function PublishSection({
   siteId,
   currentAccount,
   assets,
-  onPrepareAssets,
+  target,
   onUpdateSiteMetadata,
   onError,
   signAndExecuteTransaction,
   sponsorConfig,
-  onSponsorConfigChange,
   sponsorEnabled = false,
-  sponsorUrl = 'http://localhost:8787',
   clients
 }: PublishSectionProps) {
   if (!currentAccount) {
@@ -114,7 +112,7 @@ export default function PublishSection({
 
       <PublishButton
         siteId={siteId}
-        onPrepareAssets={onPrepareAssets}
+        target={target}
         onUpdateSiteMetadata={onUpdateSiteMetadata}
         onError={onError}
         currentAccount={currentAccount}

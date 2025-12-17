@@ -16,7 +16,7 @@ interface Props extends UseSitePublishingParams {
 const PublishButton: FC<Props> = ({
   children,
   siteId,
-  onPrepareAssets,
+  target,
   onUpdateSiteMetadata,
   onAssociatedDomain,
   onError,
@@ -37,7 +37,7 @@ const PublishButton: FC<Props> = ({
     }
   } = useSitePublishing({
     siteId,
-    onPrepareAssets,
+    target,
     onUpdateSiteMetadata,
     onAssociatedDomain,
     onError,

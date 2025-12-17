@@ -38,7 +38,7 @@ export interface UseSitePublishingParams {
    * Mandatory callback to prepare assets for publishing. It should return the `IFileManager` instance
    * containing the files to be published
    */
-  onPrepareAssets: () => Promise<IReadOnlyFileManager>
+  target: IReadOnlyFileManager | null
   /**
    * Optional callback to update site metadata after publishing. The site ID will
    * be available in the `site` parameter.
@@ -71,7 +71,7 @@ export interface UseSitePublishingParams {
 
 export function useSitePublishing({
   siteId,
-  onPrepareAssets,
+  target,
   onUpdateSiteMetadata,
   onAssociatedDomain,
   onError,
@@ -174,7 +174,7 @@ export function useSitePublishing({
     const result = await sitePublishingStore.runDeploymentStep(
       sdk,
       siteMetadata,
-      onPrepareAssets
+      target
     )
     if (!result.ok) return onError?.(result.error || 'Deployment failed')
     siteMetadata.id = result.data // Update site ID after deployment

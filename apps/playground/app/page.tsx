@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  type IReadOnlyFileManager,
   type ISponsorConfig,
   objectIdToWalrusSiteUrl
 } from '@cmdoss/site-builder'
@@ -89,13 +88,6 @@ export default function Home() {
       signTransaction
     }
   }, [sponsorEnabled, sponsorUrl, currentAccount?.address, signTransaction])
-
-  // Site Builder handlers
-  const handlePrepareAssetsForBuilder =
-    useCallback(async (): Promise<IReadOnlyFileManager> => {
-      if (!fm) throw new Error('FileManager not initialized')
-      return fm
-    }, [fm])
 
   const handleUpdateSiteMetadataForBuilder = useCallback(
     async (site: SiteMetadataUpdate): Promise<SiteMetadata> => {
@@ -215,7 +207,7 @@ export default function Home() {
               siteId={siteId}
               currentAccount={currentAccount}
               assets={assets}
-              onPrepareAssets={handlePrepareAssetsForBuilder}
+              target={fm}
               onUpdateSiteMetadata={handleUpdateSiteMetadataForBuilder}
               onError={handleBuilderError}
               signAndExecuteTransaction={signAndExecuteTransaction}
