@@ -1,6 +1,6 @@
 # @cmdoss/site-builder-react
 
-## 2.0.0
+## 1.2.1
 
 ### Minor Changes
 
@@ -9,8 +9,8 @@
 ### Patch Changes
 
 - Updated dependencies [35dead1]
-  - @cmdoss/file-manager@2.0.0
-  - @cmdoss/site-builder@2.0.0
+  - @cmdoss/file-manager@1.2.1
+  - @cmdoss/site-builder@1.2.1
 
 ## 1.2.0
 
