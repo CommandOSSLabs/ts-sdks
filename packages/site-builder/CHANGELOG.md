@@ -1,5 +1,11 @@
 # @cmdoss/site-builder
 
+## 1.2.1
+
+### Minor Changes
+
+- 35dead1: remove wasm field in walrus client
+
 ## 1.2.0
 
 ### Minor Changes
