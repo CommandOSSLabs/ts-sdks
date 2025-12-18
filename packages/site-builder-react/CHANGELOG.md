@@ -1,5 +1,17 @@
 # @cmdoss/site-builder-react
 
+## 2.0.0
+
+### Minor Changes
+
+- 35dead1: remove wasm field in walrus client
+
+### Patch Changes
+
+- Updated dependencies [35dead1]
+  - @cmdoss/file-manager@2.0.0
+  - @cmdoss/site-builder@2.0.0
+
 ## 1.2.0
 
 ### Minor Changes
