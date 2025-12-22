@@ -23,7 +23,6 @@ import {
   useSignTransaction,
   useSuiClient
 } from '@mysten/dapp-kit'
-import { useStore } from '@nanostores/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -36,10 +35,13 @@ import { testFilesSet1, testFilesSet2 } from './files'
 export default function Home() {
   const queryClient = useQueryClient()
   const suiClient = useSuiClient()
-  const siteId = useStore($siteId)
   const networkConfig = useNetworkConfig()
   const [isAddingFiles, setIsAddingFiles] = useState(false)
   const [isClearingWorkspace, setIsClearingWorkspace] = useState(false)
+  const [siteId, setSiteId] = useState('')
+
+  // Fix hydration issues by syncing siteId from nanostores manually on the client
+  useEffect(() => $siteId.listen(v => setSiteId(v)), [])
 
   // Sponsor config state
   const [sponsorEnabled, setSponsorEnabled] = useState(false)
