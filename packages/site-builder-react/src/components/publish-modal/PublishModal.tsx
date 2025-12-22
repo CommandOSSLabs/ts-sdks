@@ -606,8 +606,7 @@ const PublishModal: FC<PublishModalProps> = ({
               </div>
               <Banner
                 title="Warning"
-                description="You must pass all steps to deploy your site, which includes
-                signing multiple transactions. Please don't close the website
+                description="Please don't close the website
                 until the deployment is complete."
                 variant="warning"
               />

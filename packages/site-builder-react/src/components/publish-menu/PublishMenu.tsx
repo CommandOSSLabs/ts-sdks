@@ -58,18 +58,13 @@ const PublishMenu: FC<PublishMenuProps> = ({
 
   const associatedDomains = nsDomains.filter(d => d.walrusSiteId === siteId)
 
-  const truncateUrl = (url: string) => {
-    try {
-      const urlObj = new URL(url)
-      const subdomain = urlObj.hostname.split('.')[0]
-      if (subdomain && subdomain.length > 20) {
-        return `${subdomain.slice(0, 8)}...${subdomain.slice(-8)}.${urlObj.hostname.split('.').slice(1).join('.')}`
-      }
-      return url
-    } catch {
-      return url
-    }
-  }
+  const firstDomain =
+    associatedDomains.length > 0 &&
+    suinsDomainToWalrusSiteUrl(
+      associatedDomains[0].name,
+      portalDomain,
+      portalHttps
+    )
 
   return (
     <DropdownMenu.Root>
@@ -82,26 +77,45 @@ const PublishMenu: FC<PublishMenuProps> = ({
               {isDeployed ? 'Update your Site' : 'Publish your Site'}
             </h4>
             {isDeployed && walrusSiteUrl ? (
-              <p className={styles.description}>
-                Your site is live at{' '}
-                <a
-                  href={walrusSiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.link}
-                >
-                  {truncateUrl(walrusSiteUrl)}
-                  <ExternalLink
-                    style={{
-                      display: 'inline',
-                      width: '0.75rem',
-                      height: '0.75rem',
-                      marginLeft: '0.25rem'
-                    }}
-                  />
-                </a>
-                . You can update your site to reflect the latest changes.
-              </p>
+              associatedDomains.length > 0 && firstDomain ? (
+                <p className={styles.description}>
+                  Your site is live at{' '}
+                  <a
+                    href={firstDomain}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.link}
+                  >
+                    {firstDomain}
+                  </a>
+                  . You can update your site to reflect the latest changes.
+                </p>
+              ) : (
+                <p className={styles.description}>
+                  Your site is live at{' '}
+                  <a
+                    href={
+                      network === 'testnet'
+                        ? `https://testnet.suivision.xyz/object/${siteId}`
+                        : `https://suivision.xyz/object/${siteId}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.link}
+                  >
+                    Explorer
+                    <ExternalLink
+                      style={{
+                        display: 'inline',
+                        width: '0.75rem',
+                        height: '0.75rem',
+                        marginLeft: '0.25rem'
+                      }}
+                    />
+                  </a>
+                  . You can link SuiNS domains to view your site in the portal.
+                </p>
+              )
             ) : (
               <p className={styles.description}>
                 Deploy your app to{' '}
@@ -150,23 +164,21 @@ const PublishMenu: FC<PublishMenuProps> = ({
                 {associatedDomains.length > 0 &&
                 !isLoadingDomains &&
                 !isErrorDomains ? (
-                  <a
-                    href={suinsDomainToWalrusSiteUrl(
-                      associatedDomains[0].name,
-                      portalDomain,
-                      portalHttps
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button
-                      variant="outline"
-                      size="default"
-                      style={{ width: '100%' }}
+                  firstDomain && (
+                    <a
+                      href={firstDomain}
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      Visit Site
-                    </Button>
-                  </a>
+                      <Button
+                        variant="outline"
+                        size="default"
+                        style={{ width: '100%' }}
+                      >
+                        Visit Site
+                      </Button>
+                    </a>
+                  )
                 ) : (
                   // open suins
                   <Button
