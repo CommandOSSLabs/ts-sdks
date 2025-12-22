@@ -1,6 +1,11 @@
 import type { SuiClient } from '@mysten/sui/client'
 import type { WalrusClient } from '@mysten/walrus'
+import debug from 'debug'
 import { UpdateWalrusSiteFlow } from './deploy-flow'
+import { isSupportedNetwork, mainPackage } from './lib'
+import { buildSiteCreationTx } from './lib/tx-builder'
+import { TransactionExecutorService } from './services'
+import { SiteService } from './services/site.service'
 import type {
   IAsset,
   ISignAndExecuteTransaction,
@@ -10,10 +15,14 @@ import type {
   WSResources
 } from './types'
 
+const log = debug('site-builder:sdk')
+
 /**
  * SDK for publishing Walrus Sites.
  */
 export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
+  private txExecutor: TransactionExecutorService
+
   constructor(
     /**
      * The Walrus client used for interacting with the Walrus API.
@@ -54,7 +63,14 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
      * The function used to sign transactions.
      */
     public sponsorConfig?: ISponsorConfig
-  ) {}
+  ) {
+    this.txExecutor = new TransactionExecutorService({
+      suiClient,
+      walletAddress: this.walletAddr,
+      signAndExecuteTransaction,
+      sponsorConfig
+    })
+  }
 
   /**
    * Create a deploy flow for deploying a Walrus Site.
@@ -72,5 +88,40 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
       this.sponsorConfig,
       this.walletAddr
     )
+  }
+
+  async updateSiteMetadata(
+    siteId: string,
+    siteName: string,
+    metadata: WSResources['metadata']
+  ): Promise<string> {
+    const siteSvc = new SiteService(this.suiClient)
+    const siteUpdates = await siteSvc.calculateSiteDiff([], {
+      object_id: siteId,
+      site_name: siteName,
+      metadata
+    })
+
+    log('🔄 Starting site update...')
+
+    const network = this.suiClient.network
+    if (!isSupportedNetwork(network))
+      throw new Error(`Unsupported network: ${network}`)
+    const packageId = mainPackage[network].packageId
+
+    const tx = buildSiteCreationTx(
+      siteId,
+      siteUpdates,
+      packageId,
+      this.walletAddr
+    )
+
+    const res = await this.txExecutor.executeWithResponse({
+      transaction: tx,
+      description: 'Update Walrus site metadata'
+    })
+
+    console.log('🔍 Transaction response:', res)
+    return res.digest
   }
 }
