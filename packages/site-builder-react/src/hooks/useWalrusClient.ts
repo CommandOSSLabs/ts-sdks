@@ -17,14 +17,12 @@ export function useWalrusClient(
     return new WalrusClient({
       network,
       suiClient,
-      wasmUrl: WALRUS_WASM_CDN
-      // uploadRelay: {
-      //   timeout: 600000,
-      //   host: `https://upload-relay.${network}.walrus.space`,
-      //   sendTip: {
-      //     max: 100000000
-      //   }
-      // }
+      // wasmUrl: WALRUS_WASM_CDN
+      uploadRelay: {
+        timeout: 600000,
+        host: `https://upload-relay.${network}.walrus.space`,
+        sendTip: { max: 100000000 }
+      }
     })
   }, [suiClient])
 }

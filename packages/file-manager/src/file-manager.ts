@@ -9,6 +9,8 @@ const log = debug('file-manager')
 
 export class ZenFsFileManager implements IFileManager {
   protected changeListeners: Set<FileChangedCallback> = new Set()
+  private initPromise: Promise<void> | null = null
+
   constructor(
     /** The directory of the workspace. Any files within this directory are considered part of the workspace. */
     public readonly workspaceDir = '/workspace',
@@ -33,7 +35,17 @@ export class ZenFsFileManager implements IFileManager {
     }
   }
 
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
+    if (this.initPromise) {
+      log('⏳ Initialization already in progress, waiting...')
+      return this.initPromise
+    }
+
+    this.initPromise = this.doInitialize()
+    return this.initPromise
+  }
+
+  private async doInitialize(): Promise<void> {
     log('🔧 Configuring filesystem...')
     log(`📁 Mounting workspace at ${this.mountDir}`)
     await configure({

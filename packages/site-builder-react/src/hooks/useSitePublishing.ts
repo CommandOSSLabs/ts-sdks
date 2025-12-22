@@ -21,6 +21,7 @@ import {
 } from '~/stores/site-domain.store'
 import { siteMetadataStore } from '~/stores/site-metadata.store'
 import {
+  DeploymentStatus,
   type SiteMetadata,
   type SiteMetadataUpdate,
   sitePublishingStore
@@ -144,6 +145,17 @@ export function useSitePublishing({
     if (!siteId) return null
     return objectIdToWalrusSiteUrl(siteId, portalDomain, portalHttps)
   }, [siteId, portalDomain, portalHttps])
+  const siteMetadata = useMemo(
+    (): SiteMetadata => ({
+      id: siteId,
+      title,
+      description,
+      imageUrl: !imageUrl || imageUrl instanceof File ? undefined : imageUrl,
+      link: siteMetadataStore.link.get() ?? undefined,
+      projectUrl: siteMetadataStore.projectUrl.get() ?? undefined
+    }),
+    [siteId, title, description, imageUrl]
+  )
 
   const associatedDomains = nsDomains.filter(d => d.walrusSiteId === siteId)
 
@@ -159,6 +171,22 @@ export function useSitePublishing({
     siteMetadataStore.reset()
   }, [walrusSiteData])
 
+  // Auto prepare assets when target changes
+  useEffect(() => {
+    if (!sdk) return
+
+    if (target) {
+      console.info('» Auto preparing assets for deployment')
+      sitePublishingStore.deployStatus.set(DeploymentStatus.Idle)
+      sitePublishingStore.runDeploymentStep({
+        sdk,
+        site: siteMetadata,
+        target,
+        autoContinue: false
+      })
+    }
+  }, [target, sdk, siteMetadata])
+
   // Actions
   const handleRunDeploymentStep = async () => {
     if (!sdk) return onError?.('SDK not initialized')
@@ -171,11 +199,11 @@ export function useSitePublishing({
       link: siteMetadataStore.link.get() ?? undefined,
       projectUrl: siteMetadataStore.projectUrl.get() ?? undefined
     }
-    const result = await sitePublishingStore.runDeploymentStep(
+    const result = await sitePublishingStore.runDeploymentStep({
       sdk,
-      siteMetadata,
+      site: siteMetadata,
       target
-    )
+    })
     if (!result.ok) return onError?.(result.error || 'Deployment failed')
     siteMetadata.id = result.data // Update site ID after deployment
     await onUpdateSiteMetadata?.(siteMetadata)

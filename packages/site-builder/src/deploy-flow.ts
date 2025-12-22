@@ -200,20 +200,26 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
 
     const certifyTx = writeFilesFlow.certify()
 
-    await this.txExecutor.execute({
+    const result = await this.txExecutor.execute({
       transaction: certifyTx,
       description: 'Certify blob storage',
       onTransactionRecorded: this.#recordTransaction.bind(this)
     })
 
     log('✅ Assets certified successfully')
+
+    // Must wait for the transaction to be finalized before fetching patches
+    if (result) await this.suiClient.waitForTransaction({ digest: result })
     await this.#fetchAndUpdateBlobPatches()
   }
 
   /** Fetches patches for certified blobs and updates the site data accordingly */
   async #fetchAndUpdateBlobPatches() {
-    const certifiedFiles = await this.state.writeFilesFlow?.listFiles()
-    if (!certifiedFiles?.length) throw new Error('No certified files found')
+    const { writeFilesFlow } = this.state
+    if (!writeFilesFlow) throw new Error('Write files flow not initialized')
+
+    const certifiedFiles = await writeFilesFlow.listFiles()
+    if (!certifiedFiles.length) throw new Error('No certified files found')
     log('📁 Certified files:', certifiedFiles)
 
     const uniqueBlobIds = Array.from(new Set(certifiedFiles.map(f => f.blobId)))

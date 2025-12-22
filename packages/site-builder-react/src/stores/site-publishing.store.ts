@@ -98,6 +98,7 @@ class SitePublishingStore {
     [this.deployStatus],
     deployStatus =>
       deployStatus !== DeploymentStatus.Idle &&
+      deployStatus !== DeploymentStatus.Encoded &&
       deployStatus !== DeploymentStatus.Prepared &&
       deployStatus !== DeploymentStatus.Uploaded &&
       deployStatus !== DeploymentStatus.Certified &&
@@ -136,11 +137,17 @@ class SitePublishingStore {
   private currentFlow?: IUpdateWalrusSiteFlow
   private siteId?: string
 
-  async runDeploymentStep(
-    sdk: IWalrusSiteBuilderSdk,
-    site: SiteMetadata,
+  async runDeploymentStep({
+    sdk,
+    site,
+    target,
+    autoContinue = true
+  }: {
+    sdk: IWalrusSiteBuilderSdk
+    site: SiteMetadata
     target: IReadOnlyFileManager | null
-  ): Promise<TResult<string>> {
+    autoContinue?: boolean
+  }): Promise<TResult<string>> {
     if (this.isWorking.get()) return failed('Another operation is in progress')
 
     const status = this.deployStatus.get()
@@ -165,16 +172,20 @@ class SitePublishingStore {
             }
           })
           const diff = await this.currentFlow.prepareResources()
-          if (diff.resources.every(r => r.op === 'unchanged')) {
-            if (diff.site_name.op === 'noop' && diff.metadata.op === 'noop') {
-              this.deployStatus.set(DeploymentStatus.Idle)
-              return failed('No changes detected')
-            } else {
-              // Only metadata/site name changed, skip to certification
-              this.deployStatus.set(DeploymentStatus.Certified)
-            }
-          } else this.deployStatus.set(DeploymentStatus.Prepared)
-          return this.runDeploymentStep(sdk, site, target)
+          this.deployStatus.set(DeploymentStatus.Prepared)
+
+          // Check and advance status if no resource changes
+          if (
+            diff.resources.every(r => r.op === 'unchanged') &&
+            (diff.site_name.op !== 'noop' || diff.metadata.op !== 'noop')
+          ) {
+            console.log('» No resource changes, skipping to certification')
+            // Only metadata/site name changed, skip to certification
+            this.deployStatus.set(DeploymentStatus.Certified)
+          }
+
+          if (autoContinue) return this.runDeploymentStep({ sdk, site, target })
+          return ok('')
         } catch (e) {
           console.error('Failed to prepare assets:', e)
           const msg =
@@ -197,7 +208,8 @@ class SitePublishingStore {
         }
 
         this.deployStatus.set(DeploymentStatus.Encoded)
-        return this.runDeploymentStep(sdk, site, target)
+        if (autoContinue) return this.runDeploymentStep({ sdk, site, target })
+        return ok('')
       }
 
       case DeploymentStatus.Encoded: {
@@ -216,7 +228,8 @@ class SitePublishingStore {
         }
 
         this.deployStatus.set(DeploymentStatus.Uploaded)
-        return this.runDeploymentStep(sdk, site, target)
+        if (autoContinue) return this.runDeploymentStep({ sdk, site, target })
+        return ok('')
       }
 
       case DeploymentStatus.Uploaded: {
@@ -225,7 +238,8 @@ class SitePublishingStore {
         try {
           await this.currentFlow.certifyResources()
           this.deployStatus.set(DeploymentStatus.Certified)
-          return this.runDeploymentStep(sdk, site, target)
+          if (autoContinue) return this.runDeploymentStep({ sdk, site, target })
+          return ok('')
         } catch (e) {
           console.error('Failed to certify assets:', e)
           this.deployStatus.set(DeploymentStatus.Uploaded)
@@ -251,6 +265,7 @@ class SitePublishingStore {
           return failed(msg)
         }
       }
+
       case DeploymentStatus.Deployed:
         if (!this.siteId) return failed('Invalid state')
         // Deployment completed, close dialog
