@@ -24,13 +24,14 @@ The `PublishButton` component handles the entire publishing workflow including U
 
 ```tsx
 import { PublishButton } from '@cmdoss/site-builder-react'
-import type { IReadOnlyFileManager } from '@cmdoss/site-builder'
+import type { IAsset } from '@cmdoss/site-builder'
 import { SuiClient } from '@mysten/sui/client'
 import { QueryClient } from '@tanstack/react-query'
 
 function MyApp() {
   const suiClient = new SuiClient({ url: '...' })
   const queryClient = new QueryClient()
+  const assets: IAsset[] = [] // Your assets here
 
   return (
     <PublishButton
@@ -40,10 +41,7 @@ function MyApp() {
       signAndExecuteTransaction={signAndExecuteTransaction}
       portalDomain="walrus.site"
       portalHttps={true}
-      onPrepareAssets={async () => {
-        // Return IReadOnlyFileManager with files to publish
-        return fileManager
-      }}
+      assets={assets}
       onUpdateSiteMetadata={async (site) => {
         // Optional: Save site metadata to your backend
       }}
@@ -72,7 +70,7 @@ import { PublishButton } from '@cmdoss/site-builder-react'
   signAndExecuteTransaction={signAndExecuteTransaction}
   portalDomain="walrus.site"
   portalHttps={true}
-  onPrepareAssets={handlePrepareAssets}
+  assets={assets}
   onUpdateSiteMetadata={handleUpdateMetadata}
   onAssociatedDomain={handleAssociate}
   onError={handleError}
@@ -134,7 +132,7 @@ const publishing = useSitePublishing({
   signAndExecuteTransaction: ISignAndExecuteTransaction,
   portalDomain?: string,
   portalHttps?: boolean,
-  onPrepareAssets: () => Promise<IReadOnlyFileManager>,
+  assets: IAsset[],
   onUpdateSiteMetadata?: (site: SiteMetadataUpdate) => Promise<SiteMetadata | undefined>,
   onAssociatedDomain?: (nftId: string, siteId: string) => Promise<void>,
   onError?: (msg: string) => void
