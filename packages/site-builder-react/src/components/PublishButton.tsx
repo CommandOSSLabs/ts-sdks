@@ -16,7 +16,7 @@ interface Props extends UseSitePublishingParams {
 const PublishButton: FC<Props> = ({
   children,
   siteId,
-  onPrepareAssets,
+  assets,
   onUpdateSiteMetadata,
   onAssociatedDomain,
   onError,
@@ -37,7 +37,7 @@ const PublishButton: FC<Props> = ({
     }
   } = useSitePublishing({
     siteId,
-    onPrepareAssets,
+    assets,
     onUpdateSiteMetadata,
     onAssociatedDomain,
     onError,
@@ -64,6 +64,7 @@ const PublishButton: FC<Props> = ({
       </PublishMenu>
       <PublishModal
         siteId={siteId}
+        assets={assets}
         onDeploy={handleRunDeploymentStep}
         onSaveMetadata={handleSaveSiteMetadata}
         clients={clients}

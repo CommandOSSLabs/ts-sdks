@@ -1,5 +1,5 @@
 import {
-  type IReadOnlyFileManager,
+  type IAsset,
   type ISignAndExecuteTransaction,
   type ISponsorConfig,
   type IWalrusSiteBuilderSdk,
@@ -8,8 +8,13 @@ import {
 } from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import { Transaction } from '@mysten/sui/transactions'
-import { ALLOWED_METADATA, SuinsTransaction } from '@mysten/suins'
+import {
+  ALLOWED_METADATA,
+  type SuinsClient,
+  SuinsTransaction
+} from '@mysten/suins'
 import type { WalletAccount } from '@mysten/wallet-standard'
+import type { WalrusClient } from '@mysten/walrus'
 import { useStore } from '@nanostores/react'
 import type { QueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
@@ -25,9 +30,7 @@ import {
   type SiteMetadataUpdate,
   sitePublishingStore
 } from '~/stores/site-publishing.store'
-import { useSuiNsClient } from './useSuiNsClient'
 import { useTransactionExecutor } from './useTransactionExecutor'
-import { useWalrusClient } from './useWalrusClient'
 
 export interface UseSitePublishingParams {
   /**
@@ -35,10 +38,9 @@ export interface UseSitePublishingParams {
    */
   siteId?: string
   /**
-   * Mandatory callback to prepare assets for publishing. It should return the `IFileManager` instance
-   * containing the files to be published
+   * Site's assets to be published.
    */
-  onPrepareAssets: () => Promise<IReadOnlyFileManager>
+  assets: IAsset[]
   /**
    * Optional callback to update site metadata after publishing. The site ID will
    * be available in the `site` parameter.
@@ -56,6 +58,8 @@ export interface UseSitePublishingParams {
   clients: {
     suiClient: SuiClient
     queryClient: QueryClient
+    suinsClient: SuinsClient
+    walrusClient: WalrusClient
   }
   /** Current wallet account information. */
   currentAccount: WalletAccount | null
@@ -71,7 +75,7 @@ export interface UseSitePublishingParams {
 
 export function useSitePublishing({
   siteId,
-  onPrepareAssets,
+  assets,
   onUpdateSiteMetadata,
   onAssociatedDomain,
   onError,
@@ -80,11 +84,8 @@ export function useSitePublishing({
   sponsorConfig,
   portalDomain,
   portalHttps,
-  clients: { suiClient, queryClient }
+  clients: { suiClient, queryClient, suinsClient, walrusClient }
 }: UseSitePublishingParams) {
-  const suinsClient = useSuiNsClient(suiClient)
-  const walrusClient = useWalrusClient(suiClient)
-
   // Transaction executor with sponsor support
   const txExecutor = useTransactionExecutor({
     suiClient,
@@ -173,8 +174,8 @@ export function useSitePublishing({
     }
     const result = await sitePublishingStore.runDeploymentStep(
       sdk,
-      siteMetadata,
-      onPrepareAssets
+      assets,
+      siteMetadata
     )
     if (!result.ok) return onError?.(result.error || 'Deployment failed')
     siteMetadata.id = result.data // Update site ID after deployment

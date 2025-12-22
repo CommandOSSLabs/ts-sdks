@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  type IReadOnlyFileManager,
   type ISponsorConfig,
   objectIdToWalrusSiteUrl
 } from '@cmdoss/site-builder'
@@ -23,6 +22,8 @@ import {
   useSignTransaction,
   useSuiClient
 } from '@mysten/dapp-kit'
+import { SuinsClient } from '@mysten/suins'
+import { WalrusClient } from '@mysten/walrus'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -39,6 +40,23 @@ export default function Home() {
   const [isAddingFiles, setIsAddingFiles] = useState(false)
   const [isClearingWorkspace, setIsClearingWorkspace] = useState(false)
   const [siteId, setSiteId] = useState('')
+  const suinsClient = useMemo(
+    () => new SuinsClient({ network: networkConfig.name, client: suiClient }),
+    [networkConfig.name, suiClient]
+  )
+  const walrusClient = useMemo(
+    () =>
+      new WalrusClient({
+        suiClient,
+        network: networkConfig.name,
+        uploadRelay: {
+          // Official Walrus upload relay
+          host: `https://upload-relay.${networkConfig.name}.walrus.space`,
+          sendTip: { max: 100000000 }
+        }
+      }),
+    [networkConfig.name, suiClient]
+  )
 
   // Fix hydration issues by syncing siteId from nanostores manually on the client
   useEffect(() => $siteId.listen(v => setSiteId(v)), [])
@@ -91,13 +109,6 @@ export default function Home() {
       signTransaction
     }
   }, [sponsorEnabled, sponsorUrl, currentAccount?.address, signTransaction])
-
-  // Site Builder handlers
-  const handlePrepareAssetsForBuilder =
-    useCallback(async (): Promise<IReadOnlyFileManager> => {
-      if (!fm) throw new Error('FileManager not initialized')
-      return fm
-    }, [fm])
 
   const handleUpdateSiteMetadataForBuilder = useCallback(
     async (site: SiteMetadataUpdate): Promise<SiteMetadata> => {
@@ -217,7 +228,6 @@ export default function Home() {
               siteId={siteId}
               currentAccount={currentAccount}
               assets={assets}
-              onPrepareAssets={handlePrepareAssetsForBuilder}
               onUpdateSiteMetadata={handleUpdateSiteMetadataForBuilder}
               onError={handleBuilderError}
               signAndExecuteTransaction={signAndExecuteTransaction}
@@ -225,7 +235,7 @@ export default function Home() {
               onSponsorConfigChange={handleSponsorConfigChange}
               sponsorEnabled={sponsorEnabled}
               sponsorUrl={sponsorUrl}
-              clients={{ suiClient, queryClient }}
+              clients={{ suiClient, queryClient, suinsClient, walrusClient }}
             />
 
             {siteId && (

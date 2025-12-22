@@ -2,7 +2,7 @@ import type { SuiClient } from '@mysten/sui/client'
 import type { WalrusClient } from '@mysten/walrus'
 import { UpdateWalrusSiteFlow } from './deploy-flow'
 import type {
-  IReadOnlyFileManager,
+  IAsset,
   ISignAndExecuteTransaction,
   ISponsorConfig,
   IUpdateWalrusSiteFlow,
@@ -60,13 +60,13 @@ export class WalrusSiteBuilderSdk implements IWalrusSiteBuilderSdk {
    * Create a deploy flow for deploying a Walrus Site.
    */
   executeSiteUpdateFlow(
-    target: IReadOnlyFileManager,
+    assets: IAsset[],
     wsResource: WSResources
   ): IUpdateWalrusSiteFlow {
     return new UpdateWalrusSiteFlow(
       this.walrus,
       this.suiClient,
-      target,
+      assets,
       wsResource,
       this.signAndExecuteTransaction,
       this.sponsorConfig,

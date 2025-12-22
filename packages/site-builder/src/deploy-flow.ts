@@ -17,8 +17,8 @@ import { fetchBlobsPatches } from './queries/blobs-patches.query'
 import { SiteService } from './services/site.service'
 import { TransactionExecutorService } from './services/transaction-executor.service'
 import type {
+  IAsset,
   ICertifiedBlob,
-  IReadOnlyFileManager,
   ISignAndExecuteTransaction,
   ISponsorConfig,
   ITransaction,
@@ -62,9 +62,9 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
      */
     private suiClient: SuiClient,
     /**
-     * The target file manager containing assets to be deployed.
+     * The site's assets to be deployed.
      */
-    private target: IReadOnlyFileManager,
+    private assets: IAsset[],
     /**
      * The Walrus Site resources information.
      */
@@ -122,39 +122,28 @@ export class UpdateWalrusSiteFlow implements IUpdateWalrusSiteFlow {
   }
 
   async prepareResources(): Promise<SiteDataDiff> {
-    log('📦 Preparing files for upload...')
-    const filesPaths = await this.target.listFiles()
-    if (filesPaths.length === 0) throw new Error('Empty site')
-
-    const files: Record<string, WalrusFile> = {}
-    for (const path of filesPaths) {
-      log('» Reading file', path)
-      const contents = await this.target.readFile(path)
-      files[path] = WalrusFile.from({ contents, identifier: path })
-    }
-
+    log('🔍 Calculating site diff...')
     const diff = await this.siteSvc.calculateSiteDiff(
-      Object.values(files),
+      this.assets,
       this.wsResource
     )
+    log('✅ Site diff calculated:', diff)
     this.state.siteUpdates = diff
 
-    if (!hasUpdate(diff)) {
-      log('⏭️ No changes detected, skipping...')
+    if (!diff.resources.some(r => r.op === 'created')) {
+      log('⏭️ No new resources detected, skipping upload entirely...')
       return diff
     }
-    const changedFiles =
-      diff.resources
-        .filter(r => r.op === 'created')
-        .map(r => files[r.data.path]) || []
-    log('⚡️ Detected', changedFiles.length, 'changed files:', changedFiles)
 
-    // Step 1: Prepare the files for upload (only changed files)
-    this.state.writeFilesFlow = this.walrus.writeFilesFlow({
-      files: changedFiles
+    // Step 1: Prepare the files for upload (including unchanged files that are needed)
+    const flow = this.walrus.writeFilesFlow({
+      files: this.assets.map(f =>
+        WalrusFile.from({ identifier: f.path, contents: f.content })
+      )
     })
+    this.state.writeFilesFlow = flow
 
-    log('📦 Getting', changedFiles.length, 'files ready for upload...')
+    log('📦 Getting', this.assets.length, 'files ready for upload...')
     await this.state.writeFilesFlow.encode()
     log('✅ Files prepared successfully')
     return diff
