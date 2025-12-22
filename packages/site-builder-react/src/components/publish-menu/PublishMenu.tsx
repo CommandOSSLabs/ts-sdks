@@ -11,7 +11,7 @@ import type { FC, ReactNode } from 'react'
 import { useSuiNsDomainsQuery } from '~/queries'
 import { isDomainDialogOpen } from '~/stores'
 import { Banner } from '../ui'
-import { Button } from '../ui/Button'
+import { button } from '../ui/Button.css'
 import * as styles from './PublishMenu.css'
 
 interface PublishMenuProps {
@@ -165,50 +165,49 @@ const PublishMenu: FC<PublishMenuProps> = ({
                 !isLoadingDomains &&
                 !isErrorDomains ? (
                   firstDomain && (
-                    <a
-                      href={firstDomain}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <DropdownMenu.Item
+                      className={button({
+                        variant: 'outline',
+                        size: 'default'
+                      })}
+                      style={{ width: '100%' }}
+                      onSelect={() => {
+                        window.open(
+                          firstDomain,
+                          '_blank',
+                          'noopener,noreferrer'
+                        )
+                      }}
                     >
-                      <Button
-                        variant="outline"
-                        size="default"
-                        style={{ width: '100%' }}
-                      >
-                        Visit Site
-                      </Button>
-                    </a>
+                      Visit Site
+                    </DropdownMenu.Item>
                   )
                 ) : (
-                  // open suins
-                  <Button
-                    variant="outline"
-                    size="default"
+                  <DropdownMenu.Item
+                    className={button({ variant: 'outline', size: 'default' })}
                     style={{ width: '100%' }}
-                    onClick={() => {
+                    onSelect={() => {
                       isDomainDialogOpen.set(true)
                     }}
                   >
                     Link SuiNS
-                  </Button>
+                  </DropdownMenu.Item>
                 )}
-                <Button
-                  variant="gradient"
-                  size="default"
-                  onClick={onPublishClick}
+                <DropdownMenu.Item
+                  className={button({ variant: 'gradient', size: 'default' })}
+                  onSelect={onPublishClick}
                 >
                   Update Site
-                </Button>
+                </DropdownMenu.Item>
               </div>
             ) : (
-              <Button
-                variant="gradient"
-                size="default"
+              <DropdownMenu.Item
+                className={button({ variant: 'gradient', size: 'default' })}
                 style={{ width: '100%' }}
-                onClick={onPublishClick}
+                onSelect={onPublishClick}
               >
                 Publish to Walrus
-              </Button>
+              </DropdownMenu.Item>
             )}
 
             {/* banner */}
