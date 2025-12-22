@@ -6,13 +6,12 @@
       "dependsOn": ["^build"],
       "outputs": ["build/**", "dist/**", "out/**"]
     },
-    "check-types": { "dependsOn": ["^check-types"] },
+    "check:types": { "dependsOn": ["^check:types"] },
     "dev": { "cache": false, "persistent": true },
     "test": { "cache": false },
     "test:coverage": { "cache": false },
     "test:watch": { "cache": false, "persistent": true },
     "//#check": {},
-    "//#check:fix": {},
-    "//#check:types": {}
+    "//#check:fix": {}
   }
 }

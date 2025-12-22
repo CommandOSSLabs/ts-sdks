@@ -158,7 +158,7 @@ export function FileExplorer({ className, disabled, assets }: Props) {
     <div className={className}>
       <div className="flex text-sm h-full w-full">
         <ResizablePanelGroup
-          direction="horizontal"
+          orientation="horizontal"
           className="max-w-md md:min-w-full h-full"
         >
           <ResizablePanel

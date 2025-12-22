@@ -10,7 +10,7 @@
     "test:watch": "turbo run test:watch",
     "check": "biome check",
     "check:fix": "biome check --fix",
-    "check:types": "turbo run check-types",
+    "check:types": "turbo run check:types",
     "publish-packages": "changeset publish"
   },
   "devDependencies": {
