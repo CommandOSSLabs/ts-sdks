@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check:types": "tsc --noEmit",
     "start": "next start"
   },
   "dependencies": {
