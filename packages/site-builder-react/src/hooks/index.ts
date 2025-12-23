@@ -1,4 +1,5 @@
 export * from './useEpochDuration'
 export * from './useSitePublishing'
+export * from './useSuiNsRegistration'
 export * from './useTransactionExecutor'
 export * from './useZenFsWorkspace'

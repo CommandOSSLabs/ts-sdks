@@ -5,7 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import type { QueryClient } from '@tanstack/react-query'
 import { CalendarClock, Info, Loader2, Pencil, Upload, X } from 'lucide-react'
 import type { FC } from 'react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEpochDuration } from '~/hooks'
 import { useStorageCostQuery } from '~/queries/storage-cost.query'
 import { siteMetadataStore } from '~/stores/site-metadata.store'
@@ -22,6 +22,7 @@ interface PublishModalProps {
   assets: IAsset[]
   onDeploy?: () => void
   onSaveMetadata?: () => Promise<void>
+  onExtendBlobs?: (extendEpochs: number) => Promise<void>
   clients: {
     queryClient: QueryClient
     walrusClient: WalrusClient
@@ -33,11 +34,15 @@ const PublishModal: FC<PublishModalProps> = ({
   assets,
   onDeploy,
   onSaveMetadata,
+  onExtendBlobs,
   clients: { queryClient, walrusClient }
 }) => {
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false)
   const [isStorageDetailsExpanded, setIsStorageDetailsExpanded] =
     useState(false)
+  const [isExtending, setIsExtending] = useState(false)
+  const [previousEpochs, setPreviousEpochs] = useState<number>(0)
+  const [pendingEpochs, setPendingEpochs] = useState<number>(0)
 
   const isOpen = useStore(sitePublishingStore.isPublishDialogOpen)
   const isWorking = useStore(sitePublishingStore.isWorking)
@@ -53,6 +58,14 @@ const PublishModal: FC<PublishModalProps> = ({
 
   const { epochDurationMs, getExpirationDate } = useEpochDuration(walrusClient)
 
+  // Track initial epochs value when editing a site
+  useEffect(() => {
+    if (siteId && epochs && previousEpochs === 0) {
+      setPreviousEpochs(epochs)
+    }
+  }, [siteId, epochs, previousEpochs])
+
+  // Calculate assets size
   const assetsSize = useMemo(
     () => assets.reduce((sum, a) => sum + a.content.byteLength, 0),
     [assets]
@@ -99,7 +112,45 @@ const PublishModal: FC<PublishModalProps> = ({
     if (!selectedDate) return
 
     const calculatedEpochs = calculateEpochsFromDate(selectedDate)
+
+    // If editing existing site, store pending epochs for later processing
+    if (siteId && previousEpochs > 0) {
+      setPendingEpochs(calculatedEpochs)
+    }
+
     siteMetadataStore.epochs.set(calculatedEpochs)
+  }
+
+  // Handle save metadata with automatic extend if needed
+  const handleSaveMetadataWithExtend = async () => {
+    if (!onSaveMetadata) return
+
+    // First, save metadata
+    await onSaveMetadata()
+
+    // Then, if there's a pending extension, extend blobs
+    if (
+      siteId &&
+      onExtendBlobs &&
+      previousEpochs > 0 &&
+      pendingEpochs > previousEpochs
+    ) {
+      const extensionEpochs = pendingEpochs - previousEpochs
+
+      if (extensionEpochs > 0) {
+        setIsExtending(true)
+        try {
+          await onExtendBlobs(extensionEpochs)
+          // Update the previous epochs baseline after successful extension
+          setPreviousEpochs(pendingEpochs)
+          setPendingEpochs(0)
+        } catch (error) {
+          console.error('Failed to extend blobs:', error)
+        } finally {
+          setIsExtending(false)
+        }
+      }
+    }
   }
 
   // Get current selected date from epochs
@@ -487,83 +538,87 @@ const PublishModal: FC<PublishModalProps> = ({
                     />
                   </fieldset>
 
-                  {/* Storage Duration Section */}
-                  <fieldset>
-                    <div className={styles.fieldLabel}>
-                      <Label>Storage Duration</Label>
-                      {epochs > 0 && (
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--muted-foreground)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem'
-                          }}
-                        >
+                  {/* Storage Duration Section - Only show for new sites */}
+                  {!siteId && (
+                    <fieldset>
+                      <div className={styles.fieldLabel}>
+                        <Label>Storage Duration</Label>
+                        {epochs > 0 && (
                           <span
                             style={{
-                              fontWeight: 600,
-                              color: 'var(--foreground)'
+                              fontSize: '0.75rem',
+                              color: 'var(--muted-foreground)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem'
                             }}
                           >
-                            {epochs}
+                            <span
+                              style={{
+                                fontWeight: 600,
+                                color: 'var(--foreground)'
+                              }}
+                            >
+                              {epochs}
+                            </span>
+                            epochs
                           </span>
-                          epochs
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Date Picker */}
-                    <div style={{ position: 'relative' }}>
-                      <Input
-                        type="date"
-                        value={selectedDate}
-                        min={minDate}
-                        max={maxDate}
-                        onChange={handleDateChange}
-                        disabled={!!siteId}
-                        style={{
-                          paddingLeft: '2.5rem',
-                          cursor: siteId ? 'not-allowed' : 'pointer'
-                        }}
-                      />
-                      <CalendarClock
-                        size={18}
-                        style={{
-                          position: 'absolute',
-                          left: '0.75rem',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          color: 'var(--muted-foreground)',
-                          pointerEvents: 'none'
-                        }}
-                      />
-                    </div>
-
-                    {/* Compact Info */}
-                    {expirationDate && epochDurationMs && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          fontSize: '0.75rem',
-                          color: 'var(--muted-foreground)',
-                          marginTop: '0.5rem'
-                        }}
-                      >
-                        <Info size={14} style={{ flexShrink: 0 }} />
-                        <span>
-                          1 epoch ≈{' '}
-                          {(epochDurationMs / (1000 * 60 * 60 * 24)).toFixed(1)}{' '}
-                          days
-                          {' • '}
-                          Duration rounded up. Can be extended later.
-                        </span>
+                        )}
                       </div>
-                    )}
-                  </fieldset>
+
+                      {/* Date Picker */}
+                      <div style={{ position: 'relative' }}>
+                        <Input
+                          type="date"
+                          value={selectedDate}
+                          min={minDate}
+                          max={maxDate}
+                          onChange={handleDateChange}
+                          disabled={isWorking}
+                          style={{
+                            paddingLeft: '2.5rem',
+                            cursor: isWorking ? 'wait' : 'pointer'
+                          }}
+                        />
+                        <CalendarClock
+                          size={18}
+                          style={{
+                            position: 'absolute',
+                            left: '0.75rem',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: 'var(--muted-foreground)',
+                            pointerEvents: 'none'
+                          }}
+                        />
+                      </div>
+
+                      {/* Compact Info */}
+                      {expirationDate && epochDurationMs && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.75rem',
+                            color: 'var(--muted-foreground)',
+                            marginTop: '0.5rem'
+                          }}
+                        >
+                          <Info size={14} style={{ flexShrink: 0 }} />
+                          <span>
+                            1 epoch ≈{' '}
+                            {(epochDurationMs / (1000 * 60 * 60 * 24)).toFixed(
+                              1
+                            )}{' '}
+                            days
+                            {' • '}
+                            Duration rounded up. Can be extended later.
+                          </span>
+                        </div>
+                      )}
+                    </fieldset>
+                  )}
                 </div>
               </div>
             </div>
@@ -581,11 +636,24 @@ const PublishModal: FC<PublishModalProps> = ({
                   Cancel
                 </Button>
                 <Button
-                  style={{ flex: 1 }}
-                  onClick={onSaveMetadata}
-                  disabled={isLoading}
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                  onClick={handleSaveMetadataWithExtend}
+                  disabled={isLoading || isExtending}
                 >
-                  {isLoading ? 'Saving...' : 'Save'}
+                  {isLoading || isExtending ? (
+                    <>
+                      <Loader2 size={16} className={styles.spinner} />
+                      {isExtending ? 'Extending Storage...' : 'Saving...'}
+                    </>
+                  ) : (
+                    'Save'
+                  )}
                 </Button>
               </div>
             </section>
@@ -612,8 +680,7 @@ const PublishModal: FC<PublishModalProps> = ({
               </div>
               <Banner
                 title="Warning"
-                description="You must pass all steps to deploy your site, which includes
-                signing multiple transactions. Please don't close the website
+                description="Please don't close the website
                 until the deployment is complete."
                 variant="warning"
               />

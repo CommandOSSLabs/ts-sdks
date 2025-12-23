@@ -3,7 +3,9 @@ import {
   type ISignAndExecuteTransaction,
   type ISponsorConfig,
   type IWalrusSiteBuilderSdk,
+  mainPackage,
   objectIdToWalrusSiteUrl,
+  suinsDomainToWalrusSiteUrl,
   WalrusSiteBuilderSdk
 } from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
@@ -15,9 +17,13 @@ import {
 } from '@mysten/suins'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import type { WalrusClient } from '@mysten/walrus'
+import {
+  MAINNET_WALRUS_PACKAGE_CONFIG,
+  TESTNET_WALRUS_PACKAGE_CONFIG
+} from '@mysten/walrus'
 import { useStore } from '@nanostores/react'
 import type { QueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useWalrusSiteQuery } from '~/queries'
 import { useSuiNsDomainsQuery } from '~/queries/suins-domains.query'
 import {
@@ -52,6 +58,8 @@ export interface UseSitePublishingParams {
   onAssociatedDomain?: (nftId: string, siteId: string) => Promise<void>
   /** Optional callback for handling errors. */
   onError?: (msg: string) => void
+  /** Optional callback when blobs are extended. */
+  onExtendedBlobs?: (msg: string, txDigest?: string) => void
   /**
    * Sui and Query clients needed for on-chain operations.
    */
@@ -79,6 +87,7 @@ export function useSitePublishing({
   onUpdateSiteMetadata,
   onAssociatedDomain,
   onError,
+  onExtendedBlobs,
   currentAccount,
   signAndExecuteTransaction,
   sponsorConfig,
@@ -86,6 +95,7 @@ export function useSitePublishing({
   portalHttps,
   clients: { suiClient, queryClient, suinsClient, walrusClient }
 }: UseSitePublishingParams) {
+  const [isExtending, setIsExtending] = useState(false)
   // Transaction executor with sponsor support
   const txExecutor = useTransactionExecutor({
     suiClient,
@@ -214,7 +224,11 @@ export function useSitePublishing({
     }
   }
 
-  const handleAssociateDomain = async (nftId: string, siteId: string) => {
+  const handleAssociateDomain = async (
+    nftId: string,
+    siteId: string,
+    suiNSName: string
+  ) => {
     if (!suinsClient) return onError?.('SuiNS client not available')
     if (!nftId) return onError?.('No domain selected')
     if (!txExecutor) return onError?.('Transaction executor not available')
@@ -245,6 +259,10 @@ export function useSitePublishing({
           }
         })
 
+        siteMetadataStore.suiNSUrl.set(
+          suinsDomainToWalrusSiteUrl(suiNSName, portalDomain, portalHttps)
+        )
+
         await onAssociatedDomain?.(nftId, siteId)
       } catch (e) {
         console.error('🚨 Failed to update SuiNS metadata:', e)
@@ -262,10 +280,162 @@ export function useSitePublishing({
     sitePublishingStore.isPublishDialogOpen.set(true)
   }
 
+  const handleExtendBlobs = async (extendEpochs: number) => {
+    if (
+      !walrusClient ||
+      !currentAccount ||
+      !walrusSiteData?.resources ||
+      walrusSiteData.resources.length === 0
+    ) {
+      onError?.('Cannot extend blobs: missing required data')
+      return
+    }
+
+    if (!extendEpochs || extendEpochs <= 0 || extendEpochs > 365) {
+      onError?.('Invalid epoch count. Must be between 1 and 365')
+      return
+    }
+
+    if (!txExecutor) {
+      onError?.('Transaction executor not available')
+      return
+    }
+
+    setIsExtending(true)
+    try {
+      const blobType = await walrusClient.getBlobType()
+
+      // Determine network-specific constants
+      const walCoinType =
+        mainPackage[suiClient.network as keyof typeof mainPackage]
+          .walrusCoinType
+      const walrusPackageId =
+        mainPackage[suiClient.network as keyof typeof mainPackage]
+          .walrusPackageId
+      const systemObjectId =
+        suiClient.network === 'mainnet'
+          ? MAINNET_WALRUS_PACKAGE_CONFIG.systemObjectId
+          : TESTNET_WALRUS_PACKAGE_CONFIG.systemObjectId
+
+      // Map blob_id to blobObjectId
+      const blobIdToObjectIdMap = new Map<string, string>()
+      let cursor: string | null | undefined = null
+      let hasNextPage = true
+
+      while (hasNextPage) {
+        const ownedObjects = await suiClient.getOwnedObjects({
+          owner: currentAccount.address,
+          filter: { StructType: blobType },
+          options: { showContent: true },
+          cursor
+        })
+
+        // console.log endEpochs
+        console.log('walrusSiteData.resources', walrusSiteData.resources)
+
+        for (const resource of walrusSiteData.resources) {
+          const blobId = resource.blob_id
+
+          for (const obj of ownedObjects.data) {
+            if (obj.data?.content && 'fields' in obj.data.content) {
+              const fields = obj.data.content.fields as Record<string, unknown>
+              if ('blob_id' in fields) {
+                const objBlobId = String(fields.blob_id)
+                if (objBlobId === blobId && !blobIdToObjectIdMap.has(blobId)) {
+                  blobIdToObjectIdMap.set(blobId, obj.data.objectId)
+                  break
+                }
+              }
+            }
+          }
+        }
+
+        hasNextPage = ownedObjects.hasNextPage
+        cursor = ownedObjects.nextCursor
+      }
+
+      if (blobIdToObjectIdMap.size === 0) {
+        throw new Error(
+          'No blob objects found for this site. Make sure you own the blob objects.'
+        )
+      }
+
+      const tx = new Transaction()
+      tx.setSender(currentAccount.address)
+
+      const walCoin = await suiClient.getCoins({
+        owner: currentAccount.address,
+        coinType: walCoinType
+      })
+
+      if (walCoin.data.length === 0) {
+        throw new Error(
+          `No WAL coins found in wallet. Please acquire WAL tokens first.`
+        )
+      }
+
+      // Merge all WAL coins
+      if (walCoin.data.length > 1) {
+        tx.mergeCoins(
+          tx.object(walCoin.data[0].coinObjectId),
+          walCoin.data.slice(1).map(coin => tx.object(coin.coinObjectId))
+        )
+      }
+
+      // Extend all blobs by adding epochs to their current expiration
+      for (const [_blobId, objectId] of blobIdToObjectIdMap.entries()) {
+        tx.moveCall({
+          package: walrusPackageId,
+          module: 'system',
+          function: 'extend_blob',
+          arguments: [
+            tx.object(systemObjectId),
+            tx.object(objectId),
+            tx.pure.u32(extendEpochs),
+            tx.object(walCoin.data[0].coinObjectId)
+          ]
+        })
+      }
+
+      const digest = await txExecutor.execute({
+        transaction: tx,
+        description: `Extending ${blobIdToObjectIdMap.size} blob(s) by ${extendEpochs} epoch(s)`
+      })
+
+      // Wait for transaction to complete
+      await suiClient.waitForTransaction({ digest })
+
+      // Invalidate queries to refetch updated data
+      await queryClient.invalidateQueries({
+        predicate: query => {
+          const key = query.queryKey
+          return (
+            (Array.isArray(key) &&
+              (key[0] === 'walrus-site' || key[0] === 'walrus-sites')) ||
+            false
+          )
+        }
+      })
+
+      onExtendedBlobs?.(
+        `Successfully extended ${blobIdToObjectIdMap.size} blob(s) by ${extendEpochs} epoch(s)`,
+        digest
+      )
+    } catch (error) {
+      console.error('Error extending blobs:', error)
+      onError?.(
+        `Failed to extend blobs: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    } finally {
+      setIsExtending(false)
+    }
+  }
+
   return {
     state: {
       isDeployed,
       isAssigning,
+      isExtending,
       isPublishDialogOpen,
       isWorking,
       certifiedBlobs,
@@ -289,6 +459,7 @@ export function useSitePublishing({
       handleRunDeploymentStep,
       handleSaveSiteMetadata,
       handleAssociateDomain,
+      handleExtendBlobs,
       handleOpenDomainDialog,
       handleOpenPublishingDialog,
       handleCancelEditingSiteMetadata: siteMetadataStore.reset
