@@ -3,6 +3,7 @@ import type {
   ISponsorConfig
 } from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
+import type { SuinsClient } from '@mysten/suins'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import * as Dialog from '@radix-ui/react-dialog'
 import type { QueryClient } from '@tanstack/react-query'
@@ -18,8 +19,11 @@ interface RegisterSuiNsDialogProps {
   onClose: () => void
   onRegistered?: () => void
   currentAccount: WalletAccount | null
-  suiClient: SuiClient
-  queryClient: QueryClient
+  clients: {
+    suiClient: SuiClient
+    queryClient: QueryClient
+    suinsClient: SuinsClient
+  }
   signAndExecuteTransaction: ISignAndExecuteTransaction
   sponsorConfig?: ISponsorConfig
 }
@@ -29,8 +33,7 @@ export const RegisterSuiNsDialog: FC<RegisterSuiNsDialogProps> = ({
   onClose,
   onRegistered,
   currentAccount,
-  suiClient,
-  queryClient,
+  clients: { suiClient, queryClient, suinsClient },
   signAndExecuteTransaction,
   sponsorConfig
 }) => {
@@ -50,8 +53,7 @@ export const RegisterSuiNsDialog: FC<RegisterSuiNsDialogProps> = ({
     reset
   } = useSuiNsRegistration({
     currentAccount,
-    suiClient,
-    queryClient,
+    clients: { suiClient, queryClient, suinsClient },
     signAndExecuteTransaction,
     sponsorConfig
   })

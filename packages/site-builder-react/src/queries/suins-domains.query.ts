@@ -1,9 +1,8 @@
 import type { SuiClient } from '@mysten/sui/client'
-import { mainPackage } from '@mysten/suins'
+import { mainPackage, SuinsClient } from '@mysten/suins'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import { type QueryClient, useQueries, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
-import { useSuiNsClient } from '~/hooks/useSuiNsClient'
 import { nonNull } from '~/lib/nonNull'
 import { queryKeys } from './keys'
 
@@ -38,7 +37,14 @@ export function useSuiNsDomainsQuery(
 ): ISuiNsDomainQuery {
   const { suiClient, queryClient } = clients
   const { network } = suiClient
-  const suinsClient = useSuiNsClient(suiClient)
+  const suinsClient = useMemo(
+    () =>
+      new SuinsClient({
+        network: suiClient.network === 'mainnet' ? 'mainnet' : 'testnet',
+        client: suiClient
+      }),
+    [suiClient]
+  )
 
   const onchainDataQuery = useQuery(
     {

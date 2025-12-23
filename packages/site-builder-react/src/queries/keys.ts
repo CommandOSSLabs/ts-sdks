@@ -7,8 +7,5 @@ export const queryKeys = {
   walrusSites: (address: string | undefined, network: string) =>
     ['walrus-sites', address, network] as const,
   storageCost: (fileSize: number | null, epochs: number) =>
-    ['storage-cost', fileSize, epochs] as const,
-  // biome-ignore lint/complexity/noBannedTypes: no issue
-  assetsSize: (onPrepareAssets: Function) =>
-    ['assets-size', onPrepareAssets] as const
+    ['storage-cost', fileSize, epochs] as const
 } as const

@@ -78,7 +78,7 @@ export default function AssetsSection({
         </div>
       ) : (
         <div className="space-y-4">
-          <FileExplorer className="h-[300px]" assets={assets} />
+          <FileExplorer className="h-75" assets={assets} />
 
           <Button
             onClick={onClearWorkspace}

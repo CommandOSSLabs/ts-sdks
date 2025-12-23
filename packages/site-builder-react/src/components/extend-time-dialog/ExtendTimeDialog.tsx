@@ -8,27 +8,16 @@ import { Transaction } from '@mysten/sui/transactions'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import {
   MAINNET_WALRUS_PACKAGE_CONFIG,
-  TESTNET_WALRUS_PACKAGE_CONFIG
+  TESTNET_WALRUS_PACKAGE_CONFIG,
+  type WalrusClient
 } from '@mysten/walrus'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import type { QueryClient } from '@tanstack/react-query'
-import {
-  Calendar,
-  CalendarClock,
-  Clock,
-  FileText,
-  Info,
-  Loader2,
-  X
-} from 'lucide-react'
+import { Calendar, Clock, Info, Loader2, X } from 'lucide-react'
 import type { FC } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  useEpochDuration,
-  useTransactionExecutor,
-  useWalrusClient
-} from '~/hooks'
+import { useEpochDuration, useTransactionExecutor } from '~/hooks'
 import { useWalrusSiteQuery } from '~/queries/walrus-site.query'
 import { isExtendTimeDialogOpen } from '~/stores/site-domain.store'
 import { Banner } from '../ui'
@@ -42,6 +31,7 @@ interface ExtendTimeDialogProps {
   clients: {
     suiClient: SuiClient
     queryClient: QueryClient
+    walrusClient: WalrusClient
   }
   signAndExecuteTransaction: ISignAndExecuteTransaction
   sponsorConfig?: ISponsorConfig
@@ -51,7 +41,7 @@ interface ExtendTimeDialogProps {
 const ExtendTimeDialog: FC<ExtendTimeDialogProps> = ({
   siteId,
   currentAccount,
-  clients: { suiClient, queryClient },
+  clients: { suiClient, queryClient, walrusClient },
   signAndExecuteTransaction,
   sponsorConfig,
   onSuccess
@@ -68,7 +58,6 @@ const ExtendTimeDialog: FC<ExtendTimeDialogProps> = ({
     new Map()
   )
 
-  const walrusClient = useWalrusClient(suiClient)
   const { epochDurationMs, formatDate } = useEpochDuration(walrusClient)
   const txExecutor = useTransactionExecutor({
     suiClient,

@@ -1,11 +1,12 @@
-import type { SuiClient } from '@mysten/sui/client'
+import type { IAsset } from '@cmdoss/site-builder'
+import type { WalrusClient } from '@mysten/walrus'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import type { QueryClient } from '@tanstack/react-query'
 import { CalendarClock, Info, Loader2, Pencil, Upload, X } from 'lucide-react'
 import type { FC } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useEpochDuration, useWalrusClient } from '~/hooks'
+import { useEpochDuration } from '~/hooks'
 import { useStorageCostQuery } from '~/queries/storage-cost.query'
 import { siteMetadataStore } from '~/stores/site-metadata.store'
 import { sitePublishingStore } from '~/stores/site-publishing.store'
@@ -18,21 +19,23 @@ import * as styles from './PublishModal.css'
 
 interface PublishModalProps {
   siteId: string | undefined
+  assets: IAsset[]
   onDeploy?: () => void
   onSaveMetadata?: () => Promise<void>
   onExtendBlobs?: (extendEpochs: number) => Promise<void>
   clients: {
-    suiClient: SuiClient
     queryClient: QueryClient
+    walrusClient: WalrusClient
   }
 }
 
 const PublishModal: FC<PublishModalProps> = ({
   siteId,
+  assets,
   onDeploy,
   onSaveMetadata,
   onExtendBlobs,
-  clients: { suiClient, queryClient }
+  clients: { queryClient, walrusClient }
 }) => {
   const [isMetadataDialogOpen, setIsMetadataDialogOpen] = useState(false)
   const [isStorageDetailsExpanded, setIsStorageDetailsExpanded] =
@@ -45,7 +48,6 @@ const PublishModal: FC<PublishModalProps> = ({
   const isWorking = useStore(sitePublishingStore.isWorking)
   const deployStatusText = useStore(sitePublishingStore.deployStatusText)
   const deployStepIndex = useStore(sitePublishingStore.deploymentStepIndex)
-  const assetsSize = useStore(sitePublishingStore.assetsSize)
   const imageDisplayUrl = useStore(siteMetadataStore.imageDisplayUrl)
   const projectUrl = useStore(siteMetadataStore.projectUrl)
   const epochs = useStore(siteMetadataStore.epochs)
@@ -54,7 +56,6 @@ const PublishModal: FC<PublishModalProps> = ({
   const title = useStore(siteMetadataStore.title)
   const description = useStore(siteMetadataStore.description)
 
-  const walrusClient = useWalrusClient(suiClient)
   const { epochDurationMs, getExpirationDate } = useEpochDuration(walrusClient)
 
   // Track initial epochs value when editing a site
@@ -63,6 +64,12 @@ const PublishModal: FC<PublishModalProps> = ({
       setPreviousEpochs(epochs)
     }
   }, [siteId, epochs, previousEpochs])
+
+  // Calculate assets size
+  const assetsSize = useMemo(
+    () => assets.reduce((sum, a) => sum + a.content.byteLength, 0),
+    [assets]
+  )
 
   // Calculate min and max dates for date picker
   const minDate = useMemo(() => {
@@ -162,7 +169,7 @@ const PublishModal: FC<PublishModalProps> = ({
     },
     isLoading: storageCostLoading,
     isError: storageCostError
-  } = useStorageCostQuery(assetsSize, epochs, { suiClient, queryClient })
+  } = useStorageCostQuery(assetsSize, epochs, { walrusClient, queryClient })
 
   const deploymentSteps = [
     {

@@ -1,13 +1,9 @@
-import type { IReadOnlyFileManager } from '@cmdoss/site-builder'
+import type { ZenFsFileManager } from '@cmdoss/file-manager'
+import { getSHA256Hash, type IAsset, sha256ToU256 } from '@cmdoss/site-builder'
 import { type QueryClient, useQuery } from '@tanstack/react-query'
 
-interface IAsset {
-  path: string
-  content: Uint8Array
-}
-
 export function useZenfsFilesQuery(
-  fm: IReadOnlyFileManager | null,
+  fm: ZenFsFileManager | null,
   clients: {
     queryClient: QueryClient
   }
@@ -17,11 +13,15 @@ export function useZenfsFilesQuery(
     {
       queryKey: ['zenfs-files', fm?.workspaceDir],
       queryFn: async () => {
-        const files = (await fm?.listFiles()) ?? []
+        if (!fm) return []
+        const files = await fm.listFiles()
         const assets: IAsset[] = []
         for (const path of files) {
           const content = await fm?.readFile(path)
-          if (content) assets.push({ path, content })
+          if (!content) continue
+          const hash = await getSHA256Hash(content)
+          const hashU256 = sha256ToU256(hash)
+          assets.push({ path, content, hashU256 })
         }
         return assets
       },

@@ -4,6 +4,7 @@ import type {
 } from '@cmdoss/site-builder'
 import { suinsDomainToWalrusSiteUrl } from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
+import type { SuinsClient } from '@mysten/suins'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
@@ -45,6 +46,7 @@ interface SuiNsModalProps {
   clients: {
     suiClient: SuiClient
     queryClient: QueryClient
+    suinsClient: SuinsClient
   }
   /**
    * Callback for signing and executing transactions.
@@ -63,7 +65,7 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
   currentAccount,
   portalDomain,
   portalHttps,
-  clients: { suiClient, queryClient },
+  clients: { suiClient, queryClient, suinsClient },
   signAndExecuteTransaction,
   sponsorConfig
 }) => {
@@ -360,8 +362,7 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
             }
           }}
           currentAccount={currentAccount}
-          suiClient={suiClient}
-          queryClient={queryClient}
+          clients={{ suiClient, queryClient, suinsClient }}
           signAndExecuteTransaction={signAndExecuteTransaction}
           sponsorConfig={sponsorConfig}
         />

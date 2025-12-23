@@ -1,7 +1,7 @@
 'use client'
 
 import type {
-  IReadOnlyFileManager,
+  IAsset,
   ISignAndExecuteTransaction,
   ISponsorConfig
 } from '@cmdoss/site-builder'
@@ -12,6 +12,8 @@ import {
 } from '@cmdoss/site-builder-react'
 import type { useCurrentAccount } from '@mysten/dapp-kit'
 import type { SuiClient } from '@mysten/sui/client'
+import type { SuinsClient } from '@mysten/suins'
+import type { WalrusClient } from '@mysten/walrus'
 import type { QueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,8 +25,7 @@ import {
 interface PublishSectionProps {
   siteId: string | undefined
   currentAccount: ReturnType<typeof useCurrentAccount>
-  assets: { path: string; content: string | Uint8Array }[]
-  onPrepareAssets: () => Promise<IReadOnlyFileManager>
+  assets: IAsset[]
   onUpdateSiteMetadata: (site: SiteMetadataUpdate) => Promise<SiteMetadata>
   onError: (msg: string) => void
   signAndExecuteTransaction: ISignAndExecuteTransaction
@@ -35,6 +36,8 @@ interface PublishSectionProps {
   clients: {
     suiClient: SuiClient
     queryClient: QueryClient
+    suinsClient: SuinsClient
+    walrusClient: WalrusClient
   }
 }
 
@@ -42,14 +45,11 @@ export default function PublishSection({
   siteId,
   currentAccount,
   assets,
-  onPrepareAssets,
   onUpdateSiteMetadata,
   onError,
   signAndExecuteTransaction,
   sponsorConfig,
-  onSponsorConfigChange,
   sponsorEnabled = false,
-  sponsorUrl = 'http://localhost:8787',
   clients
 }: PublishSectionProps) {
   if (!currentAccount) {
@@ -77,7 +77,7 @@ export default function PublishSection({
   return (
     <div className="space-y-4">
       {/* Sponsor Config UI */}
-      {onSponsorConfigChange && (
+      {/* {onSponsorConfigChange && (
         <div className="p-4 bg-[#0C0F1D]/50 border border-[#97F0E599]/30 rounded-lg">
           <div className="flex items-center gap-2 mb-3">
             <input
@@ -120,11 +120,11 @@ export default function PublishSection({
             </div>
           )}
         </div>
-      )}
+      )} */}
 
       <PublishButton
         siteId={siteId}
-        onPrepareAssets={onPrepareAssets}
+        assets={assets}
         onUpdateSiteMetadata={onUpdateSiteMetadata}
         onError={onError}
         currentAccount={currentAccount}

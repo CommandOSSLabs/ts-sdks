@@ -6,30 +6,30 @@ import type {
 import { mainPackage } from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import { Transaction } from '@mysten/sui/transactions'
-import { SuinsTransaction } from '@mysten/suins'
+import { type SuinsClient, SuinsTransaction } from '@mysten/suins'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import type { QueryClient } from '@tanstack/react-query'
 import BN from 'bn.js'
 import { useCallback, useMemo, useState } from 'react'
-import { useSuiNsClient } from './useSuiNsClient'
 import { useTransactionExecutor } from './useTransactionExecutor'
 
 interface UseSuiNsRegistrationParams {
   currentAccount: WalletAccount | null
-  suiClient: SuiClient
-  queryClient: QueryClient
+  clients: {
+    suiClient: SuiClient
+    queryClient: QueryClient
+    suinsClient: SuinsClient
+  }
   signAndExecuteTransaction: ISignAndExecuteTransaction
   sponsorConfig?: ISponsorConfig
 }
 
 export function useSuiNsRegistration({
   currentAccount,
-  suiClient,
-  queryClient,
+  clients: { suiClient, queryClient, suinsClient },
   signAndExecuteTransaction,
   sponsorConfig
 }: UseSuiNsRegistrationParams) {
-  const suinsClient = useSuiNsClient(suiClient)
   const txExecutor = useTransactionExecutor({
     suiClient,
     walletAddress: currentAccount?.address,
