@@ -1,4 +1,3 @@
-import type { FileChangedCallback, IFileManager } from '@cmdoss/site-builder'
 import { Zip } from '@zenfs/archives'
 import { configure, fs } from '@zenfs/core'
 import * as path from '@zenfs/core/path'
@@ -7,7 +6,12 @@ import debug from 'debug'
 
 const log = debug('file-manager')
 
-export class ZenFsFileManager implements IFileManager {
+export type FileChangedCallback = (arg: {
+  type: 'updated' | 'removed'
+  path: string
+}) => void
+
+export class ZenFsFileManager {
   protected changeListeners: Set<FileChangedCallback> = new Set()
   constructor(
     /** The directory of the workspace. Any files within this directory are considered part of the workspace. */
@@ -23,7 +27,7 @@ export class ZenFsFileManager implements IFileManager {
       const normalizedWorkspace = path.normalize(this.workspaceDir)
       const normalizedMount = path.normalize(this.mountDir)
       if (
-        !normalizedWorkspace.startsWith(normalizedMount + '/') &&
+        !normalizedWorkspace.startsWith(`${normalizedMount}/`) &&
         normalizedWorkspace !== normalizedMount
       ) {
         throw new Error(

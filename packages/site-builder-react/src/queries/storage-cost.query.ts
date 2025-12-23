@@ -1,18 +1,16 @@
-import type { SuiClient } from '@mysten/sui/client'
+import type { WalrusClient } from '@mysten/walrus'
 import { type QueryClient, useQuery } from '@tanstack/react-query'
-import { useWalrusClient } from '~/hooks'
 import { queryKeys } from './keys'
 
 export function useStorageCostQuery(
   fileSize: number | null,
   epochs: number,
   clients: {
-    suiClient: SuiClient
     queryClient: QueryClient
+    walrusClient: WalrusClient
   }
 ) {
-  const { suiClient, queryClient } = clients
-  const walrusClient = useWalrusClient(suiClient)
+  const { walrusClient, queryClient } = clients
   return useQuery(
     {
       queryKey: queryKeys.storageCost(fileSize, epochs),

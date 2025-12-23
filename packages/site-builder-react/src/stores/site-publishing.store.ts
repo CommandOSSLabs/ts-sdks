@@ -1,6 +1,6 @@
 import type {
+  IAsset,
   ICertifiedBlob,
-  IReadOnlyFileManager,
   IUpdateWalrusSiteFlow,
   IWalrusSiteBuilderSdk
 } from '@cmdoss/site-builder'
@@ -58,15 +58,10 @@ export interface DeploymentHandlers {
 }
 
 class SitePublishingStore {
-  // UI state
-  isPublishDialogOpen = atom(false)
-  certifiedBlobs = atom<ICertifiedBlob[]>([])
-  assetsSize = atom<number | null>(null)
-
   // Deployment state
   deployStatus = atom(DeploymentStatus.Idle)
-  deploymentStepIndex = computed([this.deployStatus], deployStatus => {
-    switch (deployStatus) {
+  deploymentStepIndex = computed([this.deployStatus], s => {
+    switch (s) {
       case DeploymentStatus.Idle:
       case DeploymentStatus.Preparing:
         return 0
@@ -86,6 +81,9 @@ class SitePublishingStore {
     }
   })
 
+  // UI state
+  isPublishDialogOpen = atom(false)
+  certifiedBlobs = atom<ICertifiedBlob[]>([])
   isWorking = computed(
     [this.deployStatus],
     deployStatus =>
@@ -96,8 +94,8 @@ class SitePublishingStore {
       deployStatus !== DeploymentStatus.Deployed
   )
 
-  deployStatusText = computed([this.deployStatus], deployStatus => {
-    switch (deployStatus) {
+  deployStatusText = computed([this.deployStatus], s => {
+    switch (s) {
       case DeploymentStatus.Idle:
         return 'Start Deployment'
       case DeploymentStatus.Preparing:
@@ -126,8 +124,8 @@ class SitePublishingStore {
 
   async runDeploymentStep(
     sdk: IWalrusSiteBuilderSdk,
-    site: SiteMetadata,
-    onPrepareAssets: () => Promise<IReadOnlyFileManager>
+    assets: IAsset[],
+    site: SiteMetadata
   ): Promise<TResult<string>> {
     if (this.isWorking.get()) return failed('Another operation is in progress')
 
@@ -137,11 +135,7 @@ class SitePublishingStore {
       case DeploymentStatus.Idle: {
         this.deployStatus.set(DeploymentStatus.Preparing)
         try {
-          const fm = await onPrepareAssets()
-          const assetsSize = await fm.getSize()
-          if (!assetsSize) throw new Error('No assets to deploy')
-          this.assetsSize.set(assetsSize)
-          this.currentFlow = sdk.executeSiteUpdateFlow(fm, {
+          this.currentFlow = sdk.executeSiteUpdateFlow(assets, {
             object_id: site.id,
             site_name: site.title,
             metadata: {
@@ -162,7 +156,7 @@ class SitePublishingStore {
               this.deployStatus.set(DeploymentStatus.Certified)
             }
           } else this.deployStatus.set(DeploymentStatus.Prepared)
-          return this.runDeploymentStep(sdk, site, onPrepareAssets)
+          return this.runDeploymentStep(sdk, assets, site)
         } catch (e) {
           console.error('Failed to prepare assets:', e)
           const msg =
@@ -188,7 +182,7 @@ class SitePublishingStore {
         }
 
         this.deployStatus.set(DeploymentStatus.Uploaded)
-        return this.runDeploymentStep(sdk, site, onPrepareAssets)
+        return this.runDeploymentStep(sdk, assets, site)
       }
 
       case DeploymentStatus.Uploaded: {
@@ -197,7 +191,7 @@ class SitePublishingStore {
         try {
           await this.currentFlow.certifyResources()
           this.deployStatus.set(DeploymentStatus.Certified)
-          return this.runDeploymentStep(sdk, site, onPrepareAssets)
+          return this.runDeploymentStep(sdk, assets, site)
         } catch (e) {
           console.error('Failed to certify assets:', e)
           this.deployStatus.set(DeploymentStatus.Uploaded)

@@ -1,18 +1,13 @@
 import { bcs } from '@mysten/sui/bcs'
 import type { SuiClient } from '@mysten/sui/client'
 import { deriveDynamicFieldID, fromBase64 } from '@mysten/sui/utils'
-import type { WalrusFile } from '@mysten/walrus'
 import debug from 'debug'
 import { contentTypeFromFilePath } from '../content.ts'
 import { handleSuiClientError } from '../lib/handleSuiClientError.ts'
-import {
-  getSHA256Hash,
-  isSupportedNetwork,
-  mainPackage,
-  sha256ToU256
-} from '../lib/index.ts'
+import { isSupportedNetwork, mainPackage } from '../lib/index.ts'
 import { computeSiteDataDiff } from '../lib/site-data.utils.ts'
 import type {
+  IAsset,
   ResourceChainValue,
   Routes,
   SiteData,
@@ -51,13 +46,13 @@ export class SiteService {
   /**
    * Calculate the diff between provided files and existing on-chain site data.
    *
-   * @param files - The WalrusFile array containing files to be deployed
+   * @param files - The IAsset array containing files to be deployed
    * @param wsResources - The Walrus Site resources metadata (routes, headers, etc.)
    * @param siteId - The existing site ID to compare against. If undefined, all files are treated as new.
    * @returns The computed site data diff
    */
   async calculateSiteDiff(
-    files: WalrusFile[],
+    files: IAsset[],
     wsResources: WSResources
   ): Promise<SiteDataDiff> {
     log('📊 Calculating site diff...')
@@ -130,18 +125,17 @@ export class SiteService {
    * 3. Generates default routes if none are provided
    */
   async #buildSiteDataFromFiles(
-    files: WalrusFile[],
+    files: IAsset[],
     wsResources: WSResources
   ): Promise<SiteData> {
     const resources: SuiResource[] = []
 
     for (const file of files) {
-      const content = await file.bytes()
-      const path = (await file.getIdentifier()) ?? ''
+      const { path, hashU256 } = file
       const resource: SuiResource = {
         path,
         blob_id: '<pending>', // Will be filled after upload
-        blob_hash: sha256ToU256(await getSHA256Hash(content)).toString(),
+        blob_hash: hashU256.toString(),
         headers: wsResources.headers ?? [
           { key: 'content-encoding', value: 'identity' },
           { key: 'content-type', value: contentTypeFromFilePath(path) }

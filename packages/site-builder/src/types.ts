@@ -116,40 +116,6 @@ export interface ICertifiedBlob {
 // ##########################################################################
 
 /**
- * Callback invoked when a file is changed (added, updated, or removed)
- */
-export type FileChangedCallback = (arg: {
-  type: 'updated' | 'removed'
-  path: string
-}) => void
-
-/**
- * File Manager interface for managing site files.
- */
-export interface IFileManager extends IReadOnlyFileManager {
-  /** Write a file to the workspace */
-  writeFile(path: string, content: Uint8Array): Promise<void>
-  /** Delete a file from the workspace */
-  deleteFile(path: string): Promise<void>
-}
-
-/**
- * Read-only File Manager interface for reading site files.
- */
-export interface IReadOnlyFileManager {
-  /** Initialize the file manager */
-  initialize(): Promise<void>
-  /** Read a file from the workspace */
-  readFile(path: string): Promise<Uint8Array>
-  /** List all files in the workspace recursively */
-  listFiles(): Promise<string[]>
-  /** Get the total size of all files in the workspace */
-  getSize(): Promise<number>
-  /** The workspace path */
-  readonly workspaceDir: string
-}
-
-/**
  * The routes for a site
  */
 export type Routes = Array<[string, string]>
@@ -289,14 +255,12 @@ export interface SiteDataDiff {
 
 /**
  * Asset to be deployed.
- *
- * @deprecated Use `IReadOnlyFileManager` to pass assets instead.
  */
 export interface IAsset {
   path: string
   content: Uint8Array
   /** SHA-256 hash of the file content */
-  hash: Uint8Array
+  // hash: Uint8Array
   /** SHA-256 hash of the file content as U256 little-endian */
   hashU256: bigint
 }
@@ -361,7 +325,7 @@ export interface IWalrusSiteBuilderSdk {
    * Start a deploy flow for deploying a Walrus Site.
    */
   executeSiteUpdateFlow(
-    target: IReadOnlyFileManager,
+    assets: IAsset[],
     wsResource?: WSResources
   ): IUpdateWalrusSiteFlow
 }
