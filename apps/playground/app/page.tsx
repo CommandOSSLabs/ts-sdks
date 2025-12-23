@@ -24,6 +24,7 @@ import {
 } from '@mysten/dapp-kit'
 import { SuinsClient } from '@mysten/suins'
 import { WalrusClient } from '@mysten/walrus'
+import { useStore } from '@nanostores/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -39,7 +40,7 @@ export default function Home() {
   const networkConfig = useNetworkConfig()
   const [isAddingFiles, setIsAddingFiles] = useState(false)
   const [isClearingWorkspace, setIsClearingWorkspace] = useState(false)
-  const [siteId, setSiteId] = useState('')
+  const siteId = useStore($siteId)
   const suinsClient = useMemo(
     () => new SuinsClient({ network: networkConfig.name, client: suiClient }),
     [networkConfig.name, suiClient]
@@ -59,7 +60,7 @@ export default function Home() {
   )
 
   // Fix hydration issues by syncing siteId from nanostores manually on the client
-  useEffect(() => $siteId.listen(v => setSiteId(v)), [])
+  // useEffect(() => $siteId.listen(v => setSiteId(v)), [])
 
   // Sponsor config state
   const [sponsorEnabled, setSponsorEnabled] = useState(false)
