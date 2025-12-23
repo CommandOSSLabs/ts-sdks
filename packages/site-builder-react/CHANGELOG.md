@@ -1,5 +1,17 @@
 # @cmdoss/site-builder-react
 
+## 2.1.0
+
+### Minor Changes
+
+- 0ba171d: buy-suins-and-extend-blob
+
+### Patch Changes
+
+- Updated dependencies [0ba171d]
+  - @cmdoss/file-manager@2.1.0
+  - @cmdoss/site-builder@2.1.0
+
 ## 2.0.0
 
 ### Minor Changes
