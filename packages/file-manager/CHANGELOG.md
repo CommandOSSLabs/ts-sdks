@@ -1,6 +1,6 @@
 # @cmdoss/file-manager
 
-## 3.0.0
+## 2.1.0
 
 ### Minor Changes
 
@@ -9,7 +9,7 @@
 ### Patch Changes
 
 - Updated dependencies [0ba171d]
-  - @cmdoss/site-builder@3.0.0
+  - @cmdoss/site-builder@2.1.0
 
 ## 2.0.0
 
