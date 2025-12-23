@@ -3,6 +3,7 @@ import {
   type UseSitePublishingParams,
   useSitePublishing
 } from '~/hooks/useSitePublishing'
+import ExtendTimeDialog from './extend-time-dialog/ExtendTimeDialog'
 import PublishMenu from './publish-menu/PublishMenu'
 import PublishModal from './publish-modal/PublishModal'
 import SuiNsModal from './suins-modal/SuiNsModal'
@@ -20,6 +21,7 @@ const PublishButton: FC<Props> = ({
   onUpdateSiteMetadata,
   onAssociatedDomain,
   onError,
+  onExtendedBlobs,
   currentAccount,
   signAndExecuteTransaction,
   sponsorConfig,
@@ -33,7 +35,8 @@ const PublishButton: FC<Props> = ({
       handleOpenDomainDialog,
       handleRunDeploymentStep,
       handleSaveSiteMetadata,
-      handleAssociateDomain
+      handleAssociateDomain,
+      handleExtendBlobs
     }
   } = useSitePublishing({
     siteId,
@@ -41,10 +44,13 @@ const PublishButton: FC<Props> = ({
     onUpdateSiteMetadata,
     onAssociatedDomain,
     onError,
+    onExtendedBlobs,
     currentAccount,
     signAndExecuteTransaction,
     sponsorConfig,
-    clients
+    clients,
+    portalDomain,
+    portalHttps
   })
   const network = clients.suiClient.network
 
@@ -66,6 +72,7 @@ const PublishButton: FC<Props> = ({
         siteId={siteId}
         onDeploy={handleRunDeploymentStep}
         onSaveMetadata={handleSaveSiteMetadata}
+        onExtendBlobs={handleExtendBlobs}
         clients={clients}
       />
       <SuiNsModal
@@ -75,6 +82,18 @@ const PublishButton: FC<Props> = ({
         portalDomain={portalDomain}
         portalHttps={portalHttps}
         clients={clients}
+        signAndExecuteTransaction={signAndExecuteTransaction}
+        sponsorConfig={sponsorConfig}
+      />
+      <ExtendTimeDialog
+        siteId={siteId}
+        currentAccount={currentAccount}
+        clients={clients}
+        signAndExecuteTransaction={signAndExecuteTransaction}
+        sponsorConfig={sponsorConfig}
+        onSuccess={(message, digest) => {
+          onExtendedBlobs?.(message, digest)
+        }}
       />
     </ThemeProvider>
   )

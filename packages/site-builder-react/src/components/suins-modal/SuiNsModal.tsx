@@ -1,22 +1,26 @@
-import {
-  objectIdToWalrusSiteUrl,
-  suinsDomainToWalrusSiteUrl
+import type {
+  ISignAndExecuteTransaction,
+  ISponsorConfig
 } from '@cmdoss/site-builder'
+import { suinsDomainToWalrusSiteUrl } from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import type { QueryClient } from '@tanstack/react-query'
-import { Loader2, X } from 'lucide-react'
-import type { FC } from 'react'
+import { ExternalLink, Loader2, X } from 'lucide-react'
+import { type FC, useState } from 'react'
 import { useSuiNsDomainsQuery } from '~/queries'
 import {
   isAssigningDomain,
-  isDomainDialogOpen
+  isDomainDialogOpen,
+  isRegisterSuiNSDomainDialogOpen
 } from '~/stores/site-domain.store'
+import { siteMetadataStore } from '~/stores/site-metadata.store'
 import { Banner } from '../ui'
 import { Button } from '../ui/Button'
 import DomainCardSvg from './DomainCardSvg'
+import { RegisterSuiNsDialog } from './RegisterSuiNsDialog'
 import * as styles from './SuiNsModal.css'
 
 export interface SuiNsDomain {
@@ -29,7 +33,7 @@ export interface SuiNsDomain {
 
 interface SuiNsModalProps {
   siteId: string | undefined
-  onAssociateDomain?: (nftId: string, siteId: string) => void
+  onAssociateDomain?: (nftId: string, siteId: string, suiNSName: string) => void
   currentAccount: WalletAccount | null
   /** Optional domain for the portal to view published site. */
   portalDomain?: string
@@ -42,6 +46,15 @@ interface SuiNsModalProps {
     suiClient: SuiClient
     queryClient: QueryClient
   }
+  /**
+   * Callback for signing and executing transactions.
+   * Required for registering new SuiNS domains.
+   */
+  signAndExecuteTransaction?: ISignAndExecuteTransaction
+  /**
+   * Optional sponsor configuration for transaction sponsorship.
+   */
+  sponsorConfig?: ISponsorConfig
 }
 
 const SuiNsModal: FC<SuiNsModalProps> = ({
@@ -50,13 +63,14 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
   currentAccount,
   portalDomain,
   portalHttps,
-  clients: { suiClient, queryClient }
+  clients: { suiClient, queryClient },
+  signAndExecuteTransaction,
+  sponsorConfig
 }) => {
   const isOpen = useStore(isDomainDialogOpen)
   const isAssigning = useStore(isAssigningDomain)
-  const walrusSiteUrl = siteId
-    ? objectIdToWalrusSiteUrl(siteId, portalDomain, portalHttps)
-    : undefined
+  const suiNSUrl = useStore(siteMetadataStore.suiNSUrl)
+  const isRegisterSuiNSDomainDialog = useStore(isRegisterSuiNSDomainDialogOpen)
   const { network } = suiClient
   const {
     data: nsDomains,
@@ -64,17 +78,32 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
     isError: isErrorDomains
   } = useSuiNsDomainsQuery(currentAccount, { suiClient, queryClient })
 
-  const associatedDomains = nsDomains.filter(d => d.walrusSiteId === siteId)
+  // Find the domain that matches suiNSUrl
+  const currentSuiNSDomain = nsDomains.find(domain => {
+    const domainUrl = suinsDomainToWalrusSiteUrl(
+      domain.name,
+      portalDomain,
+      portalHttps
+    )
+    return domainUrl === suiNSUrl
+  })
 
-  const handleAssociate = (nftId: string) => {
+  // Explorer URL
+  const explorerUrl = siteId
+    ? network === 'testnet'
+      ? `https://testnet.suivision.xyz/object/${siteId}`
+      : `https://suivision.xyz/object/${siteId}`
+    : undefined
+
+  const handleAssociate = (nftId: string, suiNSName: string) => {
     if (siteId && onAssociateDomain) {
-      onAssociateDomain(nftId, siteId)
+      onAssociateDomain(nftId, siteId, suiNSName)
     }
   }
 
   const handleRemoveAssociation = (nftId: string) => {
     if (onAssociateDomain) {
-      onAssociateDomain(nftId, '')
+      onAssociateDomain(nftId, '', '')
     }
   }
 
@@ -146,26 +175,52 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
                 Currently Associated Domains
               </div>
               <div className={styles.domainList}>
-                {/* Associated SuiNS Domains */}
-                {associatedDomains.map(domain => (
-                  <div key={domain.nftId} className={styles.domainItem}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                {/* Explorer - Always shown if siteId exists */}
+                {explorerUrl && (
+                  <div className={styles.domainItem}>
+                    <div style={{ flex: 1, width: '100%' }}>
                       <a
-                        href={suinsDomainToWalrusSiteUrl(
-                          domain.name,
-                          portalDomain,
-                          portalHttps
-                        )}
+                        href={explorerUrl}
                         target="_blank"
                         rel="noreferrer"
                         className={styles.link}
                         style={{ fontSize: '0.875rem', fontWeight: 500 }}
                       >
-                        {suinsDomainToWalrusSiteUrl(
-                          domain.name,
-                          portalDomain,
-                          portalHttps
-                        )}
+                        Explorer
+                        <ExternalLink
+                          style={{
+                            display: 'inline',
+                            width: '0.75rem',
+                            height: '0.75rem',
+                            marginLeft: '0.25rem'
+                          }}
+                        />
+                      </a>
+                      <p
+                        style={{
+                          marginTop: '0.1rem',
+                          fontSize: '0.75rem',
+                          color: 'var(--muted-foreground)'
+                        }}
+                      >
+                        Sui Explorer
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* SuiNS Domain - Only shown if suiNSUrl exists */}
+                {suiNSUrl && (
+                  <div className={styles.domainItem}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <a
+                        href={suiNSUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.link}
+                        style={{ fontSize: '0.875rem', fontWeight: 500 }}
+                      >
+                        {suiNSUrl}
                       </a>
                       <p
                         style={{
@@ -179,38 +234,14 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleRemoveAssociation(domain.nftId)}
+                      onClick={() =>
+                        handleRemoveAssociation(currentSuiNSDomain?.nftId ?? '')
+                      }
                       disabled={isAssigning}
                       title="Remove domain association"
                     >
                       <X style={{ width: '1rem', height: '1rem' }} />
                     </Button>
-                  </div>
-                ))}
-
-                {/* Default Walrus Site URL */}
-                {walrusSiteUrl && (
-                  <div className={styles.domainItem}>
-                    <div style={{ flex: 1, width: '100%' }}>
-                      <a
-                        href={walrusSiteUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={styles.link}
-                        style={{ fontSize: '0.875rem', fontWeight: 500 }}
-                      >
-                        {walrusSiteUrl}
-                      </a>
-                      <p
-                        style={{
-                          marginTop: '0.1rem',
-                          fontSize: '0.75rem',
-                          color: 'var(--muted-foreground)'
-                        }}
-                      >
-                        Default Walrus URL
-                      </p>
-                    </div>
                   </div>
                 )}
               </div>
@@ -221,7 +252,13 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
               <div className={styles.sectionTitle}>
                 <span>Select a domain to associate with your website</span>
 
-                <button type="button">Buy a domain</button>
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => isRegisterSuiNSDomainDialogOpen.set(true)}
+                >
+                  Buy a domain
+                </Button>
               </div>
 
               {/* Loading state */}
@@ -251,40 +288,33 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
               )}
 
               {/* Empty state */}
-              {!isLoadingDomains &&
-                !isErrorDomains &&
-                !nsDomains.length &&
-                (network === 'testnet' ? (
-                  <Banner
-                    title="You don't own any SuiNS(Testnet) domains yet."
-                    description="Get your own .sui domain name to give your website a memorable and easy-to-share address."
-                    url="https://testnet.suins.io/"
-                    urlName="Visit SuiNS"
-                    variant="alert"
-                  />
-                ) : (
-                  <Banner
-                    title="You don't own any SuiNS domains yet."
-                    description="Get your own .sui domain name to give your website a memorable and easy-to-share address."
-                    url="https://suins.io/"
-                    urlName="Visit SuiNS"
-                    variant="alert"
-                  />
-                ))}
-
+              {!isLoadingDomains && !isErrorDomains && !nsDomains.length && (
+                <Banner
+                  title="You don't own any SuiNS domains yet."
+                  description="Buy a domain to continue."
+                  variant="warning"
+                />
+              )}
               {/* Domain cards */}
               {!isLoadingDomains && !isErrorDomains && nsDomains.length > 0 && (
                 <div className={styles.domainCardGrid}>
                   {nsDomains.map(domain => {
-                    const isAssociated = siteId === domain.walrusSiteId
+                    const domainUrl = suinsDomainToWalrusSiteUrl(
+                      domain.name,
+                      portalDomain,
+                      portalHttps
+                    )
+                    const isCurrentSuiNS = domainUrl === suiNSUrl
 
                     return (
                       <button
                         key={domain.nftId}
                         type="button"
                         className={styles.domainCard}
-                        onClick={() => handleAssociate(domain.nftId)}
-                        disabled={isAssociated || isAssigning}
+                        onClick={() =>
+                          handleAssociate(domain.nftId, domain.name)
+                        }
+                        disabled={isCurrentSuiNS}
                       >
                         <div className={styles.domainCardBg}>
                           <DomainCardSvg />
@@ -315,6 +345,27 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
           </div>
         </Dialog.Content>
       </Dialog.Portal>
+
+      {/* Register SuiNS Dialog */}
+      {signAndExecuteTransaction && (
+        <RegisterSuiNsDialog
+          isOpen={isRegisterSuiNSDomainDialog}
+          onClose={() => isRegisterSuiNSDomainDialogOpen.set(false)}
+          onRegistered={() => {
+            // Invalidate domains query to refresh the list
+            if (currentAccount?.address) {
+              queryClient.invalidateQueries({
+                queryKey: ['suins-domains', currentAccount.address, network]
+              })
+            }
+          }}
+          currentAccount={currentAccount}
+          suiClient={suiClient}
+          queryClient={queryClient}
+          signAndExecuteTransaction={signAndExecuteTransaction}
+          sponsorConfig={sponsorConfig}
+        />
+      )}
     </Dialog.Root>
   )
 }

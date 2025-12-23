@@ -1,15 +1,17 @@
-import {
-  objectIdToWalrusSiteUrl,
-  suinsDomainToWalrusSiteUrl
-} from '@cmdoss/site-builder'
+import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import type { WalletAccount } from '@mysten/wallet-standard'
+import { useStore } from '@nanostores/react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import type { QueryClient } from '@tanstack/react-query'
-import { ExternalLink, Globe2 } from 'lucide-react'
+import { CalendarClock, ExternalLink, Globe2 } from 'lucide-react'
 import type { FC, ReactNode } from 'react'
 import { useSuiNsDomainsQuery } from '~/queries'
-import { isDomainDialogOpen } from '~/stores'
+import {
+  isDomainDialogOpen,
+  isExtendTimeDialogOpen,
+  siteMetadataStore
+} from '~/stores'
 import { Banner } from '../ui'
 import { button } from '../ui/Button.css'
 import * as styles from './PublishMenu.css'
@@ -47,24 +49,14 @@ const PublishMenu: FC<PublishMenuProps> = ({
     ? objectIdToWalrusSiteUrl(siteId, portalDomain, portalHttps)
     : undefined
 
-  const {
-    data: nsDomains,
-    isLoading: isLoadingDomains,
-    isError: isErrorDomains
-  } = useSuiNsDomainsQuery(currentAccount, {
+  const { data: nsDomains } = useSuiNsDomainsQuery(currentAccount, {
     suiClient: clients.suiClient,
     queryClient: clients.queryClient
   })
 
   const associatedDomains = nsDomains.filter(d => d.walrusSiteId === siteId)
 
-  const firstDomain =
-    associatedDomains.length > 0 &&
-    suinsDomainToWalrusSiteUrl(
-      associatedDomains[0].name,
-      portalDomain,
-      portalHttps
-    )
+  const suiNSUrl = useStore(siteMetadataStore.suiNSUrl)
 
   return (
     <DropdownMenu.Root>
@@ -77,16 +69,16 @@ const PublishMenu: FC<PublishMenuProps> = ({
               {isDeployed ? 'Update your Site' : 'Publish your Site'}
             </h4>
             {isDeployed && walrusSiteUrl ? (
-              associatedDomains.length > 0 && firstDomain ? (
+              associatedDomains.length > 0 && suiNSUrl ? (
                 <p className={styles.description}>
                   Your site is live at{' '}
                   <a
-                    href={firstDomain}
+                    href={suiNSUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.link}
                   >
-                    {firstDomain}
+                    {suiNSUrl}
                   </a>
                   . You can update your site to reflect the latest changes.
                 </p>
@@ -155,33 +147,46 @@ const PublishMenu: FC<PublishMenuProps> = ({
             )}
           </DropdownMenu.Item>
 
+          <DropdownMenu.Item
+            className={styles.item}
+            onSelect={() => {
+              isExtendTimeDialogOpen.set(true)
+            }}
+            disabled={!siteId}
+          >
+            <CalendarClock style={{ width: '1rem', height: '1rem' }} />
+            <span style={{ flex: 1 }}>Extend Time</span>
+            {!siteId && (
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  color: 'var(--muted-foreground)'
+                }}
+              >
+                Not Published Yet
+              </span>
+            )}
+          </DropdownMenu.Item>
+
           <DropdownMenu.Separator className={styles.separator} />
 
           {/* Footer */}
           <div className={styles.footer}>
             {isDeployed && walrusSiteUrl ? (
               <div className={styles.buttonGroup}>
-                {associatedDomains.length > 0 &&
-                !isLoadingDomains &&
-                !isErrorDomains ? (
-                  firstDomain && (
-                    <DropdownMenu.Item
-                      className={button({
-                        variant: 'outline',
-                        size: 'default'
-                      })}
-                      style={{ width: '100%' }}
-                      onSelect={() => {
-                        window.open(
-                          firstDomain,
-                          '_blank',
-                          'noopener,noreferrer'
-                        )
-                      }}
-                    >
-                      Visit Site
-                    </DropdownMenu.Item>
-                  )
+                {suiNSUrl ? (
+                  <DropdownMenu.Item
+                    className={button({
+                      variant: 'outline',
+                      size: 'default'
+                    })}
+                    style={{ width: '100%' }}
+                    onSelect={() => {
+                      window.open(suiNSUrl, '_blank', 'noopener,noreferrer')
+                    }}
+                  >
+                    Visit Site
+                  </DropdownMenu.Item>
                 ) : (
                   <DropdownMenu.Item
                     className={button({ variant: 'outline', size: 'default' })}

@@ -12,6 +12,7 @@ class SiteMetadata {
   epochs = atom(5)
   deletable = atom(false)
   loading = atom(false)
+  suiNSUrl = atom<string>('')
 
   // Site data
   originalTitle = atom(DEFAULT_TITLE)
@@ -22,6 +23,7 @@ class SiteMetadata {
   originalLink = atom<string>('')
   originalProjectUrl = atom<string>('')
   originalEpochs = atom(5)
+  originalSuiNSUrl = atom<string>('')
 
   // Derived/computed state
   isDirty = computed(
@@ -32,12 +34,14 @@ class SiteMetadata {
       this.link,
       this.projectUrl,
       this.epochs,
+      this.suiNSUrl,
       this.originalTitle,
       this.originalDescription,
       this.originalImageUrl,
       this.originalLink,
       this.originalProjectUrl,
-      this.originalEpochs
+      this.originalEpochs,
+      this.originalSuiNSUrl
     ],
     (
       title,
@@ -46,19 +50,22 @@ class SiteMetadata {
       link,
       projectUrl,
       epochs,
+      suiNSUrl,
       originalTitle,
       originalDescription,
       originalIcon,
       originalLink,
       originalProjectUrl,
-      originalEpochs
+      originalEpochs,
+      originalSuiNSUrl
     ) =>
       title !== originalTitle ||
       description !== originalDescription ||
       (iconUrl ?? null) !== (originalIcon ?? null) ||
       link !== originalLink ||
       projectUrl !== originalProjectUrl ||
-      epochs !== originalEpochs
+      epochs !== originalEpochs ||
+      suiNSUrl !== originalSuiNSUrl
   )
   /**
    * Computed URL for displaying the image preview
@@ -76,6 +83,7 @@ class SiteMetadata {
     this.originalLink.set(this.link.get())
     this.originalProjectUrl.set(this.projectUrl.get())
     this.originalEpochs.set(this.epochs.get())
+    this.originalSuiNSUrl.set(this.suiNSUrl.get())
   }
 
   reset() {
@@ -85,6 +93,7 @@ class SiteMetadata {
     this.link.set(this.originalLink.get())
     this.projectUrl.set(this.originalProjectUrl.get())
     this.epochs.set(this.originalEpochs.get())
+    this.suiNSUrl.set(this.originalSuiNSUrl.get())
     this.loading.set(false)
   }
 

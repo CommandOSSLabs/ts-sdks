@@ -77,23 +77,31 @@ export default function PublishSection({
   return (
     <div className="space-y-4">
       {/* Sponsor Config UI */}
-      {/* {onSponsorConfigChange && (
+      {onSponsorConfigChange && (
         <div className="p-4 bg-[#0C0F1D]/50 border border-[#97F0E599]/30 rounded-lg">
           <div className="flex items-center gap-2 mb-3">
             <input
               type="checkbox"
               id="sponsor-enabled"
               checked={sponsorEnabled}
-              onChange={e => onSponsorConfigChange(e.target.checked, sponsorUrl)}
+              onChange={e =>
+                onSponsorConfigChange(e.target.checked, sponsorUrl)
+              }
               className="w-4 h-4 bg-[#0C0F1D] border-2 border-[#97F0E599] rounded focus:outline-none focus:ring-0 focus:border-[#97F0E5] checked:bg-[#97F0E5] checked:border-[#97F0E5]"
             />
-            <label htmlFor="sponsor-enabled" className="text-sm font-medium text-[#F7F7F7]">
+            <label
+              htmlFor="sponsor-enabled"
+              className="text-sm font-medium text-[#F7F7F7]"
+            >
               Enable Transaction Sponsorship
             </label>
           </div>
           {sponsorEnabled && (
             <div>
-              <label htmlFor="sponsor-url" className="block text-sm font-medium mb-1 text-[#F7F7F7]">
+              <label
+                htmlFor="sponsor-url"
+                className="block text-sm font-medium mb-1 text-[#F7F7F7]"
+              >
                 Sponsor Backend URL
               </label>
               <input
@@ -101,7 +109,9 @@ export default function PublishSection({
                 id="sponsor-url"
                 className="w-full p-2 bg-[#0C0F1D] border-2 border-[#97F0E599] rounded-md focus:outline-none focus:ring-0 focus:border-[#97F0E5] text-[#F7F7F7]"
                 value={sponsorUrl}
-                onChange={e => onSponsorConfigChange(sponsorEnabled, e.target.value)}
+                onChange={e =>
+                  onSponsorConfigChange(sponsorEnabled, e.target.value)
+                }
                 placeholder="http://localhost:8787"
               />
               <p className="text-xs opacity-70 text-[#F7F7F7] mt-1">
@@ -110,7 +120,7 @@ export default function PublishSection({
             </div>
           )}
         </div>
-      )} */}
+      )}
 
       <PublishButton
         siteId={siteId}
