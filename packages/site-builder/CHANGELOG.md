@@ -1,5 +1,11 @@
 # @cmdoss/site-builder
 
+## 3.0.0
+
+### Minor Changes
+
+- 0ba171d: buy-suins-and-extend-blob
+
 ## 2.0.0
 
 ### Minor Changes

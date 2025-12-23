@@ -1,5 +1,16 @@
 # @cmdoss/file-manager
 
+## 3.0.0
+
+### Minor Changes
+
+- 0ba171d: buy-suins-and-extend-blob
+
+### Patch Changes
+
+- Updated dependencies [0ba171d]
+  - @cmdoss/site-builder@3.0.0
+
 ## 2.0.0
 
 ### Minor Changes
