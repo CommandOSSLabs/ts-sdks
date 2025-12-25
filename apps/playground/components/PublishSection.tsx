@@ -8,7 +8,8 @@ import type {
 import {
   PublishButton,
   type SiteMetadata,
-  type SiteMetadataUpdate
+  type SiteMetadataUpdate,
+  siteMetadataStore
 } from '@cmdoss/site-builder-react'
 import type { useCurrentAccount } from '@mysten/dapp-kit'
 import type { SuiClient } from '@mysten/sui/client'
@@ -21,6 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from '@/components/ui/tooltip'
+import { $suiNSUrl } from '@/stores/siteStore'
 
 interface PublishSectionProps {
   siteId: string | undefined
@@ -132,6 +134,27 @@ export default function PublishSection({
         signAndExecuteTransaction={signAndExecuteTransaction}
         sponsorConfig={sponsorConfig}
         portalDomain="localhost:3003"
+        onAssociatedDomain={async (nftId, _siteId, suiNSName) => {
+          // Store is already updated in useSitePublishing with domain name
+          // We need to update it with proper URL and sync to localStorage
+          const currentDomains = siteMetadataStore.suiNSUrl.get()
+
+          const domainEntry = { suins: suiNSName, nftId }
+
+          // Update store: replace existing entry or add new one
+          const existingIndex = currentDomains.findIndex(d => d.nftId === nftId)
+          const updatedDomains =
+            existingIndex >= 0
+              ? currentDomains.map((d, i) =>
+                  i === existingIndex ? domainEntry : d
+                )
+              : [...currentDomains, domainEntry]
+
+          // Update store
+          siteMetadataStore.suiNSUrl.set(updatedDomains)
+          // Sync to localStorage
+          $suiNSUrl.set([...updatedDomains])
+        }}
       >
         <Button className="w-full bg-[#97f0e5] text-[#0C0F1D] hover:bg-[#97f0e5]/90 border border-[#97F0E599]">
           {siteId ? 'Update Site' : 'Publish'} {sponsorEnabled && '(Sponsored)'}

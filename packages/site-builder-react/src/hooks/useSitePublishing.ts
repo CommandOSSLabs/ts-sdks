@@ -55,7 +55,11 @@ export interface UseSitePublishingParams {
     site: SiteMetadataUpdate
   ) => Promise<SiteMetadata | undefined>
   /** Optional callback when a domain is associated with the site. */
-  onAssociatedDomain?: (nftId: string, siteId: string) => Promise<void>
+  onAssociatedDomain?: (
+    nftId: string,
+    siteId: string,
+    suiNSName: string
+  ) => Promise<void>
   /** Optional callback for handling errors. */
   onError?: (msg: string) => void
   /** Optional callback when blobs are extended. */
@@ -259,11 +263,15 @@ export function useSitePublishing({
           }
         })
 
-        siteMetadataStore.suiNSUrl.set(
-          suinsDomainToWalrusSiteUrl(suiNSName, portalDomain, portalHttps)
-        )
+        // Add domain to array if not already present
+        const currentDomains = siteMetadataStore.suiNSUrl.get()
+        const domainEntry = { suins: suiNSName, nftId }
 
-        await onAssociatedDomain?.(nftId, siteId)
+        if (!currentDomains.some(d => d.nftId === nftId)) {
+          siteMetadataStore.suiNSUrl.set([...currentDomains, domainEntry])
+        }
+
+        await onAssociatedDomain?.(nftId, siteId, suiNSName)
       } catch (e) {
         console.error('🚨 Failed to update SuiNS metadata:', e)
         onError?.('Failed to update SuiNS metadata')

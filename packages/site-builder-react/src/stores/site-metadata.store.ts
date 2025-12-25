@@ -12,7 +12,7 @@ class SiteMetadata {
   epochs = atom(5)
   deletable = atom(false)
   loading = atom(false)
-  suiNSUrl = atom<string>('')
+  suiNSUrl = atom<Array<{ suins: string; nftId: string }>>([])
 
   // Site data
   originalTitle = atom(DEFAULT_TITLE)
@@ -23,7 +23,7 @@ class SiteMetadata {
   originalLink = atom<string>('')
   originalProjectUrl = atom<string>('')
   originalEpochs = atom(5)
-  originalSuiNSUrl = atom<string>('')
+  originalSuiNSUrl = atom<Array<{ suins: string; nftId: string }>>([])
 
   // Derived/computed state
   isDirty = computed(
@@ -65,7 +65,12 @@ class SiteMetadata {
       link !== originalLink ||
       projectUrl !== originalProjectUrl ||
       epochs !== originalEpochs ||
-      suiNSUrl !== originalSuiNSUrl
+      JSON.stringify(
+        suiNSUrl.sort((a, b) => a.nftId.localeCompare(b.nftId))
+      ) !==
+        JSON.stringify(
+          originalSuiNSUrl.sort((a, b) => a.nftId.localeCompare(b.nftId))
+        )
   )
   /**
    * Computed URL for displaying the image preview
@@ -83,7 +88,7 @@ class SiteMetadata {
     this.originalLink.set(this.link.get())
     this.originalProjectUrl.set(this.projectUrl.get())
     this.originalEpochs.set(this.epochs.get())
-    this.originalSuiNSUrl.set(this.suiNSUrl.get())
+    this.originalSuiNSUrl.set(this.suiNSUrl.get().map(item => ({ ...item })))
   }
 
   reset() {
@@ -93,7 +98,7 @@ class SiteMetadata {
     this.link.set(this.originalLink.get())
     this.projectUrl.set(this.originalProjectUrl.get())
     this.epochs.set(this.originalEpochs.get())
-    this.suiNSUrl.set(this.originalSuiNSUrl.get())
+    this.suiNSUrl.set(this.originalSuiNSUrl.get().map(item => ({ ...item })))
     this.loading.set(false)
   }
 
