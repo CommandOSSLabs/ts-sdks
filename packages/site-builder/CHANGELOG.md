@@ -1,5 +1,11 @@
 # @cmdoss/site-builder
 
+## 2.2.0
+
+### Minor Changes
+
+- f46c5a1: update link suins event handler
+
 ## 2.1.0
 
 ### Minor Changes

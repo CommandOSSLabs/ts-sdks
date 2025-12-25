@@ -1,5 +1,17 @@
 # @cmdoss/site-builder-react
 
+## 2.2.0
+
+### Minor Changes
+
+- f46c5a1: update link suins event handler
+
+### Patch Changes
+
+- Updated dependencies [f46c5a1]
+  - @cmdoss/file-manager@2.2.0
+  - @cmdoss/site-builder@2.2.0
+
 ## 2.1.0
 
 ### Minor Changes

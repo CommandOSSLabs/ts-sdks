@@ -1,4 +1,7 @@
-import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder'
+import {
+  objectIdToWalrusSiteUrl,
+  suinsDomainToWalrusSiteUrl
+} from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import { useStore } from '@nanostores/react'
@@ -56,7 +59,8 @@ const PublishMenu: FC<PublishMenuProps> = ({
 
   const associatedDomains = nsDomains.filter(d => d.walrusSiteId === siteId)
 
-  const suiNSUrl = useStore(siteMetadataStore.suiNSUrl)
+  const suiNSUrlArray = useStore(siteMetadataStore.suiNSUrl)
+  const suiNSUrl = suiNSUrlArray.length > 0 ? suiNSUrlArray[0].suins : undefined
 
   return (
     <DropdownMenu.Root>
@@ -182,7 +186,15 @@ const PublishMenu: FC<PublishMenuProps> = ({
                     })}
                     style={{ width: '100%' }}
                     onSelect={() => {
-                      window.open(suiNSUrl, '_blank', 'noopener,noreferrer')
+                      window.open(
+                        suinsDomainToWalrusSiteUrl(
+                          suiNSUrl,
+                          portalDomain,
+                          portalHttps
+                        ),
+                        '_blank',
+                        'noopener,noreferrer'
+                      )
                     }}
                   >
                     Visit Site

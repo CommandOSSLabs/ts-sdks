@@ -7,6 +7,7 @@ import {
 import {
   type SiteMetadata,
   type SiteMetadataUpdate,
+  siteMetadataStore,
   useZenFsWorkspace,
   useZenfsFilesQuery
 } from '@cmdoss/site-builder-react'
@@ -14,7 +15,7 @@ import AnimatedBackground from '@/components/AnimatedBackground'
 import { Introduction } from '@/components/Introduction'
 import { CardContent } from '@/components/ui/card'
 import { useNetworkConfig } from '@/configs/networkConfig'
-import { $siteId } from '@/stores/siteStore'
+import { $siteId, $suiNSUrl } from '@/stores/siteStore'
 import '@cmdoss/site-builder-react/styles.css'
 import {
   useCurrentAccount,
@@ -199,6 +200,28 @@ export default function Home() {
     }
   }, [fm, refetchAssets])
 
+  // Sync suiNSUrl with localStorage
+  useEffect(() => {
+    // Load from localStorage on mount
+    const storedSuiNSUrl = $suiNSUrl.get()
+    if (storedSuiNSUrl.length > 0) {
+      // Set to store and also to original to prevent reset
+      siteMetadataStore.suiNSUrl.set(storedSuiNSUrl)
+      siteMetadataStore.originalSuiNSUrl.set(
+        storedSuiNSUrl.map(item => ({ ...item }))
+      )
+    }
+
+    // Listen to store changes and sync to localStorage
+    const unsubscribe = siteMetadataStore.suiNSUrl.listen(value => {
+      $suiNSUrl.set([...value])
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [])
+
   // Debugging: expose utility to window
   useEffect(() => {
     Object.assign(window, { objectIdToWalrusSiteUrl })
@@ -243,7 +266,11 @@ export default function Home() {
               <PublishedSiteInfo
                 siteId={siteId}
                 network={networkConfig.network}
-                onClearSiteId={() => $siteId.set('')}
+                onClearSiteId={() => {
+                  $siteId.set('')
+                  siteMetadataStore.suiNSUrl.set([])
+                  $suiNSUrl.set([])
+                }}
               />
             )}
           </div>

@@ -1,8 +1,8 @@
-import type {
-  ISignAndExecuteTransaction,
-  ISponsorConfig
+import {
+  type ISignAndExecuteTransaction,
+  type ISponsorConfig,
+  suinsDomainToWalrusSiteUrl
 } from '@cmdoss/site-builder'
-import { suinsDomainToWalrusSiteUrl } from '@cmdoss/site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import type { SuinsClient } from '@mysten/suins'
 import type { WalletAccount } from '@mysten/wallet-standard'
@@ -10,7 +10,7 @@ import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import type { QueryClient } from '@tanstack/react-query'
 import { ExternalLink, Loader2, X } from 'lucide-react'
-import { type FC, useState } from 'react'
+import type { FC } from 'react'
 import { useSuiNsDomainsQuery } from '~/queries'
 import {
   isAssigningDomain,
@@ -71,8 +71,8 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
 }) => {
   const isOpen = useStore(isDomainDialogOpen)
   const isAssigning = useStore(isAssigningDomain)
-  const suiNSUrl = useStore(siteMetadataStore.suiNSUrl)
   const isRegisterSuiNSDomainDialog = useStore(isRegisterSuiNSDomainDialogOpen)
+  const suiNSUrlArray = useStore(siteMetadataStore.suiNSUrl)
   const { network } = suiClient
   const {
     data: nsDomains,
@@ -80,14 +80,11 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
     isError: isErrorDomains
   } = useSuiNsDomainsQuery(currentAccount, { suiClient, queryClient })
 
-  // Find the domain that matches suiNSUrl
-  const currentSuiNSDomain = nsDomains.find(domain => {
-    const domainUrl = suinsDomainToWalrusSiteUrl(
-      domain.name,
-      portalDomain,
-      portalHttps
-    )
-    return domainUrl === suiNSUrl
+  // Find all domains that are linked in store (suiNSUrlArray)
+  const connectedDomains = nsDomains.filter(domain => {
+    console.log('[1]domain', domain)
+    console.log('[1]suiNSUrlArray', suiNSUrlArray)
+    return suiNSUrlArray.some(entry => entry.nftId === domain.nftId)
   })
 
   // Explorer URL
@@ -211,44 +208,53 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
                   </div>
                 )}
 
-                {/* SuiNS Domain - Only shown if suiNSUrl exists */}
-                {suiNSUrl && (
-                  <div className={styles.domainItem}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <a
-                        href={suiNSUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={styles.link}
-                        style={{ fontSize: '0.875rem', fontWeight: 500 }}
-                      >
-                        {suiNSUrl}
-                      </a>
-                      <p
-                        style={{
-                          fontSize: '0.75rem',
-                          color: 'var(--muted-foreground)'
-                        }}
-                      >
-                        SuiNS Domain
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() =>
-                        handleRemoveAssociation(currentSuiNSDomain?.nftId ?? '')
-                      }
-                      disabled={isAssigning}
-                      title="Remove domain association"
-                    >
-                      <X style={{ width: '1rem', height: '1rem' }} />
-                    </Button>
-                  </div>
-                )}
+                {/* SuiNS Domains - Show all linked domains from store */}
+                {connectedDomains.length > 0 &&
+                  connectedDomains.map(domain => {
+                    const linkedEntry = suiNSUrlArray.find(
+                      entry => entry.nftId === domain.nftId
+                    )
+                    return (
+                      <div key={domain.nftId} className={styles.domainItem}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <a
+                            href={
+                              suinsDomainToWalrusSiteUrl(
+                                linkedEntry?.suins || '',
+                                portalDomain,
+                                portalHttps
+                              ) || domain.walrusSiteUrl
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className={styles.link}
+                            style={{ fontSize: '0.875rem', fontWeight: 500 }}
+                          >
+                            @{domain.name}
+                          </a>
+                          <p
+                            style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--muted-foreground)'
+                            }}
+                          >
+                            SuiNS Linked Domain
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveAssociation(domain.nftId)}
+                          disabled={isAssigning}
+                          title="Remove domain association"
+                        >
+                          <X style={{ width: '1rem', height: '1rem' }} />
+                        </Button>
+                      </div>
+                    )
+                  })}
               </div>
             </div>
-
             {/* Available Domains */}
             <div className={styles.section} style={{ marginTop: '0.5rem' }}>
               <div className={styles.sectionTitle}>
@@ -301,12 +307,9 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
               {!isLoadingDomains && !isErrorDomains && nsDomains.length > 0 && (
                 <div className={styles.domainCardGrid}>
                   {nsDomains.map(domain => {
-                    const domainUrl = suinsDomainToWalrusSiteUrl(
-                      domain.name,
-                      portalDomain,
-                      portalHttps
+                    const isConnectedToThisSite = suiNSUrlArray.some(
+                      entry => entry.nftId === domain.nftId
                     )
-                    const isCurrentSuiNS = domainUrl === suiNSUrl
 
                     return (
                       <button
@@ -316,7 +319,12 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
                         onClick={() =>
                           handleAssociate(domain.nftId, domain.name)
                         }
-                        disabled={isCurrentSuiNS}
+                        disabled={isConnectedToThisSite}
+                        title={
+                          isConnectedToThisSite
+                            ? 'Already connected to this site'
+                            : 'Click to connect'
+                        }
                       >
                         <div className={styles.domainCardBg}>
                           <DomainCardSvg />
@@ -333,7 +341,6 @@ const SuiNsModal: FC<SuiNsModalProps> = ({
                 </div>
               )}
             </div>
-
             {/* Info Panel */}
             {network === 'testnet' && (
               <Banner
