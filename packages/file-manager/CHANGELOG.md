@@ -1,5 +1,16 @@
 # @cmdoss/file-manager
 
+## 3.0.0
+
+### Minor Changes
+
+- f46c5a1: update link suins event handler
+
+### Patch Changes
+
+- Updated dependencies [f46c5a1]
+  - @cmdoss/site-builder@3.0.0
+
 ## 2.1.0
 
 ### Minor Changes
