@@ -13,13 +13,13 @@ A TypeScript SDK for building and deploying decentralized websites on Walrus + S
 ## Installation
 
 ```bash
-npm install @cmdoss/site-builder
+npm install @cmdoss/walrus-site-builder
 ```
 
 ## Quick Start
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder'
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder'
 import { ZenFsFileManager } from '@cmdoss/file-manager'
 import { SuiClient } from '@mysten/sui/client'
 import { WalrusClient } from '@mysten/walrus'

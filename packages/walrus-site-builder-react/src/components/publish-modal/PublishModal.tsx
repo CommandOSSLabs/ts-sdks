@@ -1,4 +1,4 @@
-import type { IAsset } from '@cmdoss/site-builder'
+import type { IAsset } from '@cmdoss/walrus-site-builder'
 import type { WalrusClient } from '@mysten/walrus'
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'

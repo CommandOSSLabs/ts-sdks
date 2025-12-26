@@ -1,5 +1,5 @@
 {
-  "name": "@cmdoss/site-builder",
+  "name": "@cmdoss/walrus-site-builder",
   "version": "2.2.0",
   "license": "MIT",
   "type": "module",

@@ -38,7 +38,7 @@ Before starting the deployment flow, ensure you have:
 ### Initialize the SDK
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder';
 import { ZenFsFileManager } from '@cmdoss/file-manager';
 import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { WalrusClient } from '@mysten/walrus';
@@ -250,7 +250,7 @@ const handleCertifyResources = async () => {
 Create or update your site with the certified resources:
 
 ```typescript
-import { objectIdToWalrusSiteUrl } from '@cmdoss/site-builder';
+import { objectIdToWalrusSiteUrl } from '@cmdoss/walrus-site-builder';
 
 const handleWriteSite = async () => {
   try {
@@ -286,7 +286,7 @@ Here's a complete React component implementing the deployment flow:
 
 ```typescript
 import { useState } from 'react';
-import { WalrusSiteBuilderSdk, type ICertifiedBlob } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk, type ICertifiedBlob } from '@cmdoss/walrus-site-builder';
 import { ZenFsFileManager } from '@cmdoss/file-manager';
 import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { WalrusClient } from '@mysten/walrus';

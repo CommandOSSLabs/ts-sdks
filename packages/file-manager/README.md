@@ -81,7 +81,7 @@ await fileManager.writeFile('index.html', '<html>...</html>')
 The file manager is typically used with the site-builder SDK:
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder'
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder'
 import { ZenFsFileManager } from '@cmdoss/file-manager'
 
 const fileManager = new ZenFsFileManager('/my-site')

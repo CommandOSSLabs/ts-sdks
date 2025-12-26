@@ -229,7 +229,7 @@ const wsResources: WSResources = {
   <TabItem label="With deployment">
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder';
 import { ZenFsFileManager } from '@cmdoss/file-manager';
 
 const wsResources: WSResources = {

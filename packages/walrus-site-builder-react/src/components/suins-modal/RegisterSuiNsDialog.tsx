@@ -1,7 +1,7 @@
 import type {
   ISignAndExecuteTransaction,
   ISponsorConfig
-} from '@cmdoss/site-builder'
+} from '@cmdoss/walrus-site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import type { SuinsClient } from '@mysten/suins'
 import type { WalletAccount } from '@mysten/wallet-standard'

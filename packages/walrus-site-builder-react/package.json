@@ -1,5 +1,5 @@
 {
-  "name": "@cmdoss/site-builder-react",
+  "name": "@cmdoss/walrus-site-builder-react",
   "version": "2.2.0",
   "license": "MIT",
   "type": "module",
@@ -25,7 +25,7 @@
   },
   "peerDependencies": {
     "@cmdoss/file-manager": "workspace:*",
-    "@cmdoss/site-builder": "workspace:*",
+    "@cmdoss/walrus-site-builder": "workspace:*",
     "@mysten/dapp-kit": "catalog:",
     "@mysten/sui": "catalog:",
     "@mysten/suins": "catalog:",

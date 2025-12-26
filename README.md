@@ -24,8 +24,8 @@ For comprehensive documentation, tutorials, and API reference, visit: **<https:/
 
 | Package | Version | Description |
 |---------|---------|-------------|
-| [@cmdoss/site-builder] | `0.1.0` | Core SDK for deploying decentralized websites on Walrus + Sui |
-| [@cmdoss/site-builder-react] | `0.1.0` | React hooks and components for site-builder integration |
+| [@cmdoss/walrus-site-builder] | `0.1.0` | Core SDK for deploying decentralized websites on Walrus + Sui |
+| [@cmdoss/walrus-site-builder-react] | `0.1.0` | React hooks and components for site-builder integration |
 | [@cmdoss/file-manager] | `0.1.0` | Browser-based file system management with ZenFS |
 
 ## 🏗️ Apps
@@ -41,10 +41,10 @@ For comprehensive documentation, tutorials, and API reference, visit: **<https:/
 
 ```bash
 # Install the core SDK
-npm install @cmdoss/site-builder
+npm install @cmdoss/walrus-site-builder
 
 # For React applications
-npm install @cmdoss/site-builder-react @cmdoss/file-manager
+npm install @cmdoss/walrus-site-builder-react @cmdoss/file-manager
 
 # Peer dependencies (required)
 npm install @mysten/sui @mysten/wallet-standard @mysten/walrus
@@ -53,7 +53,7 @@ npm install @mysten/sui @mysten/wallet-standard @mysten/walrus
 ### Basic Usage
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder'
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder'
 import { ZenFsFileManager } from '@cmdoss/file-manager'
 import { WalrusClient } from '@mysten/walrus'
 import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit'
@@ -91,7 +91,7 @@ const { siteId } = await deployFlow.writeSite()
 ### React Integration
 
 ```typescript
-import { useZenFsWorkspace } from '@cmdoss/site-builder-react'
+import { useZenFsWorkspace } from '@cmdoss/walrus-site-builder-react'
 
 function MyComponent() {
   const { assets, loading, fileManager } = useZenFsWorkspace()
@@ -269,6 +269,6 @@ Copyright (c) 2025 CommandOSS™ Team
   <strong>Built with ❤️ by the CommandOSS Team</strong>
 </p>
 
-[@cmdoss/site-builder]: https://www.npmjs.com/package/@cmdoss/site-builder
-[@cmdoss/site-builder-react]: https://www.npmjs.com/package/@cmdoss/site-builder-react
+[@cmdoss/walrus-site-builder]: https://www.npmjs.com/package/@cmdoss/walrus-site-builder
+[@cmdoss/walrus-site-builder-react]: https://www.npmjs.com/package/@cmdoss/walrus-site-builder-react
 [@cmdoss/file-manager]: https://www.npmjs.com/package/@cmdoss/file-manager

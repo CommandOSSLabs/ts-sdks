@@ -145,7 +145,7 @@ The file extension (without the dot).
   <TabItem label="Common extensions">
 
 ```typescript
-import { contentTypeFromExtension } from '@cmdoss/site-builder';
+import { contentTypeFromExtension } from '@cmdoss/walrus-site-builder';
 
 console.log(contentTypeFromExtension('html')); // ContentType.TextHtml
 console.log(contentTypeFromExtension('css'));  // ContentType.TextCss
@@ -184,7 +184,7 @@ The full file path.
   <TabItem label="File paths">
 
 ```typescript
-import { contentTypeFromFilePath } from '@cmdoss/site-builder';
+import { contentTypeFromFilePath } from '@cmdoss/walrus-site-builder';
 
 console.log(contentTypeFromFilePath('/index.html'));     // ContentType.TextHtml
 console.log(contentTypeFromFilePath('/style.css'));      // ContentType.TextCss
@@ -223,7 +223,7 @@ The MIME type string.
   <TabItem label="Valid MIME types">
 
 ```typescript
-import { contentTypeFromString } from '@cmdoss/site-builder';
+import { contentTypeFromString } from '@cmdoss/walrus-site-builder';
 
 console.log(contentTypeFromString('text/html'));           // ContentType.TextHtml
 console.log(contentTypeFromString('application/json'));    // ContentType.ApplicationJson
@@ -251,7 +251,7 @@ try {
 ### Setting Headers for Resources
 
 ```typescript
-import { contentTypeFromFilePath } from '@cmdoss/site-builder';
+import { contentTypeFromFilePath } from '@cmdoss/walrus-site-builder';
 
 const assets = [
   { path: '/index.html', content: htmlContent },
@@ -277,7 +277,7 @@ const resources = assets.map(asset => ({
 ### Content Type Validation
 
 ```typescript
-import { ContentType, contentTypeFromString } from '@cmdoss/site-builder';
+import { ContentType, contentTypeFromString } from '@cmdoss/walrus-site-builder';
 
 function validateContentType(mimeType: string): boolean {
   try {
@@ -295,7 +295,7 @@ console.log(validateContentType('invalid/type'));   // false
 ### Dynamic Content Type Detection
 
 ```typescript
-import { contentTypeFromFilePath, ContentType } from '@cmdoss/site-builder';
+import { contentTypeFromFilePath, ContentType } from '@cmdoss/walrus-site-builder';
 
 function getAssetContentType(filePath: string): string {
   const contentType = contentTypeFromFilePath(filePath);

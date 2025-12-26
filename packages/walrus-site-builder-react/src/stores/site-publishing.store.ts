@@ -3,7 +3,7 @@ import type {
   ICertifiedBlob,
   IUpdateWalrusSiteFlow,
   IWalrusSiteBuilderSdk
-} from '@cmdoss/site-builder'
+} from '@cmdoss/walrus-site-builder'
 import { atom, computed } from 'nanostores'
 import { failed, ok, type TResult } from '~/lib/result'
 import { isDomainDialogOpen } from './site-domain.store'

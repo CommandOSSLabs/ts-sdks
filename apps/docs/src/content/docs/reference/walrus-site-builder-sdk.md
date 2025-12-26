@@ -148,7 +148,7 @@ The transaction signing function.
   <TabItem label="Setup">
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder';
 import { ZenFsFileManager } from '@cmdoss/file-manager';
 import { useSuiClient, useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { WalrusClient } from '@mysten/walrus';

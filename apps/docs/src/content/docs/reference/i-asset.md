@@ -246,7 +246,7 @@ const htmlAsset = createTextAsset(
 The new recommended approach is to use `IReadOnlyFileManager` instead of manually creating `IAsset` arrays:
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder';
 import { ZenFsFileManager } from '@cmdoss/file-manager';
 
 // Initialize file manager
@@ -270,7 +270,7 @@ const { siteId } = await deployFlow.writeSite();
 ### Using Assets in Deploy Flow (Deprecated)
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder';
 
 // Note: This approach is deprecated
 const assets: IAsset[] = [

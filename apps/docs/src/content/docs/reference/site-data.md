@@ -178,7 +178,7 @@ const siteData: SiteData = {
 Site data is typically created automatically by the SDK during the deployment flow. You don't need to manually construct it:
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder';
 import { ZenFsFileManager } from '@cmdoss/file-manager';
 
 // Initialize file manager with your files

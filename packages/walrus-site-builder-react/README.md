@@ -1,11 +1,11 @@
-# @cmdoss/site-builder-react
+# @cmdoss/walrus-site-builder-react
 
 React components for building and publishing sites to Walrus network with SuiNS domain integration.
 
 ## Installation
 
 ```bash
-pnpm add @cmdoss/site-builder-react
+pnpm add @cmdoss/walrus-site-builder-react
 ```
 
 ## Features
@@ -23,8 +23,8 @@ pnpm add @cmdoss/site-builder-react
 The `PublishButton` component handles the entire publishing workflow including UI, state management, and wallet interactions:
 
 ```tsx
-import { PublishButton } from '@cmdoss/site-builder-react'
-import type { IAsset } from '@cmdoss/site-builder'
+import { PublishButton } from '@cmdoss/walrus-site-builder-react'
+import type { IAsset } from '@cmdoss/walrus-site-builder'
 import { SuiClient } from '@mysten/sui/client'
 import { QueryClient } from '@tanstack/react-query'
 
@@ -61,7 +61,7 @@ function MyApp() {
 Main component that includes PublishMenu, PublishModal, and SuiNsModal. It wraps everything with a ThemeProvider automatically.
 
 ```tsx
-import { PublishButton } from '@cmdoss/site-builder-react'
+import { PublishButton } from '@cmdoss/walrus-site-builder-react'
 
 <PublishButton
   siteId={siteId}
@@ -85,7 +85,7 @@ import { PublishButton } from '@cmdoss/site-builder-react'
 You can also use components separately:
 
 ```tsx
-import { PublishMenu, PublishModal, SuiNsModal } from '@cmdoss/site-builder-react'
+import { PublishMenu, PublishModal, SuiNsModal } from '@cmdoss/walrus-site-builder-react'
 
 // Use individually
 <PublishMenu
@@ -123,7 +123,7 @@ import { PublishMenu, PublishModal, SuiNsModal } from '@cmdoss/site-builder-reac
 Main hook for site publishing logic:
 
 ```tsx
-import { useSitePublishing } from '@cmdoss/site-builder-react'
+import { useSitePublishing } from '@cmdoss/walrus-site-builder-react'
 
 const publishing = useSitePublishing({
   siteId: string | undefined,
@@ -171,7 +171,7 @@ import {
   siteMetadataStore,
   isDomainDialogOpen,
   isAssigningDomain
-} from '@cmdoss/site-builder-react'
+} from '@cmdoss/walrus-site-builder-react'
 
 // Read state
 const isOpen = sitePublishingStore.isPublishDialogOpen.get()
@@ -189,7 +189,7 @@ const isOpen = useStore(sitePublishingStore.isPublishDialogOpen)
 Base UI components with vanilla-extract styling:
 
 ```tsx
-import { Button, Input, Label, Textarea, Banner, Stepper } from '@cmdoss/site-builder-react'
+import { Button, Input, Label, Textarea, Banner, Stepper } from '@cmdoss/walrus-site-builder-react'
 
 <Button variant="default" size="lg">Click me</Button>
 <Button variant="outline">Outline</Button>
@@ -248,7 +248,7 @@ import type {
   UseSitePublishingParams,
   SiteMetadata,
   SiteMetadataUpdate
-} from '@cmdoss/site-builder-react'
+} from '@cmdoss/walrus-site-builder-react'
 ```
 
 ## License

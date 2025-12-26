@@ -4,13 +4,13 @@ import type {
   IAsset,
   ISignAndExecuteTransaction,
   ISponsorConfig
-} from '@cmdoss/site-builder'
+} from '@cmdoss/walrus-site-builder'
 import {
   PublishButton,
   type SiteMetadata,
   type SiteMetadataUpdate,
   siteMetadataStore
-} from '@cmdoss/site-builder-react'
+} from '@cmdoss/walrus-site-builder-react'
 import type { useCurrentAccount } from '@mysten/dapp-kit'
 import type { SuiClient } from '@mysten/sui/client'
 import type { SuinsClient } from '@mysten/suins'

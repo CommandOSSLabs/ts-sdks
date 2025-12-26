@@ -1,5 +1,9 @@
 import type { ZenFsFileManager } from '@cmdoss/file-manager'
-import { getSHA256Hash, type IAsset, sha256ToU256 } from '@cmdoss/site-builder'
+import {
+  getSHA256Hash,
+  type IAsset,
+  sha256ToU256
+} from '@cmdoss/walrus-site-builder'
 import { type QueryClient, useQuery } from '@tanstack/react-query'
 
 export function useZenfsFilesQuery(

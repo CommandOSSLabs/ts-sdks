@@ -1,4 +1,4 @@
-import { mainPackage } from '@cmdoss/site-builder'
+import { mainPackage } from '@cmdoss/walrus-site-builder'
 import type {
   DynamicFieldInfo,
   ObjectResponseError,

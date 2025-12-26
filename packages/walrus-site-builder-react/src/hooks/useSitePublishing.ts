@@ -7,7 +7,7 @@ import {
   objectIdToWalrusSiteUrl,
   suinsDomainToWalrusSiteUrl,
   WalrusSiteBuilderSdk
-} from '@cmdoss/site-builder'
+} from '@cmdoss/walrus-site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import { Transaction } from '@mysten/sui/transactions'
 import {

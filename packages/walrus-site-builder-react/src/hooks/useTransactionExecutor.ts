@@ -2,7 +2,7 @@ import {
   type ISignAndExecuteTransaction,
   type ISponsorConfig,
   TransactionExecutorService
-} from '@cmdoss/site-builder'
+} from '@cmdoss/walrus-site-builder'
 import type { SuiClient } from '@mysten/sui/client'
 import { useMemo } from 'react'
 
