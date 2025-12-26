@@ -1,0 +1,8 @@
+{
+  "name": "auth-proxy",
+  "private": true,
+  "scripts": {
+    "publish:docker": "docker buildx build --platform linux/amd64,linux/arm64 -t cmdoss/auth-proxy:main --push .",
+    "sync:dockerhub-readme": "node ../../scripts/sync-dockerhub-readme.mjs --repo cmdoss/auth-proxy --readme ./README.md --short-description 'A secure authentication proxy for CommandOSS applications.'"
+  }
+}
