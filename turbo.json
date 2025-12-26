@@ -12,6 +12,11 @@
     "test:coverage": { "cache": false },
     "test:watch": { "cache": false, "persistent": true },
     "//#check": {},
-    "//#check:fix": {}
+    "//#check:fix": {},
+    "sync:dockerhub-readme": {
+      "inputs": ["README.md"],
+      "env": ["DOCKERHUB_USERNAME", "DOCKERHUB_TOKEN"]
+    },
+    "publish:docker": { "cache": false }
   }
 }

@@ -100,7 +100,7 @@ The Site Builder SDK provides a comprehensive TypeScript API for building and de
 ## Quick Start
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder';
 import { ZenFsFileManager } from '@cmdoss/file-manager';
 
 // Initialize file manager

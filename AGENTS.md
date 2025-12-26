@@ -14,7 +14,7 @@
 
 ### Core Packages
 
-1. **[@cmdoss/site-builder](packages/site-builder)** - Core SDK
+1. **[@cmdoss/walrus-site-builder](packages/site-builder)** - Core SDK
    - Manages site deployment lifecycle: prepare → upload → certify → register
    - Entry point: `WalrusSiteBuilderSdk` class (initiates `UpdateWalrusSiteFlow`)
    - Flow stages: `prepareResources()` → `writeResources()` → `certifyResources()` → `writeSite()`
@@ -26,7 +26,7 @@
    - Implements `IFileManager` interface for cross-platform file operations
    - Workspace directory concept: tracks workspace boundaries within virtual FS
 
-3. **[@cmdoss/site-builder-react](packages/site-builder-react)** - React Integration
+3. **[@cmdoss/walrus-site-builder-react](packages/site-builder-react)** - React Integration
    - React Query hooks for blockchain queries
    - Nanostores for lightweight state management (theme, site data)
    - Vanilla Extract CSS with theme system
@@ -87,7 +87,7 @@ pnpm install
 pnpm dev
 
 # Watch specific package
-pnpm --filter @cmdoss/site-builder dev
+pnpm --filter @cmdoss/walrus-site-builder dev
 ```
 
 ### Building & Testing

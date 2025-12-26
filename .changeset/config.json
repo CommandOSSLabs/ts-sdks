@@ -5,8 +5,8 @@
   "fixed": [
     [
       "@cmdoss/file-manager",
-      "@cmdoss/site-builder",
-      "@cmdoss/site-builder-react"
+      "@cmdoss/walrus-site-builder",
+      "@cmdoss/walrus-site-builder-react"
     ]
   ],
   "linked": [],

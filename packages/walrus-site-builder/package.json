@@ -1,0 +1,36 @@
+{
+  "name": "@cmdoss/walrus-site-builder",
+  "version": "2.2.0",
+  "license": "MIT",
+  "type": "module",
+  "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "tag": "latest"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsdown --platform browser --watch --ignore-watch .turbo",
+    "test": "node --test",
+    "test:watch": "node --test --watch",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude='src/**/*.test.ts'",
+    "check:types": "tsc --noEmit",
+    "build": "tsdown --platform browser --minify"
+  },
+  "peerDependencies": {
+    "@mysten/sui": "catalog:",
+    "@mysten/wallet-standard": "catalog:",
+    "@mysten/walrus": "catalog:"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.12",
+    "@types/node": "catalog:",
+    "tsdown": "catalog:"
+  },
+  "dependencies": {
+    "debug": "^4.4.3"
+  }
+}

@@ -9,8 +9,8 @@
   },
   "dependencies": {
     "@cmdoss/file-manager": "workspace:*",
-    "@cmdoss/site-builder": "workspace:*",
-    "@cmdoss/site-builder-react": "workspace:*",
+    "@cmdoss/walrus-site-builder": "workspace:*",
+    "@cmdoss/walrus-site-builder-react": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@lottiefiles/dotlottie-react": "^0.17.10",
     "@mysten/dapp-kit": "catalog:",

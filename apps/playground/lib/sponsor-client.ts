@@ -1,4 +1,4 @@
-import type { ISponsorApiClient } from '@cmdoss/site-builder'
+import type { ISponsorApiClient } from '@cmdoss/walrus-site-builder'
 
 /**
  * Sponsor API client for the playground application.

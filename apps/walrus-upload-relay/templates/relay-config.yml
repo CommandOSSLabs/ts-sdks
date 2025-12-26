@@ -1,0 +1,21 @@
+### We're using Gomplate template (https://gomplate.ca/) to substitute environment variables in this file
+
+{{- if (getenv "SEND_TIP_ADDRESS") }}
+tip_config: !send_tip
+  address: {{ getenv "SEND_TIP_ADDRESS" }}
+  {{- if (getenv "SEND_TIP_KIND") | strings.HasPrefix "const:" }}
+  kind: !const {{ getenv "SEND_TIP_KIND" | strings.TrimPrefix "const:" }}
+  {{- else if (getenv "SEND_TIP_KIND") | strings.HasPrefix "linear:" }}
+  kind: !linear
+    {{- $val := getenv "SEND_TIP_KIND" | strings.TrimPrefix "linear:" | strings.Split ":" }}
+    base: {{ index $val 0 }}
+    encoded_size_mul_per_kib: {{ index $val 1 }}
+  {{- end }}
+{{- else }}
+tip_config: !no_tip
+{{- end }}
+
+tx_freshness_threshold_secs: 36000
+tx_max_future_threshold:
+  secs: 30
+  nanos: 0

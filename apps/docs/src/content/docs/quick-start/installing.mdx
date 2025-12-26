@@ -11,8 +11,8 @@ The CommandOSS TypeScript SDKs consist of three main packages:
 
 | Package | Purpose | Required |
 |---------|---------|----------|
-| `@cmdoss/site-builder` | Core SDK for Walrus + Sui integration | ✅ Yes |
-| `@cmdoss/site-builder-react` | React hooks and components | 🔶 For React apps |
+| `@cmdoss/walrus-site-builder` | Core SDK for Walrus + Sui integration | ✅ Yes |
+| `@cmdoss/walrus-site-builder-react` | React hooks and components | 🔶 For React apps |
 | `@cmdoss/file-manager` | Browser file system with ZenFS | 🔶 For React apps |
 
 ## Prerequisites
@@ -35,7 +35,7 @@ If you're building a vanilla JavaScript/TypeScript application:
 
 ```bash
 # Core SDK
-npm install @cmdoss/site-builder
+npm install @cmdoss/walrus-site-builder
 
 # Required peer dependencies
 npm install @mysten/sui @mysten/wallet-standard @mysten/walrus
@@ -46,7 +46,7 @@ npm install @mysten/sui @mysten/wallet-standard @mysten/walrus
 
 ```bash
 # Core SDK
-pnpm add @cmdoss/site-builder
+pnpm add @cmdoss/walrus-site-builder
 
 # Required peer dependencies
 pnpm add @mysten/sui @mysten/wallet-standard @mysten/walrus
@@ -57,7 +57,7 @@ pnpm add @mysten/sui @mysten/wallet-standard @mysten/walrus
 
 ```bash
 # Core SDK
-yarn add @cmdoss/site-builder
+yarn add @cmdoss/walrus-site-builder
 
 # Required peer dependencies
 yarn add @mysten/sui @mysten/wallet-standard @mysten/walrus
@@ -75,7 +75,7 @@ For React applications with file management capabilities:
 
 ```bash
 # All packages
-npm install @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+npm install @cmdoss/walrus-site-builder @cmdoss/walrus-site-builder-react @cmdoss/file-manager
 
 # Required peer dependencies
 npm install @mysten/sui @mysten/wallet-standard @mysten/walrus react
@@ -89,7 +89,7 @@ npm install @zenfs/core @zenfs/dom @zenfs/archives
 
 ```bash
 # All packages
-pnpm add @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+pnpm add @cmdoss/walrus-site-builder @cmdoss/walrus-site-builder-react @cmdoss/file-manager
 
 # Required peer dependencies
 pnpm add @mysten/sui @mysten/wallet-standard @mysten/walrus react
@@ -103,7 +103,7 @@ pnpm add @zenfs/core @zenfs/dom @zenfs/archives
 
 ```bash
 # All packages
-yarn add @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+yarn add @cmdoss/walrus-site-builder @cmdoss/walrus-site-builder-react @cmdoss/file-manager
 
 # Required peer dependencies
 yarn add @mysten/sui @mysten/wallet-standard @mysten/walrus react
@@ -188,7 +188,7 @@ const walrusClient = new WalrusClient({
 Test your installation with this simple verification script:
 
 ```typescript
-import { WalrusSiteBuilderSdk, getSHA256Hash, sha256ToU256 } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk, getSHA256Hash, sha256ToU256 } from '@cmdoss/walrus-site-builder';
 
 // Verify the SDK can be imported and basic functions work
 async function verifyInstallation() {
@@ -241,21 +241,21 @@ Keep your SDKs up to date to get the latest features and bug fixes:
 <TabItem label="npm">
 
 ```bash
-npm update @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+npm update @cmdoss/walrus-site-builder @cmdoss/walrus-site-builder-react @cmdoss/file-manager
 ```
 
 </TabItem>
 <TabItem label="pnpm">
 
 ```bash
-pnpm update @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+pnpm update @cmdoss/walrus-site-builder @cmdoss/walrus-site-builder-react @cmdoss/file-manager
 ```
 
 </TabItem>
 <TabItem label="yarn">
 
 ```bash
-yarn upgrade @cmdoss/site-builder @cmdoss/site-builder-react @cmdoss/file-manager
+yarn upgrade @cmdoss/walrus-site-builder @cmdoss/walrus-site-builder-react @cmdoss/file-manager
 ```
 
 </TabItem>
@@ -302,7 +302,7 @@ If you encounter version conflicts:
 
 ```bash
 # Check installed versions
-npm ls @cmdoss/site-builder
+npm ls @cmdoss/walrus-site-builder
 
 # Clear node_modules and reinstall
 rm -rf node_modules package-lock.json

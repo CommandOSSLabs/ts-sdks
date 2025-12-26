@@ -133,7 +133,7 @@ fileManager.unmount();
 The main hook for React applications provides complete file management:
 
 ```typescript
-import { useZenFsWorkspace } from '@cmdoss/site-builder-react';
+import { useZenFsWorkspace } from '@cmdoss/walrus-site-builder-react';
 
 function MyComponent() {
   const {
@@ -154,7 +154,7 @@ function MyComponent() {
 Here's a complete file upload component:
 
 ```typescript
-import { useZenFsWorkspace } from '@cmdoss/site-builder-react';
+import { useZenFsWorkspace } from '@cmdoss/walrus-site-builder-react';
 import { useCallback } from 'react';
 
 function FileUploader() {
@@ -238,8 +238,8 @@ Create a comprehensive file browser:
 
 ```typescript
 import { useState } from 'react';
-import { useZenFsWorkspace } from '@cmdoss/site-builder-react';
-import type { IAsset } from '@cmdoss/site-builder';
+import { useZenFsWorkspace } from '@cmdoss/walrus-site-builder-react';
+import type { IAsset } from '@cmdoss/walrus-site-builder';
 
 interface FileExplorerProps {
   className?: string;
@@ -422,7 +422,7 @@ await createTemplate('basic-html');
 When using the file manager with the SDK, files are automatically processed during deployment. You don't need to manually calculate hashes - the SDK handles this for you:
 
 ```typescript
-import { WalrusSiteBuilderSdk } from '@cmdoss/site-builder';
+import { WalrusSiteBuilderSdk } from '@cmdoss/walrus-site-builder';
 import { ZenFsFileManager } from '@cmdoss/file-manager';
 
 // Initialize file manager

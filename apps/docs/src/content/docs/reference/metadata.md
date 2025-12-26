@@ -237,7 +237,7 @@ const metadata: Metadata = {
 ### Using Metadata in Site Configuration
 
 ```typescript
-import { WSResources } from '@cmdoss/site-builder';
+import { WSResources } from '@cmdoss/walrus-site-builder';
 
 const wsResources: WSResources = {
   site_name: 'My Decentralized Site',

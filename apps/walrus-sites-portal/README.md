@@ -99,5 +99,5 @@ The container includes a health check that pings `/__wal__/healthz`. If it fails
 ## Related
 
 - [Walrus Sites Documentation](https://docs.walrus.site/)
-- [@cmdoss/site-builder](../../packages/site-builder) - SDK for deploying Walrus Sites
+- [@cmdoss/walrus-site-builder](../../packages/site-builder) - SDK for deploying Walrus Sites
 - [Playground App](../playground) - Interactive demo for site deployment

@@ -26,7 +26,7 @@
     "@zenfs/dom": "^1.2.4"
   },
   "dependencies": {
-    "@cmdoss/site-builder": "workspace:*",
+    "@cmdoss/walrus-site-builder": "workspace:*",
     "@types/debug": "^4.1.12",
     "@zenfs/archives": "^1.3.1",
     "@zenfs/core": "^2.4.4",

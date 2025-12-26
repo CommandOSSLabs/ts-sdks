@@ -118,10 +118,10 @@ Our TypeScript SDKs provide everything you need to build decentralized websites:
 
 ```sh
 # Core SDK
-npm install @cmdoss/site-builder
+npm install @cmdoss/walrus-site-builder
 
 # React integration (optional)
-npm install @cmdoss/site-builder-react @cmdoss/file-manager
+npm install @cmdoss/walrus-site-builder-react @cmdoss/file-manager
 
 # Required peer dependencies
 npm install @mysten/sui @mysten/wallet-standard @mysten/walrus
@@ -132,10 +132,10 @@ npm install @mysten/sui @mysten/wallet-standard @mysten/walrus
 
 ```sh
 # Core SDK
-pnpm add @cmdoss/site-builder
+pnpm add @cmdoss/walrus-site-builder
 
 # React integration (optional)
-pnpm add @cmdoss/site-builder-react @cmdoss/file-manager
+pnpm add @cmdoss/walrus-site-builder-react @cmdoss/file-manager
 
 # Required peer dependencies
 pnpm add @mysten/sui @mysten/wallet-standard @mysten/walrus
@@ -146,10 +146,10 @@ pnpm add @mysten/sui @mysten/wallet-standard @mysten/walrus
 
 ```sh
 # Core SDK
-yarn add @cmdoss/site-builder
+yarn add @cmdoss/walrus-site-builder
 
 # React integration (optional)
-yarn add @cmdoss/site-builder-react @cmdoss/file-manager
+yarn add @cmdoss/walrus-site-builder-react @cmdoss/file-manager
 
 # Required peer dependencies
 yarn add @mysten/sui @mysten/wallet-standard @mysten/walrus
@@ -171,7 +171,7 @@ import { Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 Here's how to deploy your first decentralized website:
 
 ```typescript
-import { WalrusSiteBuilderSdk, getSHA256Hash, sha256ToU256 } from '@cmdoss/site-builder'
+import { WalrusSiteBuilderSdk, getSHA256Hash, sha256ToU256 } from '@cmdoss/walrus-site-builder'
 
 // Initialize the SDK
 const sdk = new WalrusSiteBuilderSdk(
@@ -209,8 +209,8 @@ console.log(`Site deployed! ID: ${siteId}`)
 
 Our SDKs are built with a modular architecture:
 
-- **[@cmdoss/site-builder]** - Core SDK with Walrus + Sui integration
-- **[@cmdoss/site-builder-react]** - React hooks and components  
+- **[@cmdoss/walrus-site-builder]** - Core SDK with Walrus + Sui integration
+- **[@cmdoss/walrus-site-builder-react]** - React hooks and components  
 - **[@cmdoss/file-manager]** - Browser file system with ZenFS
 - **Playground App** - Interactive demo and testing environment
 - **Documentation** - Comprehensive guides and API reference
@@ -238,6 +238,6 @@ Our SDKs are built with a modular architecture:
 	</Card>
 </CardGrid>
 
-[@cmdoss/site-builder]: https://www.npmjs.com/package/@cmdoss/site-builder
-[@cmdoss/site-builder-react]: https://www.npmjs.com/package/@cmdoss/site-builder-react
+[@cmdoss/walrus-site-builder]: https://www.npmjs.com/package/@cmdoss/walrus-site-builder
+[@cmdoss/walrus-site-builder-react]: https://www.npmjs.com/package/@cmdoss/walrus-site-builder-react
 [@cmdoss/file-manager]: https://www.npmjs.com/package/@cmdoss/file-manager

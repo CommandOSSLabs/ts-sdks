@@ -57,6 +57,8 @@ importers:
         specifier: latest
         version: 2.7.1
 
+  apps/auth-proxy: {}
+
   apps/docs:
     dependencies:
       '@astrojs/starlight':
@@ -80,12 +82,12 @@ importers:
       '@cmdoss/file-manager':
         specifier: workspace:*
         version: link:../../packages/file-manager
-      '@cmdoss/site-builder':
+      '@cmdoss/walrus-site-builder':
         specifier: workspace:*
-        version: link:../../packages/site-builder
-      '@cmdoss/site-builder-react':
+        version: link:../../packages/walrus-site-builder
+      '@cmdoss/walrus-site-builder-react':
         specifier: workspace:*
-        version: link:../../packages/site-builder-react
+        version: link:../../packages/walrus-site-builder-react
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.69.0(react@19.2.3))
@@ -285,11 +287,13 @@ importers:
 
   apps/walrus-sites-portal: {}
 
+  apps/walrus-upload-relay: {}
+
   packages/file-manager:
     dependencies:
-      '@cmdoss/site-builder':
+      '@cmdoss/walrus-site-builder':
         specifier: workspace:*
-        version: link:../site-builder
+        version: link:../walrus-site-builder
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
@@ -313,7 +317,7 @@ importers:
         specifier: 'catalog:'
         version: 0.18.2(typescript@5.9.3)
 
-  packages/site-builder:
+  packages/walrus-site-builder:
     dependencies:
       '@mysten/sui':
         specifier: 'catalog:'
@@ -338,7 +342,7 @@ importers:
         specifier: 'catalog:'
         version: 0.18.2(typescript@5.9.3)
 
-  packages/site-builder-react:
+  packages/walrus-site-builder-react:
     dependencies:
       '@cetusprotocol/aggregator-sdk':
         specifier: ^1.4.2
@@ -346,9 +350,9 @@ importers:
       '@cmdoss/file-manager':
         specifier: workspace:*
         version: link:../file-manager
-      '@cmdoss/site-builder':
+      '@cmdoss/walrus-site-builder':
         specifier: workspace:*
-        version: link:../site-builder
+        version: link:../walrus-site-builder
       '@mysten/dapp-kit':
         specifier: 'catalog:'
         version: 0.19.11(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(immer@11.1.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
@@ -8694,7 +8698,7 @@ snapshots:
 
   eval@0.1.8:
     dependencies:
-      '@types/node': 22.19.3
+      '@types/node': 25.0.3
       require-like: 0.1.2
 
   event-target-shim@5.0.1: {}

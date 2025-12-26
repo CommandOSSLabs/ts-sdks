@@ -3,20 +3,20 @@
 import {
   type ISponsorConfig,
   objectIdToWalrusSiteUrl
-} from '@cmdoss/site-builder'
+} from '@cmdoss/walrus-site-builder'
 import {
   type SiteMetadata,
   type SiteMetadataUpdate,
   siteMetadataStore,
   useZenFsWorkspace,
   useZenfsFilesQuery
-} from '@cmdoss/site-builder-react'
+} from '@cmdoss/walrus-site-builder-react'
 import AnimatedBackground from '@/components/AnimatedBackground'
 import { Introduction } from '@/components/Introduction'
 import { CardContent } from '@/components/ui/card'
 import { useNetworkConfig } from '@/configs/networkConfig'
 import { $siteId, $suiNSUrl } from '@/stores/siteStore'
-import '@cmdoss/site-builder-react/styles.css'
+import '@cmdoss/walrus-site-builder-react/styles.css'
 import {
   useCurrentAccount,
   useSignAndExecuteTransaction,

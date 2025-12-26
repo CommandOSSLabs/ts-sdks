@@ -52,8 +52,8 @@ apps/playground/
 
 ## Related Packages
 
-- [`@cmdoss/site-builder`](../../packages/site-builder) - Core Site Builder SDK
-- [`@cmdoss/site-builder-react`](../../packages/site-builder-react) - React components and hooks
+- [`@cmdoss/walrus-site-builder`](../../packages/site-builder) - Core Site Builder SDK
+- [`@cmdoss/walrus-site-builder-react`](../../packages/site-builder-react) - React components and hooks
 
 ## License
 

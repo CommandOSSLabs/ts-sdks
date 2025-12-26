@@ -40,7 +40,7 @@ interface IAsset {
 <TabItem label="From Text Content">
 
 ```typescript
-import { getSHA256Hash, sha256ToU256 } from '@cmdoss/site-builder';
+import { getSHA256Hash, sha256ToU256 } from '@cmdoss/walrus-site-builder';
 
 async function createTextAsset(path: string, content: string): Promise<IAsset> {
   const encoder = new TextEncoder();

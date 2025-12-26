@@ -9,7 +9,7 @@
 ### Patch Changes
 
 - Updated dependencies [f46c5a1]
-  - @cmdoss/site-builder@2.2.0
+  - @cmdoss/walrus-site-builder@2.2.0
 
 ## 2.1.0
 
@@ -20,13 +20,13 @@
 ### Patch Changes
 
 - Updated dependencies [0ba171d]
-  - @cmdoss/site-builder@2.1.0
+  - @cmdoss/walrus-site-builder@2.1.0
 
 ## 2.0.0
 
 ### Minor Changes
 
-- a689219: ## @cmdoss/site-builder
+- a689219: ## @cmdoss/walrus-site-builder
 
   ### Minor Changes
 
@@ -41,7 +41,7 @@
   - **Breaking**: `ZenFsFileManager` no longer implements the removed `IFileManager` interface.
   - **Fix**: Improved path normalization in `ZenFsFileManager`.
 
-  ## @cmdoss/site-builder-react
+  ## @cmdoss/walrus-site-builder-react
 
   ### Minor Changes
 
@@ -52,7 +52,7 @@
 ### Patch Changes
 
 - Updated dependencies [a689219]
-  - @cmdoss/site-builder@2.0.0
+  - @cmdoss/walrus-site-builder@2.0.0
 
 ## 1.2.1
 
@@ -63,7 +63,7 @@
 ### Patch Changes
 
 - Updated dependencies [35dead1]
-  - @cmdoss/site-builder@1.2.1
+  - @cmdoss/walrus-site-builder@1.2.1
 
 ## 1.2.0
 
@@ -74,7 +74,7 @@
 ### Patch Changes
 
 - Updated dependencies [a4e8041]
-  - @cmdoss/site-builder@1.2.0
+  - @cmdoss/walrus-site-builder@1.2.0
 
 ## 1.0.1
 
@@ -85,7 +85,7 @@
 ### Patch Changes
 
 - Updated dependencies [57af66d]
-  - @cmdoss/site-builder@1.0.1
+  - @cmdoss/walrus-site-builder@1.0.1
 
 ## 1.0.0
 
@@ -93,7 +93,7 @@
 
 - 5b77a77: ## ⚠️ Breaking Changes
 
-  ### `@cmdoss/site-builder`
+  ### `@cmdoss/walrus-site-builder`
 
   #### `IUpdateWalrusSiteFlow` interface changes
 
@@ -135,7 +135,7 @@
 
   - **New resource operation types** - `resources[].op` now includes `'removedRoutes'` and `'burnedSite'` in addition to existing `'created' | 'deleted' | 'unchanged'`. ([6755667](https://github.com/CommandOSSLabs/ts-sdks/commit/675566785170b135e7bddfad9fb5f9750f7873b5))
 
-  ### `@cmdoss/site-builder-react`
+  ### `@cmdoss/walrus-site-builder-react`
 
   #### `useSitePublishing` hook signature changed
 
@@ -224,4 +224,4 @@
 ### Patch Changes
 
 - Updated dependencies [5b77a77]
-  - @cmdoss/site-builder@1.0.0
+  - @cmdoss/walrus-site-builder@1.0.0
