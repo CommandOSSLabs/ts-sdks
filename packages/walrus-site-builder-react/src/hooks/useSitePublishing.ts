@@ -5,7 +5,6 @@ import {
   type IWalrusSiteBuilderSdk,
   mainPackage,
   objectIdToWalrusSiteUrl,
-  suinsDomainToWalrusSiteUrl,
   WalrusSiteBuilderSdk
 } from '@cmdoss/walrus-site-builder'
 import type { SuiClient } from '@mysten/sui/client'
