@@ -1,5 +1,17 @@
 # @cmdoss/walrus-site-builder-react
 
+## 2.4.0
+
+### Minor Changes
+
+- 9d19f69: add year selector in buy suins modal
+
+### Patch Changes
+
+- Updated dependencies [9d19f69]
+  - @cmdoss/walrus-site-builder@2.4.0
+  - @cmdoss/file-manager@2.4.0
+
 ## 2.2.0
 
 ### Minor Changes
