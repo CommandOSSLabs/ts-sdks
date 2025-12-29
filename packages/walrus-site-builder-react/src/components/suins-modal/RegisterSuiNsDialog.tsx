@@ -48,6 +48,13 @@ export const RegisterSuiNsDialog: FC<RegisterSuiNsDialogProps> = ({
     error,
     normalizedName,
     fullName,
+    selectedYears,
+    setSelectedYears,
+    pricePerYearFormatted,
+    pricePerYearUsdc,
+    totalPriceFormatted,
+    totalPriceUsdc,
+    expirationDate,
     handleSearch,
     handleRegister: handleRegisterInternal,
     reset
@@ -57,6 +64,9 @@ export const RegisterSuiNsDialog: FC<RegisterSuiNsDialogProps> = ({
     signAndExecuteTransaction,
     sponsorConfig
   })
+
+  const network = suiClient.network
+  const isTestnet = network === 'testnet'
 
   const handleRegister = async () => {
     const success = await handleRegisterInternal()
@@ -264,16 +274,259 @@ export const RegisterSuiNsDialog: FC<RegisterSuiNsDialogProps> = ({
                       ? `${fullName} is available!`
                       : `${fullName} is already taken`}
                   </p>
-                  {isAvailable && estimatedPrice && (
-                    <p
+                </div>
+              </div>
+            )}
+
+            {/* Year Selection */}
+            {isAvailable && (
+              <div style={{ marginBottom: '1rem' }}>
+                <label
+                  htmlFor="year-select"
+                  style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    marginBottom: '0.5rem'
+                  }}
+                >
+                  Registration Period
+                </label>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '0.5rem',
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  {[1, 2, 3, 4, 5].map(year => (
+                    <button
+                      key={year}
+                      type="button"
+                      onClick={() => setSelectedYears(year)}
+                      disabled={isRegistering || isSwapping}
                       style={{
-                        fontSize: '0.75rem',
-                        opacity: 0.8,
-                        marginTop: '0.125rem'
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.375rem',
+                        border: `1px solid ${
+                          selectedYears === year
+                            ? 'rgba(59, 130, 246, 0.5)'
+                            : 'rgba(229, 231, 235, 1)'
+                        }`,
+                        backgroundColor:
+                          selectedYears === year
+                            ? 'rgba(59, 130, 246, 0.1)'
+                            : 'transparent',
+                        color:
+                          selectedYears === year
+                            ? 'rgb(37, 99, 235)'
+                            : 'inherit',
+                        fontWeight: selectedYears === year ? 600 : 400,
+                        cursor:
+                          isRegistering || isSwapping
+                            ? 'not-allowed'
+                            : 'pointer',
+                        fontSize: '0.875rem',
+                        transition: 'all 0.2s',
+                        opacity: isRegistering || isSwapping ? 0.5 : 1
                       }}
                     >
-                      Estimated cost: {estimatedPrice}
-                    </p>
+                      {year} {year === 1 ? 'Year' : 'Years'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Price Breakdown */}
+            {isAvailable && (pricePerYearFormatted || estimatedPrice) && (
+              <div
+                style={{
+                  padding: '1rem',
+                  borderRadius: '0.5rem',
+                  backgroundColor: 'rgba(249, 250, 251, 1)',
+                  border: '1px solid rgba(229, 231, 235, 1)',
+                  marginBottom: '1rem'
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    marginBottom: '0.75rem',
+                    color: 'rgb(17, 24, 39)'
+                  }}
+                >
+                  Price Breakdown
+                </h3>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '0.875rem',
+                        color: 'rgb(107, 114, 128)'
+                      }}
+                    >
+                      Price per year:
+                    </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: '0.125rem'
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          color: 'rgb(17, 24, 39)'
+                        }}
+                      >
+                        {pricePerYearFormatted || estimatedPrice}
+                      </span>
+                      {isTestnet && pricePerYearUsdc && (
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'rgb(107, 114, 128)',
+                            opacity: 0.8
+                          }}
+                        >
+                          ({pricePerYearUsdc})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '0.875rem',
+                        color: 'rgb(107, 114, 128)'
+                      }}
+                    >
+                      Number of years:
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: 'rgb(17, 24, 39)'
+                      }}
+                    >
+                      {selectedYears}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: '1px',
+                      backgroundColor: 'rgba(229, 231, 235, 1)',
+                      margin: '0.5rem 0'
+                    }}
+                  />
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: 'rgb(17, 24, 39)'
+                      }}
+                    >
+                      Total:
+                    </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: '0.125rem'
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '1rem',
+                          fontWeight: 700,
+                          color: 'rgb(17, 24, 39)'
+                        }}
+                      >
+                        {totalPriceFormatted || estimatedPrice}
+                      </span>
+                      {isTestnet && totalPriceUsdc && (
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'rgb(107, 114, 128)',
+                            opacity: 0.8
+                          }}
+                        >
+                          ({totalPriceUsdc})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {expirationDate && (
+                    <div
+                      style={{
+                        marginTop: '0.5rem',
+                        paddingTop: '0.5rem',
+                        borderTop: '1px solid rgba(229, 231, 235, 1)'
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            color: 'rgb(107, 114, 128)'
+                          }}
+                        >
+                          Expires on:
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            color: 'rgb(17, 24, 39)'
+                          }}
+                        >
+                          {expirationDate.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -329,7 +582,7 @@ export const RegisterSuiNsDialog: FC<RegisterSuiNsDialogProps> = ({
                     Registering...
                   </>
                 ) : (
-                  `Register ${fullName}`
+                  `Register ${fullName} for ${selectedYears} ${selectedYears === 1 ? 'year' : 'years'}`
                 )}
               </Button>
             )}

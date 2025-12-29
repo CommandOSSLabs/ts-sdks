@@ -10,7 +10,7 @@ import { type SuinsClient, SuinsTransaction } from '@mysten/suins'
 import type { WalletAccount } from '@mysten/wallet-standard'
 import type { QueryClient } from '@tanstack/react-query'
 import BN from 'bn.js'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTransactionExecutor } from './useTransactionExecutor'
 
 interface UseSuiNsRegistrationParams {
@@ -44,6 +44,14 @@ export function useSuiNsRegistration({
   const [isSwapping, setIsSwapping] = useState(false)
   const [estimatedPrice, setEstimatedPrice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selectedYears, setSelectedYears] = useState(1)
+  const [pricePerYear, setPricePerYear] = useState<number | null>(null)
+  const [pricePerYearFormatted, setPricePerYearFormatted] = useState<
+    string | null
+  >(null)
+  const [pricePerYearUsdc, setPricePerYearUsdc] = useState<string | null>(null)
+  const [totalPriceUsdc, setTotalPriceUsdc] = useState<string | null>(null)
+  const priceRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const normalizedName = searchName.toLowerCase().trim()
   const fullName = normalizedName ? `${normalizedName}.sui` : ''
@@ -51,11 +59,36 @@ export function useSuiNsRegistration({
   const isMainnet = network === 'mainnet'
   const isTestnet = network === 'testnet'
 
+  // Calculate expiration date
+  const expirationDate = useMemo(() => {
+    if (!selectedYears) return null
+    const date = new Date()
+    date.setFullYear(date.getFullYear() + selectedYears)
+    return date
+  }, [selectedYears])
+
+  // Calculate total price
+  const totalPrice = useMemo(() => {
+    if (!pricePerYear || !selectedYears) return null
+    return pricePerYear * selectedYears
+  }, [pricePerYear, selectedYears])
+
+  // Format total price
+  const totalPriceFormatted = useMemo(() => {
+    if (!totalPrice || !pricePerYearFormatted) return null
+    const perYearValue = parseFloat(
+      pricePerYearFormatted.replace(/[^\d.]/g, '')
+    )
+    if (Number.isNaN(perYearValue)) return null
+    const totalValue = perYearValue * selectedYears
+    return pricePerYearFormatted.replace(/[\d.]+/, totalValue.toFixed(4))
+  }, [totalPrice, pricePerYearFormatted, selectedYears])
+
   // Get WAL coin type from mainPackage
   const WAL_COIN_TYPE =
     mainPackage[network as keyof typeof mainPackage]?.walrusCoinType
 
-  // Initialize Aggregator Client for WAL → USDC swaps (mainnet only)
+  // Initialize Aggregator Client for swaps (mainnet only)
   const aggregatorClient = useMemo(() => {
     if (!suiClient || !currentAccount || !isMainnet) return null
 
@@ -65,6 +98,228 @@ export function useSuiNsRegistration({
       env: Env.Mainnet
     })
   }, [suiClient, currentAccount, isMainnet])
+
+  // Function to update price estimate for mainnet (WAL → USDC)
+  const updatePriceEstimate = useCallback(async () => {
+    if (
+      !suinsClient ||
+      !currentAccount ||
+      !isMainnet ||
+      !WAL_COIN_TYPE ||
+      !aggregatorClient ||
+      !normalizedName
+    ) {
+      return
+    }
+
+    // Get price list
+    const priceList = await suinsClient.getPriceList()
+    const nameLength = normalizedName.length
+
+    // Find price for this name length
+    let pricePerYearValue = 0
+    for (const [[from, to], price] of priceList.entries()) {
+      if (nameLength >= from && nameLength <= to) {
+        pricePerYearValue = price
+        break
+      }
+    }
+
+    if (pricePerYearValue > 0) {
+      setPricePerYear(pricePerYearValue)
+
+      // Calculate total price with buffer (5%)
+      const totalPriceValue = pricePerYearValue * selectedYears
+      const requiredAmount = BigInt(Math.floor(totalPriceValue * 1.05))
+
+      // Get current USDC balance to calculate missing amount
+      const usdcCoins = await suiClient.getCoins({
+        owner: currentAccount.address,
+        coinType: suinsClient.config.coins.USDC.type
+      })
+
+      const usdcBalance =
+        usdcCoins.data?.reduce((sum, coin) => sum + BigInt(coin.balance), 0n) ??
+        0n
+
+      // Calculate missing USDC (if any)
+      const missingUsdc =
+        usdcBalance < requiredAmount
+          ? requiredAmount - usdcBalance
+          : requiredAmount
+
+      // Estimate WAL needed using same logic as register
+      const baseWalAtomic = 1_000_000_000n // 1 WAL (9 decimals)
+      const rateRouter = await aggregatorClient.findRouters({
+        from: WAL_COIN_TYPE,
+        target: suinsClient.config.coins.USDC.type,
+        amount: new BN(baseWalAtomic.toString()),
+        byAmountIn: true,
+        providers: ['CETUS']
+      })
+
+      if (rateRouter && !rateRouter.error && rateRouter.amountOut) {
+        const rawAmountOut = rateRouter.amountOut
+        const usdcOutForOneWal = BigInt(
+          rawAmountOut instanceof BN
+            ? rawAmountOut.toString()
+            : new BN(String(rawAmountOut)).toString()
+        )
+
+        if (usdcOutForOneWal > 0n) {
+          const exchangeRate = Number(baseWalAtomic) / Number(usdcOutForOneWal)
+          const estimatedWalNeeded =
+            missingUsdc * BigInt(Math.ceil(exchangeRate))
+          const walNeededFormatted = (
+            Number(estimatedWalNeeded) / 1_000_000_000
+          ).toFixed(4)
+          const walPerYearFormatted = (
+            Number(estimatedWalNeeded) /
+            selectedYears /
+            1_000_000_000
+          ).toFixed(4)
+          setPricePerYearFormatted(`${walPerYearFormatted} WAL`)
+          setEstimatedPrice(`~${walNeededFormatted} WAL`)
+        } else {
+          // Fallback: show USDC price
+          const usdcPrice = (Number(requiredAmount) / 1_000_000).toFixed(2)
+          const usdcPerYear = (pricePerYearValue / 1_000_000).toFixed(2)
+          setPricePerYearFormatted(`${usdcPerYear} USDC`)
+          setEstimatedPrice(`~${usdcPrice} USDC`)
+        }
+      } else {
+        // Fallback: show USDC price
+        const usdcPrice = (Number(requiredAmount) / 1_000_000).toFixed(2)
+        const usdcPerYear = (pricePerYearValue / 1_000_000).toFixed(2)
+        setPricePerYearFormatted(`${usdcPerYear} USDC`)
+        setEstimatedPrice(`~${usdcPrice} USDC`)
+      }
+    }
+  }, [
+    suinsClient,
+    currentAccount,
+    isMainnet,
+    WAL_COIN_TYPE,
+    aggregatorClient,
+    normalizedName,
+    selectedYears,
+    suiClient
+  ])
+
+  // Function to update price estimate for testnet (USDC → SUI)
+  // Uses fixed exchange rate: 1 SUI = 1.5 USDC (or 1 USDC = 2/3 SUI)
+  const updateTestnetPriceEstimate = useCallback(async () => {
+    if (!suinsClient || !currentAccount || !isTestnet || !normalizedName) {
+      return
+    }
+
+    // Get price list (price is in USDC)
+    const priceList = await suinsClient.getPriceList()
+    const nameLength = normalizedName.length
+
+    // Find price for this name length
+    let pricePerYearValue = 0
+    for (const [[from, to], price] of priceList.entries()) {
+      if (nameLength >= from && nameLength <= to) {
+        pricePerYearValue = price
+        break
+      }
+    }
+
+    if (pricePerYearValue > 0) {
+      setPricePerYear(pricePerYearValue)
+
+      // Calculate total price (USDC amount) - this is what needs to be paid
+      const totalPriceValue = pricePerYearValue * selectedYears
+      const usdcAmountAtomic = BigInt(Math.floor(totalPriceValue))
+
+      // Fixed exchange rate: 1 SUI = 1.5 USDC
+      // So 1 USDC = 2/3 SUI = 0.666666... SUI
+      // To calculate: (usdcAmount * 2 * 10^9) / (3 * 10^6)
+      // This gives us SUI amount with 9 decimals
+      const suiNeededAtomic =
+        (usdcAmountAtomic * 2n * 1_000_000_000n) / (3n * 1_000_000n)
+      const suiPerYearAtomic =
+        (BigInt(Math.floor(pricePerYearValue)) * 2n * 1_000_000_000n) /
+        (3n * 1_000_000n)
+
+      // Format for display (SUI has 9 decimals)
+      const suiNeededFormatted = (
+        Number(suiNeededAtomic) / 1_000_000_000
+      ).toFixed(4)
+      const suiPerYearFormatted = (
+        Number(suiPerYearAtomic) / 1_000_000_000
+      ).toFixed(4)
+
+      // Also store USDC prices for display
+      const usdcPrice = (Number(usdcAmountAtomic) / 1_000_000).toFixed(2)
+      const usdcPerYear = (pricePerYearValue / 1_000_000).toFixed(2)
+
+      setPricePerYearFormatted(`${suiPerYearFormatted} SUI`)
+      setEstimatedPrice(`${suiNeededFormatted} SUI`)
+      setPricePerYearUsdc(`${usdcPerYear} USDC`)
+      setTotalPriceUsdc(`${usdcPrice} USDC`)
+    }
+  }, [suinsClient, currentAccount, isTestnet, normalizedName, selectedYears])
+
+  // Auto-refresh price every 10s when domain is available (mainnet only)
+  useEffect(() => {
+    if (
+      isMainnet &&
+      isAvailable &&
+      normalizedName &&
+      !isRegistering &&
+      aggregatorClient
+    ) {
+      // Clear existing interval
+      if (priceRefreshIntervalRef.current) {
+        clearInterval(priceRefreshIntervalRef.current)
+      }
+
+      // Set up interval to refresh price every 10s
+      priceRefreshIntervalRef.current = setInterval(() => {
+        updatePriceEstimate().catch(err => {
+          console.error('Error refreshing price:', err)
+        })
+      }, 10000)
+
+      return () => {
+        if (priceRefreshIntervalRef.current) {
+          clearInterval(priceRefreshIntervalRef.current)
+        }
+      }
+    }
+  }, [
+    isMainnet,
+    isAvailable,
+    normalizedName,
+    isRegistering,
+    aggregatorClient,
+    updatePriceEstimate
+  ])
+
+  // Update price when years change
+  useEffect(() => {
+    if (isAvailable && pricePerYear !== null) {
+      if (isMainnet && aggregatorClient) {
+        updatePriceEstimate().catch(err => {
+          console.error('Error updating price:', err)
+        })
+      } else if (isTestnet) {
+        updateTestnetPriceEstimate().catch(err => {
+          console.error('Error updating price:', err)
+        })
+      }
+    }
+  }, [
+    isAvailable,
+    pricePerYear,
+    isMainnet,
+    isTestnet,
+    aggregatorClient,
+    updatePriceEstimate,
+    updateTestnetPriceEstimate
+  ])
 
   const handleSearch = useCallback(async () => {
     if (!normalizedName || !suinsClient) return
@@ -86,90 +341,13 @@ export function useSuiNsRegistration({
       const available = !nameRecord?.nftId
       setIsAvailable(available)
 
-      // Show estimated price (mainnet only)
-      if (
-        available &&
-        currentAccount &&
-        isMainnet &&
-        WAL_COIN_TYPE &&
-        aggregatorClient
-      ) {
+      // Show estimated price
+      if (available && currentAccount && aggregatorClient) {
         try {
-          // Get price list
-          const priceList = await suinsClient.getPriceList()
-          const nameLength = normalizedName.length
-
-          // Find price for this name length
-          let pricePerYear = 0
-          for (const [[from, to], price] of priceList.entries()) {
-            if (nameLength >= from && nameLength <= to) {
-              pricePerYear = price
-              break
-            }
-          }
-
-          if (pricePerYear > 0) {
-            // Calculate total price (1 year) with buffer (5%)
-            const totalPrice = pricePerYear * 1
-            const requiredAmount = BigInt(Math.floor(totalPrice * 1.05))
-
-            // Get current USDC balance to calculate missing amount
-            const usdcCoins = await suiClient.getCoins({
-              owner: currentAccount.address,
-              coinType: suinsClient.config.coins.USDC.type
-            })
-
-            const usdcBalance =
-              usdcCoins.data?.reduce(
-                (sum, coin) => sum + BigInt(coin.balance),
-                0n
-              ) ?? 0n
-
-            // Calculate missing USDC (if any)
-            const missingUsdc =
-              usdcBalance < requiredAmount
-                ? requiredAmount - usdcBalance
-                : requiredAmount
-
-            // Estimate WAL needed using same logic as register
-            const baseWalAtomic = 1_000_000_000n // 1 WAL (9 decimals)
-            const rateRouter = await aggregatorClient.findRouters({
-              from: WAL_COIN_TYPE,
-              target: suinsClient.config.coins.USDC.type,
-              amount: new BN(baseWalAtomic.toString()),
-              byAmountIn: true,
-              providers: ['CETUS']
-            })
-
-            if (rateRouter && !rateRouter.error && rateRouter.amountOut) {
-              const rawAmountOut = rateRouter.amountOut
-              const usdcOutForOneWal = BigInt(
-                rawAmountOut instanceof BN
-                  ? rawAmountOut.toString()
-                  : new BN(String(rawAmountOut)).toString()
-              )
-
-              if (usdcOutForOneWal > 0n) {
-                const exchangeRate =
-                  Number(baseWalAtomic) / Number(usdcOutForOneWal)
-                const estimatedWalNeeded =
-                  missingUsdc * BigInt(Math.ceil(exchangeRate))
-                const walNeededFormatted = (
-                  Number(estimatedWalNeeded) / 1_000_000_000
-                ).toFixed(4)
-                setEstimatedPrice(`~${walNeededFormatted} WAL`)
-              } else {
-                // Fallback: show USDC price
-                const usdcPrice = (Number(requiredAmount) / 1_000_000).toFixed(
-                  2
-                )
-                setEstimatedPrice(`~${usdcPrice} USDC`)
-              }
-            } else {
-              // Fallback: show USDC price
-              const usdcPrice = (Number(requiredAmount) / 1_000_000).toFixed(2)
-              setEstimatedPrice(`~${usdcPrice} USDC`)
-            }
+          if (isMainnet && WAL_COIN_TYPE) {
+            await updatePriceEstimate()
+          } else if (isTestnet) {
+            await updateTestnetPriceEstimate()
           }
         } catch (priceError) {
           console.error('Error estimating price:', priceError)
@@ -189,9 +367,11 @@ export function useSuiNsRegistration({
     suinsClient,
     currentAccount,
     isMainnet,
+    isTestnet,
     WAL_COIN_TYPE,
     aggregatorClient,
-    suiClient
+    updatePriceEstimate,
+    updateTestnetPriceEstimate
   ])
 
   const handleRegister = useCallback(async () => {
@@ -225,8 +405,8 @@ export function useSuiNsRegistration({
         throw new Error('Unable to determine price for this domain')
       }
 
-      // Register for 1 year
-      const years = 1
+      // Register for selected years
+      const years = selectedYears
       const totalPrice = pricePerYear * years
 
       // Get coin config (use SUI for testnet, USDC for mainnet)
@@ -534,6 +714,7 @@ export function useSuiNsRegistration({
     isAvailable,
     normalizedName,
     fullName,
+    selectedYears,
     txExecutor,
     isTestnet,
     isMainnet,
@@ -552,6 +733,15 @@ export function useSuiNsRegistration({
     setIsSearching(false)
     setIsRegistering(false)
     setIsSwapping(false)
+    setSelectedYears(1)
+    setPricePerYear(null)
+    setPricePerYearFormatted(null)
+    setPricePerYearUsdc(null)
+    setTotalPriceUsdc(null)
+    if (priceRefreshIntervalRef.current) {
+      clearInterval(priceRefreshIntervalRef.current)
+      priceRefreshIntervalRef.current = null
+    }
   }, [])
 
   return {
@@ -566,6 +756,15 @@ export function useSuiNsRegistration({
     error,
     normalizedName,
     fullName,
+    selectedYears,
+    setSelectedYears,
+    pricePerYear,
+    pricePerYearFormatted,
+    pricePerYearUsdc,
+    totalPrice,
+    totalPriceFormatted,
+    totalPriceUsdc,
+    expirationDate,
     // Actions
     handleSearch,
     handleRegister,
