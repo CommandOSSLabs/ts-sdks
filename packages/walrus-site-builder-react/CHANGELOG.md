@@ -1,6 +1,6 @@
 # @cmdoss/walrus-site-builder-react
 
-## 3.0.0
+## 2.5.0
 
 ### Minor Changes
 
@@ -9,8 +9,8 @@
 ### Patch Changes
 
 - Updated dependencies [d8e5864]
-  - @cmdoss/walrus-site-builder@3.0.0
-  - @cmdoss/file-manager@3.0.0
+  - @cmdoss/walrus-site-builder@2.5.0
+  - @cmdoss/file-manager@2.5.0
 
 ## 2.4.0
 
