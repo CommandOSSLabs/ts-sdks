@@ -14,10 +14,11 @@ import {
 import { useStore } from '@nanostores/react'
 import * as Dialog from '@radix-ui/react-dialog'
 import type { QueryClient } from '@tanstack/react-query'
-import { Calendar, Clock, Info, Loader2, X } from 'lucide-react'
+import { Calendar, Clock, DollarSign, Info, Loader2, X } from 'lucide-react'
 import type { FC } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useEpochDuration, useTransactionExecutor } from '~/hooks'
+import { useStorageCostQuery } from '~/queries/storage-cost.query'
 import { useWalrusSiteQuery } from '~/queries/walrus-site.query'
 import { isExtendTimeDialogOpen } from '~/stores/site-domain.store'
 import { Banner } from '../ui'
@@ -57,6 +58,7 @@ const ExtendTimeDialog: FC<ExtendTimeDialogProps> = ({
   const [expirationDates, setExpirationDates] = useState<Map<string, Date>>(
     new Map()
   )
+  const [totalFileSize, setTotalFileSize] = useState<number | null>(null)
 
   const { epochDurationMs, formatDate } = useEpochDuration(walrusClient)
   const txExecutor = useTransactionExecutor({
@@ -71,7 +73,7 @@ const ExtendTimeDialog: FC<ExtendTimeDialogProps> = ({
     queryClient
   })
 
-  // Function to fetch expiration dates
+  // Function to fetch expiration dates and blob sizes
   const fetchExpirationDates = useCallback(async () => {
     if (!siteId || !walrusClient || !currentAccount || !siteData?.resources) {
       return
@@ -80,6 +82,7 @@ const ExtendTimeDialog: FC<ExtendTimeDialogProps> = ({
     try {
       const blobType = await walrusClient.getBlobType()
       const datesMap = new Map<string, Date>()
+      let totalSize = 0
 
       // Get staking state once before the loop
       const stakingState = await walrusClient.stakingState()
@@ -119,6 +122,19 @@ const ExtendTimeDialog: FC<ExtendTimeDialogProps> = ({
                     const expirationTime =
                       Date.now() + remainingEpochs * epochDuration
                     datesMap.set(blobId, new Date(expirationTime))
+
+                    // Get blob size from fields.size (onchain data has this field)
+                    const sizeField = fields.size
+                    if (sizeField !== undefined) {
+                      // Size can be string or number
+                      const size =
+                        typeof sizeField === 'string'
+                          ? Number(sizeField)
+                          : Number(sizeField)
+                      if (!Number.isNaN(size) && size > 0) {
+                        totalSize += size
+                      }
+                    }
                     break
                   }
                 }
@@ -132,10 +148,58 @@ const ExtendTimeDialog: FC<ExtendTimeDialogProps> = ({
       }
 
       setExpirationDates(datesMap)
+      setTotalFileSize(totalSize > 0 ? totalSize : null)
     } catch (error) {
       console.error('Error fetching expiration dates:', error)
     }
   }, [siteId, walrusClient, currentAccount, suiClient, siteData])
+
+  // Query storage cost (only when we have file size)
+  const {
+    data: storageCostData,
+    isLoading: isStorageCostLoading,
+    error: storageCostError
+  } = useStorageCostQuery(totalFileSize, epochs, {
+    queryClient,
+    walrusClient
+  })
+
+  // Calculate estimated cost as fallback (rough estimate: ~1KB per resource)
+  const estimatedFileSize = useMemo(() => {
+    if (totalFileSize !== null) return null
+    if (!siteData?.resources) return null
+    // Estimate: average 10KB per resource
+    return siteData.resources.length * 10 * 1024
+  }, [totalFileSize, siteData?.resources])
+
+  // Query estimated cost as fallback
+  const { data: estimatedCostData, isLoading: isEstimatedCostLoading } =
+    useStorageCostQuery(estimatedFileSize, epochs, {
+      queryClient,
+      walrusClient
+    })
+
+  // Format file size helper
+  const formatFileSize = useCallback((bytes: number | null): string => {
+    if (bytes === null || bytes === 0) return 'Unknown'
+    const units = ['B', 'KB', 'MB', 'GB']
+    let size = bytes
+    let unitIndex = 0
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024
+      unitIndex++
+    }
+    return `${size.toFixed(2)} ${units[unitIndex]}`
+  }, [])
+
+  // Format WAL amount helper
+  const formatWalAmount = useCallback((amount: string | undefined): string => {
+    if (!amount) return '—'
+    const num = BigInt(amount)
+    // WAL has 9 decimals
+    const formatted = Number(num) / 1_000_000_000
+    return formatted.toFixed(6)
+  }, [])
 
   // Query blob expiration dates
   useEffect(() => {
@@ -578,6 +642,80 @@ const ExtendTimeDialog: FC<ExtendTimeDialogProps> = ({
                     </div>
                   ) : (
                     <div className={styles.summaryValue}>Select a date</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Storage Cost Section */}
+              <div className={styles.costSection}>
+                <div className={styles.costHeader}>
+                  <DollarSign size={16} />
+                  <span>Storage Cost</span>
+                  {totalFileSize === null && estimatedFileSize !== null && (
+                    <span className={styles.estimatedBadge}>Estimated</span>
+                  )}
+                </div>
+                <div className={styles.costContent}>
+                  <div className={styles.costRow}>
+                    <span className={styles.costLabel}>Size:</span>
+                    <span className={styles.costValue}>
+                      {totalFileSize !== null
+                        ? formatFileSize(totalFileSize)
+                        : estimatedFileSize !== null
+                          ? formatFileSize(estimatedFileSize)
+                          : 'Unknown'}
+                    </span>
+                  </div>
+                  <div className={styles.costRow}>
+                    <span className={styles.costLabel}>Resources:</span>
+                    <span className={styles.costValue}>
+                      {siteData?.resources?.length || 0} resources • {epochs}{' '}
+                      epoch
+                      {epochs !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {isStorageCostLoading || isEstimatedCostLoading ? (
+                    <div className={styles.costLoading}>
+                      <Loader2 size={14} className={styles.spinner} />
+                      <span>Calculating cost...</span>
+                    </div>
+                  ) : storageCostData || estimatedCostData ? (
+                    <>
+                      {totalFileSize === null && estimatedFileSize !== null && (
+                        <div className={styles.costWarning}>
+                          <Info size={12} />
+                          <span>
+                            Estimated cost based on{' '}
+                            {siteData?.resources?.length || 0} resource
+                            {siteData?.resources?.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      )}
+                      <div className={styles.costDivider} />
+                      <div className={styles.costRow}>
+                        <span className={styles.costLabel}>Storage Cost:</span>
+                        <span className={styles.costValue}>
+                          {formatWalAmount(
+                            storageCostData?.storageCost ||
+                              estimatedCostData?.storageCost
+                          )}{' '}
+                          WAL
+                        </span>
+                      </div>
+                    </>
+                  ) : storageCostError ? (
+                    <div className={styles.costError}>
+                      <Info size={14} />
+                      <span>
+                        Unable to calculate cost. Please ensure you have
+                        sufficient WAL balance.
+                      </span>
+                    </div>
+                  ) : (
+                    <div className={styles.costError}>
+                      <Info size={14} />
+                      <span>Unable to calculate cost</span>
+                    </div>
                   )}
                 </div>
               </div>

@@ -1,5 +1,11 @@
 # @cmdoss/walrus-site-builder
 
+## 2.5.0
+
+### Minor Changes
+
+- d8e5864: add storage cost section in extend blob modal
+
 ## 2.4.0
 
 ### Minor Changes

@@ -1,5 +1,16 @@
 # @cmdoss/file-manager
 
+## 2.5.0
+
+### Minor Changes
+
+- d8e5864: add storage cost section in extend blob modal
+
+### Patch Changes
+
+- Updated dependencies [d8e5864]
+  - @cmdoss/walrus-site-builder@2.5.0
+
 ## 2.4.0
 
 ### Minor Changes
