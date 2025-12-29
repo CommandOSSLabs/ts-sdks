@@ -1,6 +1,6 @@
 # @cmdoss/file-manager
 
-## 3.0.0
+## 2.4.0
 
 ### Minor Changes
 
@@ -9,7 +9,7 @@
 ### Patch Changes
 
 - Updated dependencies [9d19f69]
-  - @cmdoss/walrus-site-builder@3.0.0
+  - @cmdoss/walrus-site-builder@2.4.0
 
 ## 2.2.0
 

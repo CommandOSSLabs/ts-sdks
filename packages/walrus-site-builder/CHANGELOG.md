@@ -1,6 +1,6 @@
 # @cmdoss/walrus-site-builder
 
-## 3.0.0
+## 2.4.0
 
 ### Minor Changes
 
