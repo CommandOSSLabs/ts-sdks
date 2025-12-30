@@ -1,6 +1,6 @@
 {
   "name": "@cmdoss/file-manager",
-  "version": "3.0.0",
+  "version": "2.6.0",
   "license": "MIT",
   "type": "module",
   "exports": "./dist/index.js",

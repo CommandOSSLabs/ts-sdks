@@ -1,6 +1,6 @@
 'use client'
 
-import { Copy, ExternalLink, Trash2 } from 'lucide-react'
+import { Copy, ExternalLink, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -18,12 +18,14 @@ interface PublishedSiteInfoProps {
   siteId: string
   network: 'mainnet' | 'testnet'
   onClearSiteId: () => void
+  onUpdateMetadata?: () => void
 }
 
 export default function PublishedSiteInfo({
   siteId,
   network,
-  onClearSiteId
+  onClearSiteId,
+  onUpdateMetadata
 }: PublishedSiteInfoProps) {
   const handleCopy = () => {
     navigator.clipboard.writeText(siteId)
@@ -60,6 +62,17 @@ export default function PublishedSiteInfo({
         View on Suiscan
         <ExternalLink className="w-3 h-3" />
       </a>
+      {onUpdateMetadata && (
+        <button
+          type="button"
+          onClick={onUpdateMetadata}
+          className="text-[#97f0e5] hover:text-[#97f0e5]/80 p-1 rounded hover:bg-[#97f0e5]/10 flex items-center gap-1 text-xs shrink-0"
+          title="Update metadata"
+        >
+          <Pencil className="w-3 h-3" />
+          <span>Update Metadata</span>
+        </button>
+      )}
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <button
