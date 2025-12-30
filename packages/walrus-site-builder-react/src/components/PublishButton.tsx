@@ -1,14 +1,17 @@
+import { useStore } from '@nanostores/react'
 import type { FC, ReactNode } from 'react'
 import {
   type UseSitePublishingParams,
   useSitePublishing
 } from '~/hooks/useSitePublishing'
+import { isUpdateMetadataModalOpen } from '~/stores/site-domain.store'
 import ExtendTimeDialog from './extend-time-dialog/ExtendTimeDialog'
 import PublishMenu from './publish-menu/PublishMenu'
 import PublishModal from './publish-modal/PublishModal'
 import SuiNsModal from './suins-modal/SuiNsModal'
 import { ThemeProvider } from './ThemeProvider'
 import { Button } from './ui/Button'
+import UpdateMetadataModal from './update-metadata-modal/UpdateMetadataModal'
 
 interface Props extends UseSitePublishingParams {
   children?: ReactNode
@@ -53,6 +56,7 @@ const PublishButton: FC<Props> = ({
     portalHttps
   })
   const network = clients.suiClient.network
+  const updateMetadataModalOpen = useStore(isUpdateMetadataModalOpen)
 
   return (
     <ThemeProvider>
@@ -96,6 +100,29 @@ const PublishButton: FC<Props> = ({
           onExtendedBlobs?.(message, digest)
         }}
       />
+      {siteId && (
+        <UpdateMetadataModal
+          siteId={siteId}
+          isOpen={updateMetadataModalOpen}
+          onOpenChange={isUpdateMetadataModalOpen.set}
+          onSuccess={digest => {
+            console.log('✅ Site metadata updated:', digest)
+            // Success is handled silently - modal closes automatically and queries are invalidated
+          }}
+          onError={error => {
+            onError?.(error.message)
+            console.error('❌ Failed to update metadata:', error)
+          }}
+          clients={{
+            suiClient: clients.suiClient,
+            queryClient: clients.queryClient,
+            walrusClient: clients.walrusClient
+          }}
+          currentAccount={currentAccount}
+          signAndExecuteTransaction={signAndExecuteTransaction}
+          sponsorConfig={sponsorConfig}
+        />
+      )}
     </ThemeProvider>
   )
 }

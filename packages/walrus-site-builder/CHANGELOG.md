@@ -1,5 +1,11 @@
 # @cmdoss/walrus-site-builder
 
+## 2.6.1
+
+### Patch Changes
+
+- 5144548: migrate update metadata from outsite into publish button
+
 ## 2.6.0
 
 ### Minor Changes

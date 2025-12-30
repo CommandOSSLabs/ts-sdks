@@ -1,5 +1,14 @@
 # @cmdoss/walrus-site-builder-react
 
+## 2.6.1
+
+### Patch Changes
+
+- 5144548: migrate update metadata from outsite into publish button
+- Updated dependencies [5144548]
+  - @cmdoss/walrus-site-builder@2.6.1
+  - @cmdoss/file-manager@2.6.1
+
 ## 2.6.0
 
 ### Minor Changes

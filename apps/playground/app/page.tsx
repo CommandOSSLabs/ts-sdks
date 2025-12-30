@@ -9,7 +9,6 @@ import {
   type SiteMetadata,
   type SiteMetadataUpdate,
   siteMetadataStore,
-  UpdateMetadataModal,
   useZenFsWorkspace,
   useZenfsFilesQuery
 } from '@cmdoss/walrus-site-builder-react'
@@ -44,7 +43,6 @@ export default function Home() {
   const [isAddingFiles, setIsAddingFiles] = useState(false)
   const [isClearingWorkspace, setIsClearingWorkspace] = useState(false)
   const siteId = useStore($siteId)
-  const updateMetadataModalOpen = useStore(isUpdateMetadataModalOpen)
   const suinsClient = useMemo(
     () => new SuinsClient({ network: networkConfig.name, client: suiClient }),
     [networkConfig.name, suiClient]
@@ -266,41 +264,20 @@ export default function Home() {
             />
 
             {siteId && (
-              <>
-                <PublishedSiteInfo
-                  siteId={siteId}
-                  network={networkConfig.network}
-                  onClearSiteId={() => {
-                    $siteId.set('')
-                    siteMetadataStore.suiNSUrl.set([])
-                    $suiNSUrl.set([])
-                  }}
-                  onUpdateMetadata={() => isUpdateMetadataModalOpen.set(true)}
-                />
-                <UpdateMetadataModal
-                  siteId={siteId}
-                  isOpen={updateMetadataModalOpen}
-                  onOpenChange={isUpdateMetadataModalOpen.set}
-                  onSuccess={(digest: string) => {
-                    toast.success(
-                      `Site metadata updated successfully! Digest: ${digest.slice(0, 8)}...`
-                    )
-                    console.log('✅ Site metadata updated:', digest)
-                  }}
-                  onError={(error: Error) => {
-                    toast.error(`Failed to update metadata: ${error.message}`)
-                    console.error('❌ Failed to update metadata:', error)
-                  }}
-                  clients={{
-                    suiClient,
-                    queryClient,
-                    walrusClient
-                  }}
-                  currentAccount={currentAccount}
-                  signAndExecuteTransaction={signAndExecuteTransaction}
-                  sponsorConfig={sponsorConfig}
-                />
-              </>
+              <PublishedSiteInfo
+                siteId={siteId}
+                network={networkConfig.network}
+                onClearSiteId={() => {
+                  $siteId.set('')
+                  siteMetadataStore.suiNSUrl.set([])
+                  $suiNSUrl.set([])
+                }}
+                onUpdateMetadata={() => {
+                  // Modal is now handled by PublishButton component
+                  // Just trigger the store to open it
+                  isUpdateMetadataModalOpen.set(true)
+                }}
+              />
             )}
           </div>
         </CardContent>
