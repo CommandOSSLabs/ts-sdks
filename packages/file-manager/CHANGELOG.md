@@ -1,5 +1,13 @@
 # @cmdoss/file-manager
 
+## 2.6.2
+
+### Patch Changes
+
+- dbbe37c: add event handler onUpdateMetadataOnChain
+- Updated dependencies [dbbe37c]
+  - @cmdoss/walrus-site-builder@2.6.2
+
 ## 2.6.1
 
 ### Patch Changes
