@@ -1,5 +1,16 @@
 # @cmdoss/file-manager
 
+## 3.0.0
+
+### Minor Changes
+
+- 4eae3ba: add update metadata modal
+
+### Patch Changes
+
+- Updated dependencies [4eae3ba]
+  - @cmdoss/walrus-site-builder@3.0.0
+
 ## 2.5.0
 
 ### Minor Changes
