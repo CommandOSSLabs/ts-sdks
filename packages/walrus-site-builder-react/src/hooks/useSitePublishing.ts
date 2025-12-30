@@ -82,6 +82,8 @@ export interface UseSitePublishingParams {
   portalDomain?: string
   /** Whether to use HTTPS for the portal URL. */
   portalHttps?: boolean
+  /** Optional callback when site metadata is successfully updated on chain. Receives the transaction digest. */
+  onUpdatedSiteMetadataOnChain?: (digest: string) => void
 }
 
 export function useSitePublishing({

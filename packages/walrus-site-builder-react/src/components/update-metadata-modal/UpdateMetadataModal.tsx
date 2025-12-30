@@ -230,12 +230,14 @@ const UpdateMetadataModal: FC<UpdateMetadataModalProps> = ({
     }
 
     try {
+      // Only send fields that have values (non-empty strings)
+      // Empty fields will be preserved from current site data in the hook
       const digest = await updateSiteMetadata({
-        siteName,
+        siteName: siteName.trim() || undefined,
         metadata: {
-          description: description || undefined,
-          project_url: projectUrl || undefined,
-          image_url: imageUrl || undefined
+          ...(description.trim() && { description: description.trim() }),
+          ...(projectUrl.trim() && { project_url: projectUrl.trim() }),
+          ...(imageUrl.trim() && { image_url: imageUrl.trim() })
         }
       })
       onSuccess?.(digest)

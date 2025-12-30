@@ -10,6 +10,7 @@ import type { WalrusClient } from '@mysten/walrus'
 import type { QueryClient } from '@tanstack/react-query'
 import { useMutation } from '@tanstack/react-query'
 import { useMemo } from 'react'
+import { useWalrusSiteQuery } from '~/queries'
 import { queryKeys } from '~/queries/keys'
 
 export interface UseUpdateSiteMetadataParams {
@@ -25,8 +26,8 @@ export interface UseUpdateSiteMetadataParams {
 }
 
 export interface UpdateSiteMetadataInput {
-  siteName: string
-  metadata: WSResources['metadata']
+  siteName?: string
+  metadata?: Partial<WSResources['metadata']>
 }
 
 export function useUpdateSiteMetadata({
@@ -57,6 +58,12 @@ export function useUpdateSiteMetadata({
     sponsorConfig
   ])
 
+  // Get current site data to merge with updates
+  const { data: currentSiteData } = useWalrusSiteQuery(siteId, {
+    suiClient,
+    queryClient
+  })
+
   // Mutation for updating site metadata
   const mutation = useMutation(
     {
@@ -68,7 +75,57 @@ export function useUpdateSiteMetadata({
           throw new Error('SDK not initialized')
         }
 
-        const digest = await sdk.updateSiteMetadata(siteId, siteName, metadata)
+        // Merge with current site data - only update fields that are provided
+        const finalSiteName =
+          siteName !== undefined && siteName !== ''
+            ? siteName
+            : currentSiteData?.name || ''
+
+        // Merge metadata: keep existing values for fields that are not provided
+        // Only include fields that have actual values (not empty strings or undefined)
+        const finalMetadata: WSResources['metadata'] = {}
+
+        // Start with current site data (only include defined fields)
+        if (currentSiteData) {
+          if (currentSiteData.link) finalMetadata.link = currentSiteData.link
+          if (currentSiteData.image_url)
+            finalMetadata.image_url = currentSiteData.image_url
+          if (currentSiteData.description)
+            finalMetadata.description = currentSiteData.description
+          if (currentSiteData.project_url)
+            finalMetadata.project_url = currentSiteData.project_url
+          if (currentSiteData.creator)
+            finalMetadata.creator = currentSiteData.creator
+        }
+
+        // Override with provided values (only if they are not empty)
+        if (
+          metadata?.description !== undefined &&
+          metadata.description !== ''
+        ) {
+          finalMetadata.description = metadata.description
+        }
+        if (
+          metadata?.project_url !== undefined &&
+          metadata.project_url !== ''
+        ) {
+          finalMetadata.project_url = metadata.project_url
+        }
+        if (metadata?.image_url !== undefined && metadata.image_url !== '') {
+          finalMetadata.image_url = metadata.image_url
+        }
+        if (metadata?.link !== undefined && metadata.link !== '') {
+          finalMetadata.link = metadata.link
+        }
+        if (metadata?.creator !== undefined && metadata.creator !== '') {
+          finalMetadata.creator = metadata.creator
+        }
+
+        const digest = await sdk.updateSiteMetadata(
+          siteId,
+          finalSiteName,
+          finalMetadata
+        )
         return digest
       },
       onSuccess: digest => {
