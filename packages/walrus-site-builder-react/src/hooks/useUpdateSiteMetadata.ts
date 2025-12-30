@@ -121,6 +121,23 @@ export function useUpdateSiteMetadata({
           finalMetadata.creator = metadata.creator
         }
 
+        // Always include creator and link from current data if not provided
+        // This ensures they are preserved even if not explicitly set in the update
+        if (
+          !finalMetadata.creator &&
+          currentSiteData?.creator &&
+          currentSiteData.creator !== ''
+        ) {
+          finalMetadata.creator = currentSiteData.creator
+        }
+        if (
+          !finalMetadata.link &&
+          currentSiteData?.link &&
+          currentSiteData.link !== ''
+        ) {
+          finalMetadata.link = currentSiteData.link
+        }
+
         const digest = await sdk.updateSiteMetadata(
           siteId,
           finalSiteName,
