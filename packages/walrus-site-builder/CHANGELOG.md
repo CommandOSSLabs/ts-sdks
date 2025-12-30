@@ -1,5 +1,11 @@
 # @cmdoss/walrus-site-builder
 
+## 2.6.2
+
+### Patch Changes
+
+- dbbe37c: add event handler onUpdateMetadataOnChain
+
 ## 2.6.1
 
 ### Patch Changes

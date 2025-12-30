@@ -25,6 +25,7 @@ const PublishButton: FC<Props> = ({
   onAssociatedDomain,
   onError,
   onExtendedBlobs,
+  onUpdatedSiteMetadataOnChain,
   currentAccount,
   signAndExecuteTransaction,
   sponsorConfig,
@@ -107,6 +108,7 @@ const PublishButton: FC<Props> = ({
           onOpenChange={isUpdateMetadataModalOpen.set}
           onSuccess={digest => {
             console.log('✅ Site metadata updated:', digest)
+            onUpdatedSiteMetadataOnChain?.(digest)
             // Success is handled silently - modal closes automatically and queries are invalidated
           }}
           onError={error => {

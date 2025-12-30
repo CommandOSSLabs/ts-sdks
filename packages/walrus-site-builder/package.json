@@ -1,6 +1,6 @@
 {
   "name": "@cmdoss/walrus-site-builder",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "license": "MIT",
   "type": "module",
   "exports": "./dist/index.js",
