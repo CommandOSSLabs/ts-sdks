@@ -1,5 +1,11 @@
 # @cmdoss/walrus-site-builder
 
+## 2.6.0
+
+### Minor Changes
+
+- 4eae3ba: add update metadata modal
+
 ## 2.5.0
 
 ### Minor Changes
