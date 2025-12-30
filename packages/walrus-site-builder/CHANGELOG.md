@@ -1,5 +1,11 @@
 # @cmdoss/walrus-site-builder
 
+## 2.6.3
+
+### Patch Changes
+
+- 22d277c: hotfix update metadata
+
 ## 2.6.2
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @cmdoss/walrus-site-builder-react
 
+## 2.6.3
+
+### Patch Changes
+
+- 22d277c: hotfix update metadata
+- Updated dependencies [22d277c]
+  - @cmdoss/walrus-site-builder@2.6.3
+  - @cmdoss/file-manager@2.6.3
+
 ## 2.6.2
 
 ### Patch Changes
