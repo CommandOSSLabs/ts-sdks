@@ -1,0 +1,19 @@
+###############################################################################
+# Walrus Aggregator & Publisher
+#
+# This compose file is used to deploy a Walrus Aggregator and/or Publisher service
+#
+# How to use:
+# - <WIP>
+#
+###############################################################################
+
+services:
+  deployer:
+    image: cmdoss/walrus
+    build: .
+    ports: [ 8080:8080, 27182:27182 ]
+    environment:
+      NETWORK:
+      SUI_KEYSTORE:
+      # PUBLISHER_BIND_ADDRESS: "0.0.0.0:8080"
