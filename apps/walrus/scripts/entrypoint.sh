@@ -51,84 +51,275 @@ generate_configs() {
 }
 
 # ===============================================
-# Start Walrus Publisher
+# Start Walrus Service
 # ===============================================
+
+# General configuration
+MODE=${MODE:-}
+NETWORK=${NETWORK:-testnet}
+
+# If MODE is not set, exit without running anything (CLI mode)
+if [[ -z "${MODE}" ]]; then
+  log_info "MODE not set. Container will be used as CLI tool only."
+  log_info "Use MODE=publisher, MODE=aggregator, or MODE=daemon to start a service."
+  exit 0
+fi
 
 # Run config generation
 generate_configs
 
-# General configuration
-NETWORK=${NETWORK:-testnet}
+# ===============================================
+# Common Configuration (shared across all modes)
+# ===============================================
 
-# Publisher Configuration variables
-PUBLISHER_WALLETS_DIR=${PUBLISHER_WALLETS_DIR:-/publisher-wallets}
-PUBLISHER_BIND_ADDRESS=${PUBLISHER_BIND_ADDRESS:-"[::]:8080"}
-PUBLISHER_METRICS_ADDRESS=${PUBLISHER_METRICS_ADDRESS:-"[::]:27182"}
-PUBLISHER_MAX_BODY_SIZE=${PUBLISHER_MAX_BODY_SIZE:-10240}
-PUBLISHER_MAX_QUILT_BODY_SIZE=${PUBLISHER_MAX_QUILT_BODY_SIZE:-10240}
+# Shared options
+BIND_ADDRESS=${BIND_ADDRESS:-"[::]:31415"}
+METRICS_ADDRESS=${METRICS_ADDRESS:-"[::]:27182"}
+BLOCKLIST=${BLOCKLIST:-""}
+MAX_BLOB_SIZE=${MAX_BLOB_SIZE:-""}
+
+# ===============================================
+# Publisher-specific Configuration
+# ===============================================
+
+# Required for publisher/daemon modes
+SUB_WALLETS_DIR=${SUB_WALLETS_DIR:-/wallets}
+
+# Publisher request handling
+MAX_BODY_SIZE=${MAX_BODY_SIZE:-10240}
+MAX_QUILT_BODY_SIZE=${MAX_QUILT_BODY_SIZE:-102400}
 PUBLISHER_MAX_BUFFER_SIZE=${PUBLISHER_MAX_BUFFER_SIZE:-8}
-PUBLISHER_CONCURRENT_REQUESTS=${PUBLISHER_CONCURRENT_REQUESTS:-8}
-PUBLISHER_N_CLIENTS=${PUBLISHER_N_CLIENTS:-1}
-PUBLISHER_REFILL_INTERVAL=${PUBLISHER_REFILL_INTERVAL:-"1s"}
-PUBLISHER_GAS_REFILL_AMOUNT=${PUBLISHER_GAS_REFILL_AMOUNT:-500000000}
-PUBLISHER_WAL_REFILL_AMOUNT=${PUBLISHER_WAL_REFILL_AMOUNT:-500000000}
-PUBLISHER_SUB_WALLETS_MIN_BALANCE=${PUBLISHER_SUB_WALLETS_MIN_BALANCE:-500000000}
-PUBLISHER_BURN_AFTER_STORE=${PUBLISHER_BURN_AFTER_STORE:-0}
-PUBLISHER_JWT_DECODE_SECRET=${PUBLISHER_JWT_DECODE_SECRET:-""}
-PUBLISHER_JWT_ALGORITHM=${PUBLISHER_JWT_ALGORITHM:-""}
-PUBLISHER_JWT_EXPIRING_SEC=${PUBLISHER_JWT_EXPIRING_SEC:-""}
-PUBLISHER_JWT_VERIFY_UPLOAD=${PUBLISHER_JWT_VERIFY_UPLOAD:-0}
-PUBLISHER_JWT_CACHE_SIZE=${PUBLISHER_JWT_CACHE_SIZE:-""}
-PUBLISHER_JWT_CACHE_REFRESH_INTERVAL=${PUBLISHER_JWT_CACHE_REFRESH_INTERVAL:-""}
+PUBLISHER_MAX_CONCURRENT_REQUESTS=${PUBLISHER_MAX_CONCURRENT_REQUESTS:-8}
+N_CLIENTS=${N_CLIENTS:-8}
 
-# Prepare extra arguments
-EXTRA_ARGS=()
-if [[ "${PUBLISHER_BURN_AFTER_STORE}" == "1" ]]; then
-  EXTRA_ARGS+=("--burn-after-store")
-fi
+# Publisher wallet refill settings
+REFILL_INTERVAL=${REFILL_INTERVAL:-"1s"}
+GAS_REFILL_AMOUNT=${GAS_REFILL_AMOUNT:-500000000}
+WAL_REFILL_AMOUNT=${WAL_REFILL_AMOUNT:-500000000}
+SUB_WALLETS_MIN_BALANCE=${SUB_WALLETS_MIN_BALANCE:-500000000}
 
-if [[ -n "${PUBLISHER_JWT_DECODE_SECRET}" ]]; then
-  EXTRA_ARGS+=("--jwt-decode-secret" "${PUBLISHER_JWT_DECODE_SECRET}")
-fi
+# Publisher blob storage behavior
+BURN_AFTER_STORE=${BURN_AFTER_STORE:-0}
 
-if [[ -n "${PUBLISHER_JWT_ALGORITHM}" ]]; then
-  EXTRA_ARGS+=("--jwt-algorithm" "${PUBLISHER_JWT_ALGORITHM}")
-fi
+# JWT authentication (publisher/daemon only)
+JWT_DECODE_SECRET=${JWT_DECODE_SECRET:-""}
+JWT_ALGORITHM=${JWT_ALGORITHM:-""}
+JWT_EXPIRING_SEC=${JWT_EXPIRING_SEC:-""}
+JWT_VERIFY_UPLOAD=${JWT_VERIFY_UPLOAD:-0}
+JWT_CACHE_SIZE=${JWT_CACHE_SIZE:-10000}
+JWT_CACHE_REFRESH_INTERVAL=${JWT_CACHE_REFRESH_INTERVAL:-"5s"}
 
-if [[ -n "${PUBLISHER_JWT_EXPIRING_SEC}" ]]; then
-  EXTRA_ARGS+=("--jwt-expiring-sec" "${PUBLISHER_JWT_EXPIRING_SEC}")
-fi
+# ===============================================
+# Aggregator-specific Configuration
+# ===============================================
 
-if [[ "${PUBLISHER_JWT_VERIFY_UPLOAD}" == "1" ]]; then
-  EXTRA_ARGS+=("--jwt-verify-upload")
-fi
+# Aggregator request handling
+AGGREGATOR_MAX_BUFFER_SIZE=${AGGREGATOR_MAX_BUFFER_SIZE:-320}
+AGGREGATOR_MAX_CONCURRENT_REQUESTS=${AGGREGATOR_MAX_CONCURRENT_REQUESTS:-256}
 
-if [[ -n "${PUBLISHER_JWT_CACHE_SIZE}" ]]; then
-  EXTRA_ARGS+=("--jwt-cache-size" "${PUBLISHER_JWT_CACHE_SIZE}")
-fi
+# Aggregator response headers
+ALLOWED_HEADERS=${ALLOWED_HEADERS:-"content-type authorization content-disposition content-encoding content-language content-location link"}
+ALLOW_QUILT_PATCH_TAGS=${ALLOW_QUILT_PATCH_TAGS:-0}
 
-if [[ -n "${PUBLISHER_JWT_CACHE_REFRESH_INTERVAL}" ]]; then
-  EXTRA_ARGS+=("--jwt-cache-refresh-interval" "${PUBLISHER_JWT_CACHE_REFRESH_INTERVAL}")
-fi
+# ===============================================
+# Publisher Mode
+# ===============================================
 
-# Create publisher wallets directory if it doesn't exist
-mkdir -p ${PUBLISHER_WALLETS_DIR}
+start_publisher() {
+  log_info "Starting Walrus Publisher in ${NETWORK} network... (Process ID: $$, Container ID: $(hostname))"
 
-log_info "Starting Walrus Publisher in ${NETWORK} network... (Process ID: $$, Container ID: $(hostname))"
+  # Prepare extra arguments
+  EXTRA_ARGS=()
+  
+  if [[ -n "${BLOCKLIST}" ]]; then
+    EXTRA_ARGS+=("--blocklist" "${BLOCKLIST}")
+  fi
 
-walrus publisher \
-  --bind-address "${PUBLISHER_BIND_ADDRESS}" \
-  --config "/config/client-config.yml" \
-  --metrics-address "${PUBLISHER_METRICS_ADDRESS}" \
-  --wallet "/config/wallet-config.yml" \
-  --max-body-size "${PUBLISHER_MAX_BODY_SIZE}" \
-  --max-quilt-body-size "${PUBLISHER_MAX_QUILT_BODY_SIZE}" \
-  --publisher-max-buffer-size "${PUBLISHER_MAX_BUFFER_SIZE}" \
-  --publisher-max-concurrent-requests "${PUBLISHER_CONCURRENT_REQUESTS}" \
-  --n-clients "${PUBLISHER_N_CLIENTS}" \
-  --refill-interval "${PUBLISHER_REFILL_INTERVAL}" \
-  --sub-wallets-dir "${PUBLISHER_WALLETS_DIR}" \
-  --gas-refill-amount "${PUBLISHER_GAS_REFILL_AMOUNT}" \
-  --wal-refill-amount "${PUBLISHER_WAL_REFILL_AMOUNT}" \
-  --sub-wallets-min-balance "${PUBLISHER_SUB_WALLETS_MIN_BALANCE}" \
-  "${EXTRA_ARGS[@]}"
+  if [[ -n "${MAX_BLOB_SIZE}" ]]; then
+    EXTRA_ARGS+=("--max-blob-size" "${MAX_BLOB_SIZE}")
+  fi
+
+  if [[ "${BURN_AFTER_STORE}" == "1" ]]; then
+    EXTRA_ARGS+=("--burn-after-store")
+  fi
+
+  if [[ -n "${JWT_DECODE_SECRET}" ]]; then
+    EXTRA_ARGS+=("--jwt-decode-secret" "${JWT_DECODE_SECRET}")
+  fi
+
+  if [[ -n "${JWT_ALGORITHM}" ]]; then
+    EXTRA_ARGS+=("--jwt-algorithm" "${JWT_ALGORITHM}")
+  fi
+
+  if [[ -n "${JWT_EXPIRING_SEC}" ]]; then
+    EXTRA_ARGS+=("--jwt-expiring-sec" "${JWT_EXPIRING_SEC}")
+  fi
+
+  if [[ "${JWT_VERIFY_UPLOAD}" == "1" ]]; then
+    EXTRA_ARGS+=("--jwt-verify-upload")
+  fi
+
+  if [[ -n "${JWT_CACHE_SIZE}" ]]; then
+    EXTRA_ARGS+=("--jwt-cache-size" "${JWT_CACHE_SIZE}")
+  fi
+
+  if [[ -n "${JWT_CACHE_REFRESH_INTERVAL}" ]]; then
+    EXTRA_ARGS+=("--jwt-cache-refresh-interval" "${JWT_CACHE_REFRESH_INTERVAL}")
+  fi
+
+  # Create wallets directory if it doesn't exist
+  mkdir -p ${SUB_WALLETS_DIR}
+
+  walrus publisher \
+    --bind-address "${BIND_ADDRESS}" \
+    --config "/config/client-config.yml" \
+    --metrics-address "${METRICS_ADDRESS}" \
+    --wallet "/config/wallet-config.yml" \
+    --max-body-size "${MAX_BODY_SIZE}" \
+    --max-quilt-body-size "${MAX_QUILT_BODY_SIZE}" \
+    --publisher-max-buffer-size "${PUBLISHER_MAX_BUFFER_SIZE}" \
+    --publisher-max-concurrent-requests "${PUBLISHER_MAX_CONCURRENT_REQUESTS}" \
+    --n-clients "${N_CLIENTS}" \
+    --refill-interval "${REFILL_INTERVAL}" \
+    --sub-wallets-dir "${SUB_WALLETS_DIR}" \
+    --gas-refill-amount "${GAS_REFILL_AMOUNT}" \
+    --wal-refill-amount "${WAL_REFILL_AMOUNT}" \
+    --sub-wallets-min-balance "${SUB_WALLETS_MIN_BALANCE}" \
+    "${EXTRA_ARGS[@]}"
+}
+
+# ===============================================
+# Aggregator Mode
+# ===============================================
+
+start_aggregator() {
+  log_info "Starting Walrus Aggregator in ${NETWORK} network... (Process ID: $$, Container ID: $(hostname))"
+
+  # Prepare extra arguments
+  EXTRA_ARGS=()
+  
+  if [[ -n "${BLOCKLIST}" ]]; then
+    EXTRA_ARGS+=("--blocklist" "${BLOCKLIST}")
+  fi
+
+  if [[ -n "${MAX_BLOB_SIZE}" ]]; then
+    EXTRA_ARGS+=("--max-blob-size" "${MAX_BLOB_SIZE}")
+  fi
+
+  if [[ "${ALLOW_QUILT_PATCH_TAGS}" == "1" ]]; then
+    EXTRA_ARGS+=("--allow-quilt-patch-tags-in-response")
+  fi
+
+  # Add allowed headers
+  for header in ${ALLOWED_HEADERS}; do
+    EXTRA_ARGS+=("--allowed-headers" "${header}")
+  done
+
+  walrus aggregator \
+    --bind-address "${BIND_ADDRESS}" \
+    --config "/config/client-config.yml" \
+    --metrics-address "${METRICS_ADDRESS}" \
+    --wallet "/config/wallet-config.yml" \
+    --aggregator-max-buffer-size "${AGGREGATOR_MAX_BUFFER_SIZE}" \
+    --aggregator-max-concurrent-requests "${AGGREGATOR_MAX_CONCURRENT_REQUESTS}" \
+    "${EXTRA_ARGS[@]}"
+}
+
+# ===============================================
+# Daemon Mode
+# ===============================================
+
+start_daemon() {
+  log_info "Starting Walrus Daemon in ${NETWORK} network... (Process ID: $$, Container ID: $(hostname))"
+
+  # Prepare extra arguments
+  EXTRA_ARGS=()
+  
+  if [[ -n "${BLOCKLIST}" ]]; then
+    EXTRA_ARGS+=("--blocklist" "${BLOCKLIST}")
+  fi
+
+  if [[ -n "${MAX_BLOB_SIZE}" ]]; then
+    EXTRA_ARGS+=("--max-blob-size" "${MAX_BLOB_SIZE}")
+  fi
+
+  if [[ "${BURN_AFTER_STORE}" == "1" ]]; then
+    EXTRA_ARGS+=("--burn-after-store")
+  fi
+
+  if [[ -n "${JWT_DECODE_SECRET}" ]]; then
+    EXTRA_ARGS+=("--jwt-decode-secret" "${JWT_DECODE_SECRET}")
+  fi
+
+  if [[ -n "${JWT_ALGORITHM}" ]]; then
+    EXTRA_ARGS+=("--jwt-algorithm" "${JWT_ALGORITHM}")
+  fi
+
+  if [[ -n "${JWT_EXPIRING_SEC}" ]]; then
+    EXTRA_ARGS+=("--jwt-expiring-sec" "${JWT_EXPIRING_SEC}")
+  fi
+
+  if [[ "${JWT_VERIFY_UPLOAD}" == "1" ]]; then
+    EXTRA_ARGS+=("--jwt-verify-upload")
+  fi
+
+  if [[ -n "${JWT_CACHE_SIZE}" ]]; then
+    EXTRA_ARGS+=("--jwt-cache-size" "${JWT_CACHE_SIZE}")
+  fi
+
+  if [[ -n "${JWT_CACHE_REFRESH_INTERVAL}" ]]; then
+    EXTRA_ARGS+=("--jwt-cache-refresh-interval" "${JWT_CACHE_REFRESH_INTERVAL}")
+  fi
+
+  if [[ "${ALLOW_QUILT_PATCH_TAGS}" == "1" ]]; then
+    EXTRA_ARGS+=("--allow-quilt-patch-tags-in-response")
+  fi
+
+  # Add allowed headers
+  for header in ${ALLOWED_HEADERS}; do
+    EXTRA_ARGS+=("--allowed-headers" "${header}")
+  done
+
+  # Create wallets directory if it doesn't exist
+  mkdir -p ${SUB_WALLETS_DIR}
+
+  walrus daemon \
+    --bind-address "${BIND_ADDRESS}" \
+    --config "/config/client-config.yml" \
+    --metrics-address "${METRICS_ADDRESS}" \
+    --wallet "/config/wallet-config.yml" \
+    --max-body-size "${MAX_BODY_SIZE}" \
+    --max-quilt-body-size "${MAX_QUILT_BODY_SIZE}" \
+    --publisher-max-buffer-size "${PUBLISHER_MAX_BUFFER_SIZE}" \
+    --publisher-max-concurrent-requests "${PUBLISHER_MAX_CONCURRENT_REQUESTS}" \
+    --n-clients "${N_CLIENTS}" \
+    --refill-interval "${REFILL_INTERVAL}" \
+    --sub-wallets-dir "${SUB_WALLETS_DIR}" \
+    --gas-refill-amount "${GAS_REFILL_AMOUNT}" \
+    --wal-refill-amount "${WAL_REFILL_AMOUNT}" \
+    --sub-wallets-min-balance "${SUB_WALLETS_MIN_BALANCE}" \
+    --aggregator-max-buffer-size "${AGGREGATOR_MAX_BUFFER_SIZE}" \
+    --aggregator-max-concurrent-requests "${AGGREGATOR_MAX_CONCURRENT_REQUESTS}" \
+    "${EXTRA_ARGS[@]}"
+}
+
+# ===============================================
+# Start Service Based on Mode
+# ===============================================
+
+case "${MODE}" in
+  publisher)
+    start_publisher
+    ;;
+  aggregator)
+    start_aggregator
+    ;;
+  daemon)
+    start_daemon
+    ;;
+  *)
+    log_error "Invalid MODE: ${MODE}"
+    log_error "Valid modes are: publisher, aggregator, daemon"
+    exit 1
+    ;;
+esac
