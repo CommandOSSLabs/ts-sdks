@@ -1,3 +1,5 @@
+![Walrus](https://docs.wal.app/img/logo.svg)
+
 # Walrus Docker Image
 
 Official Docker image containing the latest Sui and Walrus binaries with a pre-configured Walrus Publisher service.
