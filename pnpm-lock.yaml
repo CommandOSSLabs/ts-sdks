@@ -285,6 +285,8 @@ importers:
         specifier: 'catalog:'
         version: 4.56.0
 
+  apps/walrus: {}
+
   apps/walrus-sites-portal: {}
 
   apps/walrus-upload-relay: {}

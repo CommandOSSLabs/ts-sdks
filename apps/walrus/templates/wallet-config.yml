@@ -1,0 +1,8 @@
+### This file used Gomplate template (https://gomplate.ca/) to substitute environment variables
+
+keystore:
+  File: /config/keystore-config.json
+envs:
+  - alias: {{ .Env.NETWORK }}
+    rpc: https://fullnode.{{ .Env.NETWORK }}.sui.io:443
+active_env: {{ .Env.NETWORK }}

@@ -1,0 +1,8 @@
+{
+  "name": "walrus",
+  "private": true,
+  "scripts": {
+    "publish:docker": "docker buildx build --platform linux/amd64,linux/arm64 -t cmdoss/walrus -t cmdoss/walrus:v0.1.1 --push .",
+    "sync:dockerhub-readme": "node ../../scripts/sync-dockerhub-readme.mjs --repo cmdoss/walrus --readme ./README.md --short-description 'A decentralized storage solution powered by Sui and Walrus.'"
+  }
+}
