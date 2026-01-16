@@ -30,12 +30,115 @@ For comprehensive documentation, tutorials, and API reference, visit: **<https:/
 
 ## 🏗️ Apps
 
+### Development Apps
+
 | App | Description |
 |-----|-------------|
 | **docs** | Comprehensive documentation site built with Astro + Starlight |
 | **playground** | Interactive demo application showcasing all SDK features |
 
-## 🛠️ Quick Start
+### Docker Services
+
+| App | Docker Hub | Description |
+|-----|------------|-------------|
+| **walrus** | [cmdoss/walrus](https://hub.docker.com/r/cmdoss/walrus) | Latest Sui and Walrus binaries with pre-configured Publisher service (supports Publisher, Aggregator, and Daemon modes) |
+| **walrus-upload-relay** | - | High-performance upload relay for Walrus TypeScript SDK with environment-based configuration |
+| **walrus-sites-portal** | - | Self-hosted portal server for serving Walrus Sites as a gateway to decentralized websites |
+| **auth-proxy** | - | OpenResty-based JWT validation reverse proxy for securing backend services |
+
+## 🐳 Docker Images & Services
+
+### Walrus
+
+**Docker Hub**: [cmdoss/walrus](https://hub.docker.com/r/cmdoss/walrus)
+
+Official Docker image containing the latest Sui and Walrus binaries with multi-architecture support (amd64/arm64).
+
+**Features**:
+- Pre-installed `sui` (v1.63.2) and `walrus` (v1.40.3) binaries
+- Multiple operation modes: Publisher, Aggregator, Daemon (combined), or CLI tool
+- Environment variable-based configuration using Gomplate
+- Network support: testnet (default), mainnet
+
+**Quick Start**:
+```bash
+# CLI Mode
+docker run cmdoss/walrus:latest walrus --version
+
+# Publisher Mode
+docker run -p 31415:31415 \
+  -e MODE=publisher \
+  -e NETWORK=testnet \
+  -e SUI_KEYSTORE=your_private_key_here \
+  cmdoss/walrus:latest
+
+# Aggregator Mode
+docker run -p 31415:31415 \
+  -e MODE=aggregator \
+  -e NETWORK=testnet \
+  cmdoss/walrus:latest
+```
+
+[Full Documentation →](apps/walrus/README.md)
+
+### Walrus Upload Relay
+
+High-performance upload relay service for the Walrus TypeScript SDK, handling encoding and distribution of data shards across Walrus's decentralized storage network.
+
+**Features**:
+- Lightweight alternative to the full Publisher
+- Environment-based configuration generation via Gomplate
+- Configurable server binding via `HOST` and `PORT`
+- Optimized for application-specific data uploads
+
+**Quick Start**:
+```bash
+docker compose up
+```
+
+[Full Documentation →](apps/walrus-upload-relay/README.md)
+
+### Walrus Sites Portal
+
+Self-hosted portal server for serving Walrus Sites - decentralized websites stored on Sui blockchain and Walrus storage.
+
+**Features**:
+- Resolves Walrus Site domains (base36 object IDs)
+- Fetches site content from Walrus aggregators
+- Standard HTTP interface for decentralized websites
+- SuiNS name resolution support
+- Configurable allowlist/blocklist
+
+**Quick Start**:
+```bash
+cd apps/walrus-sites-portal
+docker compose up
+# Portal available at http://localhost:3003
+```
+
+[Full Documentation →](apps/walrus-sites-portal/README.md)
+
+### Auth Proxy
+
+OpenResty-based JWT validation reverse proxy that adds a security layer to private backend services.
+
+**Features**:
+- High-performance JWT validation at the edge using Lua
+- Protects backends from unauthorized requests
+- Injects `X-User-ID` header with user identity
+- Zero backend overhead for token validation
+
+**Quick Start**:
+```bash
+docker run -p 8080:8080 \
+  -e JWT_SECRET=your_secret_key \
+  -e UPSTREAM_URL=http://backend:3000 \
+  cmdoss/auth-proxy:latest
+```
+
+[Full Documentation →](apps/auth-proxy/README.md)
+
+
 
 ### Installation
 
