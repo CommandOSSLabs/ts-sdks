@@ -28,29 +28,29 @@ ENV WALRUS_NETWORK=testnet
 # Determine binary architecture and download/install binaries
 RUN set -eux; \
   case "$TARGETARCH" in \
-  amd64) BIN_ARCH="x86_64" ;; \
-  arm64) BIN_ARCH="aarch64" ;; \
-  *) echo "Unsupported architecture: $TARGETARCH"; exit 1 ;; \
+    amd64) BIN_ARCH="x86_64" ;; \
+    arm64) BIN_ARCH="aarch64" ;; \
+    *) echo "Unsupported architecture: $TARGETARCH"; exit 1 ;; \
   esac; \
   BINARIES="sui walrus"; \
   for BIN in $BINARIES; do \
-  case "$BIN" in \
-  sui) \
-  URL="https://github.com/MystenLabs/sui/releases/download/${SUI_NETWORK}-${SUI_VERSION}/sui-${SUI_NETWORK}-${SUI_VERSION}-ubuntu-${BIN_ARCH}.tgz"; \
-  OUT="/tmp/sui.tar.gz"; \
-  EXE="sui" \
-  ;; \
-  walrus) \
-  URL="https://github.com/MystenLabs/walrus/releases/download/${WALRUS_NETWORK}-${WALRUS_VERSION}/walrus-${WALRUS_NETWORK}-${WALRUS_VERSION}-ubuntu-${BIN_ARCH}.tgz"; \
-  OUT="/tmp/walrus.tar.gz"; \
-  EXE="walrus" \
-  ;; \
-  esac; \
-  wget -O "$OUT" "$URL"; \
-  tar -xzf "$OUT" -C /tmp; \
-  mv "/tmp/$EXE" "/usr/local/bin/$EXE"; \
-  chmod +x "/usr/local/bin/$EXE"; \
-  rm "$OUT"; \
+    case "$BIN" in \
+      sui) \
+        URL="https://github.com/MystenLabs/sui/releases/download/${SUI_NETWORK}-${SUI_VERSION}/sui-${SUI_NETWORK}-${SUI_VERSION}-ubuntu-${BIN_ARCH}.tgz"; \
+        OUT="/tmp/sui.tar.gz"; \
+        EXE="sui" \
+        ;; \
+      walrus) \
+        URL="https://github.com/MystenLabs/walrus/releases/download/${WALRUS_NETWORK}-${WALRUS_VERSION}/walrus-${WALRUS_NETWORK}-${WALRUS_VERSION}-ubuntu-${BIN_ARCH}.tgz"; \
+        OUT="/tmp/walrus.tar.gz"; \
+        EXE="walrus" \
+        ;; \
+    esac; \
+    wget -O "$OUT" "$URL"; \
+    tar -xzf "$OUT" -C /tmp; \
+    mv "/tmp/$EXE" "/usr/local/bin/$EXE"; \
+    chmod +x "/usr/local/bin/$EXE"; \
+    rm "$OUT"; \
   done
 
 # Use Ubuntu 24.04 as runtime, since it's the only one that has glibc 2.39
