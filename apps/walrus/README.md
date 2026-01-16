@@ -28,6 +28,7 @@ docker run cmdoss/walrus:latest walrus --version
 # Start Walrus Publisher service
 docker run -p 31415:31415 \
   -e MODE=publisher \
+  -e NETWORK=testnet \
   -e SUI_KEYSTORE=your_private_key_here \
   cmdoss/walrus:latest
 ```
@@ -38,6 +39,7 @@ docker run -p 31415:31415 \
 # Start Walrus Aggregator service (no wallet required)
 docker run -p 31415:31415 \
   -e MODE=aggregator \
+  -e NETWORK=testnet \
   cmdoss/walrus:latest
 ```
 
@@ -47,6 +49,7 @@ docker run -p 31415:31415 \
 # Start combined Publisher and Aggregator service
 docker run -p 31415:31415 \
   -e MODE=daemon \
+  -e NETWORK=testnet \
   -e SUI_KEYSTORE=your_private_key_here \
   cmdoss/walrus:latest
 ```
@@ -58,7 +61,7 @@ docker run -p 31415:31415 \
 | Variable       | Default   | Description                                                                               |
 | -------------- | --------- | ----------------------------------------------------------------------------------------- |
 | `MODE`         | -         | Service mode: `publisher`, `aggregator`, `daemon`, or unset for CLI mode                  |
-| `NETWORK`      | `testnet` | Network to use (`testnet`, `mainnet`)                                                     |
+| `NETWORK`      | -         | **Required** Network to use (`testnet`, `mainnet`)                                        |
 | `SUI_KEYSTORE` | -         | **Required for publisher/daemon modes** Private key from `~/.sui/sui_config/sui.keystore` |
 
 ### Shared Configuration (All Modes)
@@ -74,7 +77,6 @@ docker run -p 31415:31415 \
 
 | Variable                            | Default     | Description                               |
 | ----------------------------------- | ----------- | ----------------------------------------- |
-| `SUB_WALLETS_DIR`                   | `/wallets`  | Directory for sub-wallets                 |
 | `MAX_BODY_SIZE`                     | `10240`     | Maximum upload body size (KB)             |
 | `MAX_QUILT_BODY_SIZE`               | `102400`    | Maximum quilt body size (KB)              |
 | `PUBLISHER_MAX_BUFFER_SIZE`         | `8`         | Publisher max buffer size                 |
@@ -191,6 +193,7 @@ Mount your own wallet and configuration files:
 ```bash
 docker run -p 31415:31415 \
   -e MODE=publisher \
+  -e NETWORK=testnet \
   -e SUI_KEYSTORE=your_private_key_here \
   -v $(pwd)/config:/config \
   -v $(pwd)/wallets:/wallets \
@@ -203,6 +206,29 @@ Configuration files in `/config`:
 - `wallet-config.yml` - Sui wallet configuration
 - `keystore-config.json` - Keystore configuration
 - `sites-config.yml` - Sites configuration
+
+## Docker Volumes
+
+### `/wallets`
+
+A persistent volume for storing sub-wallets used by the Publisher and Daemon modes. The container automatically creates and manages sub-wallets in this directory for parallel transaction processing.
+
+**Usage:**
+- **Required for**: Publisher and Daemon modes
+- **Purpose**: Stores automatically generated sub-wallets that handle concurrent blob uploads
+- **Recommended**: Mount a host directory to persist wallets across container restarts
+
+```bash
+# Mount a local directory for wallet persistence
+docker run -p 31415:31415 \
+  -e MODE=publisher \
+  -e NETWORK=testnet \
+  -e SUI_KEYSTORE=your_private_key_here \
+  -v $(pwd)/wallets:/wallets \
+  cmdoss/walrus:latest
+```
+
+**Note**: Aggregator mode does not use this volume.
 
 ## Exposed Ports
 

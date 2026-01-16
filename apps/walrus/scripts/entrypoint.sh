@@ -56,13 +56,27 @@ generate_configs() {
 
 # General configuration
 MODE=${MODE:-}
-NETWORK=${NETWORK:-testnet}
+NETWORK=${NETWORK:-}
 
 # If MODE is not set, exit without running anything (CLI mode)
 if [[ -z "${MODE}" ]]; then
   log_info "MODE not set. Container will be used as CLI tool only."
   log_info "Use MODE=publisher, MODE=aggregator, or MODE=daemon to start a service."
   exit 0
+fi
+
+# Validate NETWORK is set when MODE is specified
+if [[ -z "${NETWORK}" ]]; then
+  log_error "NETWORK environment variable is required when MODE is set"
+  log_error "Valid values are: testnet, mainnet"
+  exit 1
+fi
+
+# Validate NETWORK value
+if [[ "${NETWORK}" != "testnet" && "${NETWORK}" != "mainnet" ]]; then
+  log_error "Invalid NETWORK: ${NETWORK}"
+  log_error "Valid values are: testnet, mainnet"
+  exit 1
 fi
 
 # Run config generation
@@ -82,8 +96,8 @@ MAX_BLOB_SIZE=${MAX_BLOB_SIZE:-""}
 # Publisher-specific Configuration
 # ===============================================
 
-# Required for publisher/daemon modes
-SUB_WALLETS_DIR=${SUB_WALLETS_DIR:-/wallets}
+# Hardcoded sub-wallets directory (not configurable)
+SUB_WALLETS_DIR=/wallets
 
 # Publisher request handling
 MAX_BODY_SIZE=${MAX_BODY_SIZE:-10240}

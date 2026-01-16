@@ -56,6 +56,9 @@ RUN set -eux; \
 # Use Ubuntu 24.04 as runtime, since it's the only one that has glibc 2.39
 FROM ubuntu:24.04 AS runtime
 
+# Create a volume for storing wallets
+VOLUME [ "/wallets" ]
+
 # sui-tool needs libpq5 at runtime and uses git when fetching move dependencies during build
 RUN apt-get update && apt-get install -y libpq5 libpq-dev ca-certificates git curl
 
